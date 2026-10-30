@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Nothing on this page may reach the network. It handles a real NAV password and the key that
+  Nothing on this page may reach the network. It handles real NAV passwords and the key that
   unlocks every login code, so no external script, style, image or connection is allowed — the
   browser enforces that through this policy, not just good intentions in the code below.
 -->
@@ -14,7 +14,7 @@
 <style>
   :root {
     --coral: #C95B4D; --slate: #2E3539; --cream: #F2EBDE;
-    --ink: #1F2427; --ink3: #6B7275; --red: #CE3A3A;
+    --ink: #1F2427; --ink3: #6B7275; --red: #CE3A3A; --green: #2E8C5E;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -22,18 +22,24 @@
   header { background: var(--slate); color: #fff; padding: 16px 24px; }
   header h1 { margin: 0; font-size: 18px; font-weight: 600; }
   header p { margin: 4px 0 0; font-size: 13px; opacity: .75; }
+  .top { max-width: 920px; margin: 0 auto; padding: 24px 24px 0; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button[aria-selected="true"] { background: var(--slate); border-color: var(--slate); color: #fff; }
   main { max-width: 920px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  main.batch { grid-template-columns: 1fr; }
   @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
   .card { background: #fff; border-radius: 14px; padding: 20px; border: 1px solid rgba(0, 0, 0, .08); }
   label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
   label:first-child { margin-top: 0; }
   .field { display: flex; gap: 6px; }
-  input { flex: 1; min-width: 0; width: 100%; font: 15px/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; padding: 10px 12px;
+  input, textarea { flex: 1; min-width: 0; width: 100%; font: 15px/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; padding: 10px 12px;
           border: 1px solid rgba(0, 0, 0, .2); border-radius: 8px; background: #fff; color: var(--ink); }
-  input:focus { outline: 2px solid var(--coral); outline-offset: -1px; border-color: transparent; }
+  textarea { font-size: 13px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--coral); outline-offset: -1px; border-color: transparent; }
   button { font: inherit; font-size: 14px; border-radius: 8px; padding: 10px 14px; border: 1px solid rgba(0, 0, 0, .2);
            background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap; }
   button:hover { background: #f6f3ee; }
+  button:disabled { opacity: .5; cursor: default; }
   button.primary { background: var(--coral); border-color: var(--coral); color: #fff; font-weight: 600; width: 100%; margin-top: 22px; padding: 12px; }
   button.primary:hover { filter: brightness(1.05); background: var(--coral); }
   .hint { font-size: 12px; color: var(--ink3); margin-top: 6px; }
@@ -46,28 +52,63 @@
   #outMeta { font-size: 12px; color: var(--ink3); margin-top: 4px; }
   .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
   .empty { color: var(--ink3); font-size: 14px; }
+  .source { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #bsource { font-size: 13px; color: var(--ink3); }
+  #bsummary { font-size: 14px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(0, 0, 0, .08); vertical-align: top; }
+  th { color: var(--ink3); font-weight: 600; }
+  td.user { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  td.ok { color: var(--green); }
+  td.bad { color: var(--red); }
+  /* The print pages, two codes each — top and bottom half, cut along the dashes — shown on screen
+     as a row of small A4 previews. */
+  #sheet { max-width: 920px; margin: 0 auto 24px; padding: 0 24px; display: flex; flex-wrap: wrap; gap: 16px; }
+  #sheet[hidden] { display: none !important; }
+  .page { background: #fff; width: 170px; aspect-ratio: 210 / 297; display: flex; flex-direction: column;
+          border: 1px solid rgba(0, 0, 0, .12); }
+  .half { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .half + .half { border-top: 1px dashed #bbb; }
+  .half img { width: 45%; height: auto; }
+  @page { size: A4; margin: 10mm; }
   @media print {
-    header, #form, .actions, #outUser, #outMeta { display: none !important; }
+    header, .top, #form, .actions, #outUser, #outMeta, #batch { display: none !important; }
     body { background: #fff; }
     main { display: block; padding: 0; }
     .card { border: none; padding: 0; }
     #qr { width: 7cm; image-rendering: pixelated; }
+    body.batch-mode #single { display: none !important; }
+    body:not(.batch-mode) #sheet { display: none !important; }
+    #sheet { display: block; max-width: none; margin: 0; padding: 0; }
+    .page { width: 190mm; height: 277mm; margin: 0; border: none; aspect-ratio: auto;
+            break-after: page; page-break-after: always; }
+    .page:last-child { break-after: auto; page-break-after: auto; }
+    .half + .half { border-top: .2mm dashed #999; }
+    /* The same 7 cm as a single printed code, so a batch prints exactly what one code would. */
+    .half img { width: 7cm; image-rendering: pixelated; }
   }
 </style>
 </head>
 <body>
 <header>
   <h1>QR kod za prijavu</h1>
-  <p>Radi samo u ovom pregledniku, bez interneta. Ključ i lozinka ne napuštaju računalo.</p>
+  <p>Radi samo u ovom pregledniku, bez interneta. Ključ i lozinke ne napuštaju računalo.</p>
 </header>
-<main>
-  <section class="card" id="form">
+<div class="top">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tabSingle" aria-selected="true">Jedan kod</button>
+    <button type="button" role="tab" id="tabBatch" aria-selected="false">Više kodova</button>
+  </div>
+  <section class="card" id="keyCard">
     <label for="key">Ključ — <code>loginQrKey</code> iz konfiguracije</label>
     <div class="field">
       <input id="key" type="password" autocomplete="off" spellcheck="false">
       <button type="button" data-toggle="key">Prikaži</button>
     </div>
-
+  </section>
+</div>
+<main id="single">
+  <section class="card" id="form">
     <label for="user">Korisničko ime</label>
     <input id="user" type="text" autocomplete="off" spellcheck="false" placeholder="PRIMA-COMMERCE\ime">
     <div class="hint">Kao pri prijavi: <code>DOMENA\ime</code> ili <code>ime@domena</code>, s jednom kosom crtom.</div>
@@ -99,7 +140,35 @@
     </div>
   </section>
 </main>
-
+<main id="batch" class="batch" hidden>
+  <section class="card">
+    <div class="source">
+      <button type="button" id="tpl">Preuzmi predložak</button>
+      <button type="button" id="pick">Učitaj CSV</button>
+      <input type="file" id="csvFile" accept=".csv,.txt,text/csv,text/plain" hidden>
+      <span id="bsource"></span>
+    </div>
+    <label for="paste">ili zalijepi retke iz Excela</label>
+    <textarea id="paste" rows="7" spellcheck="false" autocomplete="off"
+              placeholder="korisničko ime&#9;lozinka&#9;ime za prikaz"></textarea>
+    <div class="hint">Tri stupca: korisničko ime, lozinka i ime za prikaz. Prvi red smije biti zaglavlje. Razdjelnik (<code>;</code>, <code>,</code> ili tabulator) i kodna stranica prepoznaju se sami. Prazno ime za prikaz izvodi se iz korisničkog imena, npr. <code>PRIMA\ana.kovacic</code> → Ana Kovacic. Datoteka s lozinkama čita se samo ovdje; obriši je nakon ispisa.</div>
+    <button class="primary" id="bmake" type="button">Napravi kodove</button>
+    <div class="msg" id="bmsg" hidden></div>
+  </section>
+  <section class="card" id="bout" hidden>
+    <div id="bsummary"></div>
+    <table>
+      <thead><tr><th>#</th><th>Korisničko ime</th><th>Ime za prikaz</th><th>Status</th></tr></thead>
+      <tbody id="brows"></tbody>
+    </table>
+    <div class="actions">
+      <button type="button" id="bprint">Ispiši (dva koda po stranici A4)</button>
+      <button type="button" id="bzip">Spremi ZIP</button>
+      <button type="button" id="bclear">Očisti</button>
+    </div>
+  </section>
+</main>
+<div id="sheet" hidden></div>
 <script>
 'use strict';
 
@@ -510,16 +579,12 @@ function layoutLabel(text, maxWidth) {
   return { size: LABEL_MIN, lines: wrapChars(text, maxWidth) };
 }
 
-// Draws the code, and under it the display name when there is one, into the one canvas that is
-// shown, printed and saved, so all three are the same picture. The name goes below the code's
-// quiet zone, never into it: those four light modules around the code are what a scanner uses to
-// find its edge.
-function render() {
-  const canvas = $('qr');
-  const modules = currentModules;
+// Draws a code, and under it `name` when there is one. Used for the single code and for every code
+// of a batch, so both come out the same. The name goes below the code's quiet zone, never into it:
+// those four light modules around the code are what a scanner uses to find its edge.
+function drawCode(canvas, modules, name) {
   const n = modules.length;
   const side = (n + BORDER * 2) * SCALE;
-  const name = $('display').value.trim();
   const label = name ? layoutLabel(name, n * SCALE) : null;
   const lineHeight = label ? Math.round(label.size * 1.25) : 0;
   canvas.width = side;
@@ -541,6 +606,12 @@ function render() {
   }
 }
 
+// The single code, in the one canvas that is shown, printed and saved, so all three are the same
+// picture.
+function render() {
+  drawCode($('qr'), currentModules, $('display').value.trim());
+}
+
 function showError(text) {
   $('msg').textContent = text;
   $('msg').hidden = !text;
@@ -550,6 +621,22 @@ function fileNameFor(username) {
   const bare = username.split('\\').pop().split('@')[0];
   return (bare.replace(/[^A-Za-z0-9._-]/g, '_') || 'prijava') + '.png';
 }
+
+function cryptoMissing() {
+  return !window.crypto || !crypto.subtle;
+}
+const NO_CRYPTO = 'Ovaj preglednik ne dopušta šifriranje na ovoj stranici. Otvori datoteku dvoklikom u Chromeu ili Edgeu.';
+const DOUBLE_BACKSLASH = 'Korisničko ime ima dvije kose crte zaredom. Pravo ime ima jednu, npr. PRIMA-COMMERCE\\ime.';
+
+function saveBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// ═══ One code ═══════════════════════════════════════════════════════════════════════════════════
 
 let currentUser = '';
 let currentModules = null;  // the code on screen, or null when there is none
@@ -576,20 +663,14 @@ function invalidate() {
 
 async function make() {
   showError('');
-  if (!window.crypto || !crypto.subtle) {
-    showError('Ovaj preglednik ne dopušta šifriranje na ovoj stranici. Otvori datoteku dvoklikom u Chromeu ili Edgeu.');
-    return;
-  }
+  if (cryptoMissing()) { showError(NO_CRYPTO); return; }
   const keyB64 = $('key').value;
   const username = $('user').value.trim();  // the device trims it too
   const password = $('pass').value;         // never trimmed: edge spaces can be real
   if (!keyB64.trim()) { showError('Upiši ključ.'); return; }
   if (!username) { showError('Upiši korisničko ime.'); return; }
   if (!password) { showError('Upiši lozinku.'); return; }
-  if (username.indexOf('\\\\') !== -1) {
-    showError('Korisničko ime ima dvije kose crte zaredom. Pravo ime ima jednu, npr. PRIMA-COMMERCE\\ime.');
-    return;
-  }
+  if (username.indexOf('\\\\') !== -1) { showError(DOUBLE_BACKSLASH); return; }
   try {
     const payload = await encryptLogin(keyB64, username, password);
     const qr = encodeQr(payload);
@@ -623,6 +704,305 @@ function clearAll() {
   $('user').focus();
 }
 
+// ═══ Many codes ═════════════════════════════════════════════════════════════════════════════════
+//
+// Rows come from a CSV file or from cells pasted out of Excel: user name, password, display name.
+// Every row is encrypted exactly as a single code is. Passwords are kept only until their codes
+// are made; the table never shows them.
+
+const PER_PAGE = 2;         // top and bottom half of an A4 page
+let batchFileText = null;   // a loaded file's text, until it is used or replaced
+let batchFileName = '';
+let batchResults = [];      // [{ user, display, canvas }] for the codes made
+
+// Croatian Excel saves "CSV" in Windows-1250 unless told to use UTF-8; read as UTF-8 that turns
+// č, ć, š, ž and đ into garbage. Strict UTF-8 first, then the Windows code page.
+function decodeFile(bytes) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^﻿/, '');
+  } catch (e) {
+    return new TextDecoder('windows-1250').decode(bytes);
+  }
+}
+
+// Tab when the text has one (cells pasted from Excel), else semicolon (what Croatian Excel
+// writes), else comma. Judged on the first line, outside quotes.
+function detectDelimiter(text) {
+  const first = (text.split(/\r?\n/).find(function (l) { return l.trim(); }) || '').replace(/"[^"]*"/g, '');
+  if (first.indexOf('\t') !== -1) return '\t';
+  if (first.indexOf(';') !== -1) return ';';
+  return ',';
+}
+
+// CSV with quoting: a quoted field may hold the delimiter, a line break or a doubled quote, so a
+// password containing ; , or " survives. Nothing is trimmed here — a password's edge spaces are
+// part of it.
+function parseCsv(text, delim) {
+  const rows = [];
+  let row = [], field = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else { quoted = false; }
+      } else {
+        field += c;
+      }
+    } else if (c === '"' && field === '') {
+      quoted = true;
+    } else if (c === delim) {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else {
+      field += c;
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// "PRIMA-COMMERCE\ana.kovacic" → "Ana Kovacic": the name without its domain, split at . _ and -,
+// each word capitalised. Letters the user name never had (č, ć…) cannot be recovered.
+function nameFromUser(user) {
+  const bare = user.split('\\').pop().split('@')[0];
+  return bare.split(/[._-]+/).filter(Boolean)
+    .map(function (w) { return w.charAt(0).toLocaleUpperCase('hr') + w.slice(1); })
+    .join(' ');
+}
+
+// Rows with a status each. A first row naming the columns is dropped; blank rows are skipped.
+function readRows(text) {
+  const all = parseCsv(text, detectDelimiter(text));
+  const rows = [];
+  all.forEach(function (cells, i) {
+    if (cells.every(function (c) { return !c.trim(); })) return;
+    if (i === 0 && /korisni|user/i.test(cells[0] || '')) return;
+    const user = (cells[0] || '').trim();
+    const pass = cells[1] || '';
+    const display = (cells[2] || '').trim() || nameFromUser(user);
+    let error = null;
+    if (!user) error = 'Nedostaje korisničko ime';
+    else if (!pass) error = 'Nedostaje lozinka';
+    else if (user.indexOf('\\\\') !== -1) error = 'Dvije kose crte zaredom';
+    rows.push({ line: i + 1, user: user, pass: pass, display: display, error: error });
+  });
+  // The same person twice is a mistake in the list; the second one is left out, not printed twice.
+  const seen = {};
+  rows.forEach(function (r) {
+    if (r.error) return;
+    const k = r.user.toLowerCase();
+    if (seen[k]) r.error = 'Ponavlja se (red ' + seen[k] + ')';
+    else seen[k] = r.line;
+  });
+  return rows;
+}
+
+function showBatchError(text) {
+  $('bmsg').textContent = text;
+  $('bmsg').hidden = !text;
+}
+
+function clearBatchResults() {
+  batchResults = [];
+  $('brows').textContent = '';
+  $('bsummary').textContent = '';
+  $('bout').hidden = true;
+  $('sheet').textContent = '';
+  $('sheet').hidden = true;
+}
+
+async function makeBatch() {
+  showBatchError('');
+  if (cryptoMissing()) { showBatchError(NO_CRYPTO); return; }
+  const keyB64 = $('key').value;
+  if (!keyB64.trim()) { showBatchError('Upiši ključ.'); return; }
+  const pasted = $('paste').value;
+  const text = pasted.trim() ? pasted : batchFileText;
+  if (!text || !text.trim()) { showBatchError('Učitaj CSV ili zalijepi retke iz Excela.'); return; }
+
+  const rows = readRows(text);
+  if (!rows.length) { showBatchError('Nema redaka s podacima.'); return; }
+  clearBatchResults();
+  $('bmake').disabled = true;
+  try {
+    let done = 0;
+    for (const r of rows) {
+      if (r.error) continue;
+      $('bmake').textContent = 'Izrađujem ' + (++done) + '…';
+      try {
+        const qr = encodeQr(await encryptLogin(keyB64, r.user, r.pass));
+        const canvas = document.createElement('canvas');
+        drawCode(canvas, qr.modules, r.display);
+        batchResults.push({ user: r.user, display: r.display, canvas: canvas });
+        r.ok = true;
+      } catch (e) {
+        // A bad key fails every row the same way; say it once and stop.
+        if (/^Ključ/.test(e.message || '')) { showBatchError(e.message); clearBatchResults(); return; }
+        r.error = e.message || String(e);
+      }
+    }
+  } finally {
+    // The passwords have done their job: off the screen and out of memory.
+    rows.forEach(function (r) { r.pass = ''; });
+    $('paste').value = '';
+    batchFileText = null;
+    $('bsource').textContent = batchFileName ? 'Iskorišteno: ' + batchFileName : '';
+    $('csvFile').value = '';
+    $('bmake').disabled = false;
+    $('bmake').textContent = 'Napravi kodove';
+  }
+  showBatchTable(rows);
+  buildSheet();
+}
+
+// 1 kod, 2–4 koda, 5 kodova; 21 kod, 22 koda, but 11–14 kodova.
+function kodova(n) {
+  const d = n % 10, h = n % 100;
+  if (d === 1 && h !== 11) return 'kod';
+  if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return 'koda';
+  return 'kodova';
+}
+
+function showBatchTable(rows) {
+  const body = $('brows');
+  rows.forEach(function (r) {
+    const tr = document.createElement('tr');
+    [String(r.line), r.user, r.display].forEach(function (text, i) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (i === 1) td.className = 'user';
+      tr.appendChild(td);
+    });
+    const status = document.createElement('td');
+    status.textContent = r.ok ? 'Napravljen' : (r.error || '—');
+    status.className = r.ok ? 'ok' : 'bad';
+    tr.appendChild(status);
+    body.appendChild(tr);
+  });
+  const made = batchResults.length, skipped = rows.length - made;
+  $('bsummary').textContent = 'Napravljeno: ' + made + ' ' + kodova(made) +
+    (skipped ? ', preskočeno ' + skipped + ' (razlog u tablici).' : '.') +
+    (made ? ' Ispis: ' + Math.ceil(made / PER_PAGE) + ' str. A4, dva koda po stranici.' : '');
+  $('bprint').disabled = $('bzip').disabled = made === 0;
+  $('bout').hidden = false;
+}
+
+// The printable pages, two codes each, every code centred in its half — also shown below as small
+// previews. An odd last code keeps an empty bottom half, so it prints at the same place as the rest.
+function buildSheet() {
+  const sheet = $('sheet');
+  sheet.textContent = '';
+  for (let p = 0; p < batchResults.length; p += PER_PAGE) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    for (let i = p; i < p + PER_PAGE; i++) {
+      const half = document.createElement('div');
+      half.className = 'half';
+      const r = batchResults[i];
+      if (r) {
+        const img = document.createElement('img');
+        img.src = r.canvas.toDataURL('image/png');
+        img.alt = r.display;
+        half.appendChild(img);
+      }
+      page.appendChild(half);
+    }
+    sheet.appendChild(page);
+  }
+  sheet.hidden = batchResults.length === 0;
+}
+
+// ── ZIP, written here because the page may load nothing: stored (no compression — PNGs are
+// compressed already), UTF-8 names, one entry per code.
+
+const CRC_TABLE = (function () {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function makeZip(files) {
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const parts = [], central = [];
+  let offset = 0;
+  files.forEach(function (f) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+    local.setUint16(8, 0, true); local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
+    local.setUint32(14, crc, true); local.setUint32(18, size, true); local.setUint32(22, size, true);
+    local.setUint16(26, name.length, true); local.setUint16(28, 0, true);
+    parts.push(new Uint8Array(local.buffer), name, f.data);
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true); cen.setUint16(4, 20, true); cen.setUint16(6, 20, true);
+    cen.setUint16(8, 0x0800, true); cen.setUint16(10, 0, true); cen.setUint16(12, dosTime, true);
+    cen.setUint16(14, dosDate, true); cen.setUint32(16, crc, true); cen.setUint32(20, size, true);
+    cen.setUint32(24, size, true); cen.setUint16(28, name.length, true);
+    cen.setUint32(42, offset, true);
+    central.push(new Uint8Array(cen.buffer), name);
+    offset += 30 + name.length + size;
+  });
+  const centralSize = central.reduce(function (s, p) { return s + p.length; }, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+  return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/zip' });
+}
+
+function canvasBytes(canvas) {
+  return new Promise(function (resolve) {
+    canvas.toBlob(function (blob) { blob.arrayBuffer().then(function (b) { resolve(new Uint8Array(b)); }); }, 'image/png');
+  });
+}
+
+async function saveZip() {
+  const used = {}, files = [];
+  for (const r of batchResults) {
+    let name = fileNameFor(r.user);
+    // Two domains can share a bare name; the second gets a number rather than replacing the first.
+    if (used[name]) name = name.replace(/\.png$/, '_' + (++used[name]) + '.png');
+    else used[name] = 1;
+    files.push({ name: name, data: await canvasBytes(r.canvas) });
+  }
+  saveBlob(makeZip(files), 'qr_prijave.zip');
+}
+
+function clearBatch() {
+  clearBatchResults();
+  $('paste').value = '';
+  batchFileText = null;
+  batchFileName = '';
+  $('bsource').textContent = '';
+  $('csvFile').value = '';
+  showBatchError('');
+}
+
+function setMode(batch) {
+  $('tabSingle').setAttribute('aria-selected', String(!batch));
+  $('tabBatch').setAttribute('aria-selected', String(batch));
+  $('single').hidden = batch;
+  $('batch').hidden = !batch;
+  $('sheet').hidden = !batch || batchResults.length === 0;
+  document.body.classList.toggle('batch-mode', batch);
+}
+
+// ═══ Wiring ═════════════════════════════════════════════════════════════════════════════════════
+
 document.querySelectorAll('[data-toggle]').forEach(function (btn) {
   btn.addEventListener('click', function () {
     const input = $(btn.getAttribute('data-toggle'));
@@ -631,6 +1011,9 @@ document.querySelectorAll('[data-toggle]').forEach(function (btn) {
     btn.textContent = show ? 'Sakrij' : 'Prikaži';
   });
 });
+$('tabSingle').addEventListener('click', function () { setMode(false); });
+$('tabBatch').addEventListener('click', function () { setMode(true); });
+
 $('make').addEventListener('click', make);
 $('pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') make(); });
 $('user').addEventListener('input', function () {
@@ -645,19 +1028,43 @@ $('display').addEventListener('input', function () {
   displayLinked = false;
   if (currentModules) render();
 });
-$('key').addEventListener('input', invalidate);
+// Codes made under the old key would not open under the new one: both modes drop theirs.
+$('key').addEventListener('input', function () { invalidate(); clearBatchResults(); });
 $('pass').addEventListener('input', invalidate);
 $('print').addEventListener('click', function () { window.print(); });
 $('clear').addEventListener('click', clearAll);
 $('save').addEventListener('click', function () {
-  $('qr').toBlob(function (blob) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fileNameFor(currentUser);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  $('qr').toBlob(function (blob) { saveBlob(blob, fileNameFor(currentUser)); });
+});
+
+$('tpl').addEventListener('click', function () {
+  // UTF-8 with a byte-order mark, so Excel opens the Croatian header correctly; semicolons, as
+  // Croatian Excel expects.
+  saveBlob(new Blob(['﻿korisničko ime;lozinka;ime za prikaz\r\n'], { type: 'text/csv' }), 'qr_prijave_predlozak.csv');
+});
+$('pick').addEventListener('click', function () { $('csvFile').click(); });
+$('csvFile').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  file.arrayBuffer().then(function (buf) {
+    batchFileText = decodeFile(new Uint8Array(buf));
+    batchFileName = file.name;
+    $('paste').value = '';  // one source at a time
+    $('bsource').textContent = 'Učitano: ' + file.name;
+    showBatchError('');
   });
 });
+$('paste').addEventListener('input', function () {
+  if (!$('paste').value.trim() || batchFileText === null) return;
+  batchFileText = null;  // pasting replaces a loaded file: one source at a time
+  batchFileName = '';
+  $('bsource').textContent = '';
+  $('csvFile').value = '';
+});
+$('bmake').addEventListener('click', makeBatch);
+$('bprint').addEventListener('click', function () { window.print(); });
+$('bzip').addEventListener('click', saveZip);
+$('bclear').addEventListener('click', clearBatch);
 </script>
 </body>
 </html>
