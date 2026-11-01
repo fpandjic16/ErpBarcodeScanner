@@ -55,8 +55,16 @@ data/
 ├── auth/                        # ExtSystemConfig(Store), ExtSystemCredentialStore (encrypted), AppSettings(Store)
 ├── barcode/                     # BarcodeAnalyzer (ML Kit), DataWedgeManager (Zebra profile + broadcasts)
 ├── haptic/                      # HapticEngine
+├── sound/                       # SoundEngine — confirm beep, synthesised warning, sign-in QR rejection
 └── export/                      # DatabaseExporter (JSON dump via SAF)
+i18n/                            # AppLanguage.kt — Context.inAppLanguage()
 ```
+
+Outside the app:
+
+- **`tools/`** — `login_qr.html` (offline page that makes encrypted sign-in QR codes, one at a time or in batches from CSV/Excel, printed two per A4 page) and `make_login_qr.py` (the same from the command line). Both must stay byte-compatible with `LoginQrPayload.kt`.
+- **`NAV/`** — C/AL text exports of the NAV 2018 side (tables, codeunit 50112 Barcode App Mgmt, pages). **CP852 with CRLF** — never edit them with a UTF-8 tool; go through a script that round-trips `cp852`. Every NAV change is wrapped in the request's tag (`// <PRICO-2025-67>`) and old code is commented out, never deleted. They cannot be compiled here. See TECHNICAL_GUIDE §B.18.
+- **`docs/`** — `TECHNICAL_GUIDE.md`, `USER_GUIDE.md` and its Croatian translation `USER_GUIDE_HR.md`. A change to one user guide goes into both.
 
 ### Screens
 

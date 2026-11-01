@@ -28,6 +28,7 @@ This guide explains what every screen does, what every button and toggle means, 
 17. [Signing In and Out](#17-signing-in-and-out)
 18. [Common Situations & What To Do](#18-common-situations--what-to-do)
 18a. [Removing an Operator From a Device](#18a-removing-an-operator-from-a-device)
+18b. [Sign-in QR Codes (for administrators)](#18b-sign-in-qr-codes-for-administrators)
 19. [Glossary](#19-glossary)
 
 ---
@@ -107,7 +108,7 @@ This is the home screen you land on every time you open the app.
 
 - **Top bar**: shows your name. The round button top-left with your initials opens your **User Info** — user ID, name, Responsibility Center, Location, and a sign-out button. A gear ⚙️ icon top-right opens **Settings**.
 - **Today card** (tap it anywhere): a summary of today's activity — total lines scanned, and counts of Ready / Partial / Over / Error documents. Tapping this card opens the **Dashboard**.
-- **Location/RC bar**: two side-by-side pills showing your current Responsibility Center code and Location code. Tap **either one** to open the Location & RC picker and change them.
+- **Location/RC bar**: two side-by-side pills showing your current Responsibility Center code and Location code. Tap **either one** to open the Location & RC picker and change them. Beside them, once the device has been set up for one, the system it works with: **Test** (in amber) or **Production**. On Test, scans go to the test company, not to real stock.
 - **Document type list**: one row per document type (Warehouse Shipment, Warehouse Receipt, Retail Shipment, Retail Whse. Receipt, Transport Sheet, Complaint, Inventory), each showing:
   - An icon and the type's name.
   - A thin colored mini-bar (if there's any activity) previewing the mix of statuses across that type's documents.
@@ -460,6 +461,25 @@ Before it asks you to confirm, the app counts what would go and tells you — in
 You cannot remove yourself while you are signed in — there is no bin on your own row. Removing someone does not touch anybody else's work, and does not touch the device's own setup (server addresses, locations).
 
 Someone removed this way is not banned: they can sign in again on that device whenever they like, and they will start from an empty slate. That first sign-in back needs the central system to be reachable, the same as any first sign-in on a device.
+
+## 18b. Sign-in QR codes (for administrators)
+
+Operators can sign in by scanning a QR code instead of typing ([§3](#3-first-time-setup)). The codes are made on a computer with the page `tools/login_qr.html` from the app's repository. The page itself is in Croatian; its labels are quoted below.
+
+- Open it by double-clicking, in Chrome or Edge. It works without internet, and nothing typed into it leaves the computer.
+- Paste the **key** once: `loginQrKey` from the device configuration. It applies to both tabs. A code made with a different key does not work on the device.
+- **"Jedan kod" (one code):**
+  1. Enter the user name, the display name and the password. The display name is the caption under the code, and it follows the user name until you change it.
+  2. Tap "Napravi QR kod".
+  3. Tap "Ispiši" to print, or "Spremi PNG" to save the image.
+- **"Više kodova" (many codes):**
+  1. Tap "Preuzmi predložak" and fill the template in Excel: user name, password, display name.
+  2. Load it with "Učitaj CSV", or paste the rows straight from Excel. A blank display name is made from the user name, e.g. `PRIMA\ana.kovacic` → Ana Kovacic.
+  3. Tap "Napravi kodove". The table shows which rows became codes and why the others were skipped.
+  4. "Ispiši" puts **two codes on each A4 page**, with a cut line between. "Spremi ZIP" saves every image in one file.
+- **A printed code carries the password.** Keep it as you would the password itself, and delete the CSV after printing.
+
+For the command line there is also `tools/make_login_qr.py`.
 
 ## 19. Glossary
 

@@ -30,6 +30,7 @@ Nazivi gumba i ekrana navedeni su onako kako ih aplikacija prikazuje na hrvatsko
 17. [Prijava i odjava](#17-prijava-i-odjava)
 18. [Česte situacije i što učiniti](#18-česte-situacije-i-što-učiniti)
 18a. [Uklanjanje operatera s uređaja](#18a-uklanjanje-operatera-s-uređaja)
+18b. [QR kodovi za prijavu (za administratore)](#18b-qr-kodovi-za-prijavu-za-administratore)
 19. [Pojmovnik](#19-pojmovnik)
 
 ---
@@ -109,7 +110,7 @@ Ovo je početni ekran na koji dolazite svaki put kad otvorite aplikaciju.
 
 - **Gornja traka**: prikazuje vaše ime. Okrugli gumb s vašim inicijalima gore lijevo otvara **Podatke o korisniku** — ID korisnika, ime, centar odgovornosti, lokaciju i gumb za odjavu. Ikona zupčanika ⚙️ gore desno otvara **Postavke**.
 - **Kartica DANAS** (dodirnite bilo gdje na njoj): sažetak današnje aktivnosti — ukupan broj skeniranih stavki te broj dokumenata u stanju Gotovo / Djelomično / Prekoračenje / Greška. Dodir na karticu otvara **Pregled**.
-- **Traka lokacije i CC-a**: dvije oznake jedna uz drugu, sa šifrom trenutnog centra odgovornosti i šifrom lokacije. Dodirnite **bilo koju** da otvorite odabir lokacije i CC-a i promijenite ih.
+- **Traka lokacije i CC-a**: dvije oznake jedna uz drugu, sa šifrom trenutnog centra odgovornosti i šifrom lokacije. Dodirnite **bilo koju** da otvorite odabir lokacije i CC-a i promijenite ih. Uz njih, kad je uređaj postavljen za neki sustav, piše s kojim radi: **Test** (narančasto) ili **Produkcija**. Na Testu skeniranja idu u testnu tvrtku, a ne na stvarnu robu.
 - **Popis vrsta dokumenata**: jedan redak po vrsti dokumenta (Skladišna otpremnica, Skladišna primka, MP skladišna otpremnica, MP skladišna primka, Transportni list, Reklamacija, Inventura). Svaki redak prikazuje:
   - ikonu i naziv vrste,
   - tanku traku u bojama (ako ima aktivnosti) koja pokazuje omjer statusa dokumenata te vrste,
@@ -469,6 +470,25 @@ Sebe ne možete ukloniti dok ste prijavljeni — u vašem retku nema kante. Ukla
 Osoba uklonjena na ovaj način nije blokirana: može se ponovno prijaviti na taj uređaj kad god želi i počet će od praznog. Ta prva ponovna prijava traži da je vanjski sustav dostupan, kao i svaka prva prijava na uređaju.
 
 ---
+
+## 18b. QR kodovi za prijavu (za administratore)
+
+Operateri se mogu prijaviti skeniranjem QR koda umjesto upisivanja ([§3](#3-prvo-pokretanje)). Kodovi se izrađuju na računalu, stranicom `tools/login_qr.html` iz repozitorija aplikacije.
+
+- Otvorite je dvoklikom, u Chromeu ili Edgeu. Radi bez interneta i ništa upisano ne napušta računalo.
+- Jednom upišite **ključ**: `loginQrKey` iz konfiguracije uređaja. Vrijedi za obje kartice. Kod izrađen drugim ključem na uređaju ne radi.
+- **„Jedan kod”:**
+  1. Upišite korisničko ime, ime za prikaz i lozinku. Ime za prikaz je natpis ispod koda i prati korisničko ime dok ga ne promijenite.
+  2. Dodirnite „Napravi QR kod”.
+  3. Dodirnite „Ispiši” za ispis ili „Spremi PNG” za spremanje slike.
+- **„Više kodova”:**
+  1. Dodirnite „Preuzmi predložak” i popunite ga u Excelu: korisničko ime, lozinka, ime za prikaz.
+  2. Učitajte ga s „Učitaj CSV” ili zalijepite retke izravno iz Excela. Prazno ime za prikaz izvodi se iz korisničkog imena, npr. `PRIMA\ana.kovacic` → Ana Kovacic.
+  3. Dodirnite „Napravi kodove”. Tablica pokazuje koji su redovi postali kodovi i zašto su ostali preskočeni.
+  4. „Ispiši” stavlja **dva koda po stranici A4**, s crtom za rezanje između. „Spremi ZIP” sprema sve slike u jednu datoteku.
+- **Ispisani kod nosi lozinku.** Čuvajte ga kao samu lozinku, a CSV nakon ispisa obrišite.
+
+Za naredbeni redak postoji i `tools/make_login_qr.py`.
 
 ## 19. Pojmovnik
 

@@ -7,7 +7,7 @@ This document supersedes the older `docs/ARCHITECTURE.md` (now a stub pointing h
 - **Part A — Consultant / Functional Reference**: business rules, document lifecycle, NAV/Business Central integration setup, configuration reference, common support scenarios. No code-reading required.
 - **Part B — Developer / Technical Reference**: architecture, database schema, repository/DAO/ViewModel APIs, networking internals, screen-by-screen implementation notes, extension points.
 
-For the end-user manual (how warehouse staff use the app day to day), see `docs/USER_GUIDE.md`.
+For the end-user manual (how warehouse staff use the app day to day), see `docs/USER_GUIDE.md`, and its Croatian translation `docs/USER_GUIDE_HR.md` — the two are kept in step. The NAV side of the integration (C/AL objects exported to `NAV/`) is §B.18.
 
 ---
 
@@ -113,8 +113,8 @@ One flat OData row **per individual scanned recording** — not one row per docu
 | `Document_No` | Document number |
 | `Document_Line_No` | Which line this recording applies to |
 | `Recording_Line_No` | Sequence number within that line's recordings |
-| `Recording_Guid` | The recording's stable identity, generated once when the scan is stored and **the same on every upload attempt** (2026-09; a fresh GUID per attempt before that). **It does not make a retry safe.** The Barcode App Recordings table validates nothing and never refuses a row — a duplicate is recorded and appears as surplus — so a repeated GUID is merely *identifiable* after the fact, not rejected. It exists so that a NAV-side guard could be added cheaply, and so support can trace one scan. The window it cannot close: a row NAV commits whose response is lost is indistinguishable from a failure on the device, and will be sent again |
-| `Barcode` | The scanned barcode string |
+| `Recording_Guid` | The recording's stable identity, generated once when the scan is stored and **the same on every upload attempt** (2026-09; a fresh GUID per attempt before that). **It is the table's primary key** (table 50180, `Recording Guid`, clustered — see §B.18), so a repeat is refused *only while the first copy is still in 50180*. NAV moves rows out of 50180 into Scanned Document Lines (50111) and deletes them when the document's scans are processed (`CreateScanningEntriesOnDocument` → `FindScannedEntries`). After that, the same GUID is accepted again and counts twice. Two consequences: a row NAV committed whose response was lost, resent before processing, comes back as an error ("already exists") although NAV has it — the device then shows that row as refused; resent after processing, it is recorded as surplus. Support can trace one scan by its GUID either way |
+| `Barcode` | The scanned barcode string — **at most 30 characters** in NAV (`Text30`). A longer value, e.g. a long `BARCODE\|UOM\|QTY` label, is refused for that row |
 | `Scanned_Quantity` | Quantity for this recording |
 | `Unit_Of_Measure_Code` | UoM for this recording |
 | `Source_Creation_DateTime` | When the scan happened (ISO-8601) |
@@ -216,6 +216,8 @@ app/src/main/java/com/prima/barcode/
 There is deliberately **no separate "SyncRepository"** — NAV networking (download/upload/test-connection) is orchestrated directly in `AppViewModel`, which calls `ExtSystemODataClient` and `DocumentRepository`/DAOs itself.
 
 ## B.2 Database Schema (Room)
+
+The schema version is `PRIMA_DB_VERSION` in `PrimaDatabase.kt` (19 as of 2026-10), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
 
 Two databases, and which one a table lives in is the whole of the per-user isolation.
 
@@ -369,7 +371,7 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 
 **The sent quantity is a floor (2026-09).** `Line.sentQuantity` carries the part of `Line.scanned` the ERP has already accepted, summed in `Mappers.toDomain` from the recordings already in hand. A manual edit may raise a line freely but may not go below that number, and the refusal is explicit — `SetQuantityResult.BelowSent(sent)` back to `RecordingViewModel`, which hands it to `RecordingScreen`'s dialog.
 
-Why a refusal rather than a clamp: this ERP's recordings table validates nothing and never refuses a row, so there is no delete, no correction, and no way to unsend a posted quantity from the device. A silent clamp would write a number the operator did not type and let them walk away believing the correction went through.
+Why a refusal rather than a clamp: this ERP's recordings table takes any row with a new GUID and offers no delete or correction, so there is no way to unsend a posted quantity from the device. A silent clamp would write a number the operator did not type and let them walk away believing the correction went through.
 
 Enforced in three places, deliberately: the stepper stops at the floor, the keypad checks the typed value, and the repository is the authority — the UI cannot see a floor a background upload raised while the screen was open.
 
@@ -428,7 +430,7 @@ fun of(scanned: Double, expected: Double) = when {
     else                -> OVER
 }
 ```
-Plus `.color`/`.bgColor`/`.label` UI extension properties, and `Document.scanStatus()` (aggregate — see §A.4).
+Plus `.color`/`.bgColor` UI extension properties (the English `.label` was removed in 2026-10; screens use their own `localizedLabel()`), and `Document.scanStatus()` (aggregate — see §A.4).
 
 ### `DocTypeFilterMode`
 `{ LOCATION, RESPONSIBILITY_CENTER }` — governs whether a document type's download/dashboard filtering scopes by source location code or RC code. Stored per-type in `AppSettings.docTypeFilters`.
@@ -614,10 +616,10 @@ Plain (unencrypted) `SharedPreferences`, split across two files while `AppSettin
 
 | Field | Type | Default |
 |---|---|---|
-| textSize | `TextSize` enum | NORMAL |
+| textSize | `TextSize` enum | LARGER |
 | uppercaseText | Boolean | false |
-| language | `Language` enum | ENGLISH |
-| debounceTime | Int (ms) | 500 |
+| language | `Language` enum | CROATIAN |
+| debounceTime | Int (ms) | 200 |
 | hapticEnabled | Boolean | true |
 | soundEnabled | Boolean | true |
 | warnOnOver | Boolean | true |
@@ -652,7 +654,7 @@ Holds the NAV password in the clear, because NTLM computes its response from the
 
 **Android auto-backup is off** (`android:allowBackup="false"`, no `dataExtractionRules`/`fullBackupContent` — those were the project template's empty samples and were removed). Left on, it copied this file and every operator's `prima_<hash>.db` — unsent scans included — into whatever Google account happens to be signed in on a shared warehouse scanner. The restore side could not work regardless: the Keystore master key is device-bound and is not backed up, so the restored `EncryptedSharedPreferences` throws on first open.
 
-### The gate, and the one door through it
+### The gate, and the doors through it
 
 `MainActivity.PrimaBarcodeApp` early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
 
@@ -663,6 +665,8 @@ So `SignInScreen` takes an `onOpenConfig` callback and shows a button for it, an
 **QR sign-in lives on this screen too, not only in `LoginSheet`.** A DataWedge receiver is registered for as long as the gate is up (nothing else composes while it is, so no second receiver can double-deliver), plus a camera button gated on `FEATURE_CAMERA_ANY` for the MC3300 configurations that ship without one. Both call the same `parseLoginQr(raw, loginQrKey)` and fill the two fields; the operator still taps to submit, exactly as in the sheet. This is not decoration — before the gate existed the way into the app *was* `LoginSheet`, so putting a typed-only screen in front of it took the scanner away from the one moment a warehouse operator most wants it. A bad code reports inline (`login_qr_invalid`) rather than through the `error` dialog, because a mis-pull of the trigger is routine and a dialog would be in the way of the next attempt.
 
 It stays open even on a device that already has operators enrolled. The same screen is reachable by anyone who can sign in anyway, the devices sit in a controlled area, and gating it behind sign-in would lock the device out of repair exactly when the configuration is what broke.
+
+**A second, read-only door: "O aplikaciji".** `SignInScreen` takes `onOpenAppInfo` and the gate renders `AppInfoScreen` while `appInfoAtSignIn` is true. It shows what support asks first — build, Android, SDK, database version, ERP environment and company — and is open to anyone at the gate because nothing in it is personal or secret. The question usually comes from someone who *cannot* sign in. `AppInfoScreen` catches the system back button itself (`BackHandler`): it is drawn in place of the gate rather than as a route, so an uncaught back would close the app.
 
 ### Login flow (end-to-end)
 1. `LoginSheet` (`ui/screen/LoginSheet.kt`) — reusable full-screen `Dialog` (`DialogProperties(usePlatformDefaultWidth = false)`, resized to `MATCH_PARENT` via `DialogWindowProvider`; changed from a `ModalBottomSheet` in 2026-08), reused by `ExtSystemConfigScreen` (Test connection), `LocationRcPickScreen` (refresh without credentials), `DownloadFilterScreen` (auto-opens if `!hasCredentials`), and the main-menu sign-in entry point.
@@ -825,8 +829,14 @@ Four decisions worth keeping:
 
 `highlightAlpha` is passed to `OverviewContent` as a lambda, not a `Float`, so reading it inside the `items` block invalidates one row per frame instead of the whole list.
 
+### `AppInfo.kt` — `AppInfoCard` and `AppInfoScreen`
+One block, shown in two places: Settings → System info, and `AppInfoScreen` at the sign-in gate (§B.7). Rows: app version and build, Android and API, SDK (min/target, with the Android release each maps to), database version, ERP environment (`ExtSystemConfig.environment`, "Nije postavljeno" when null) and company. The database row reads `PRIMA_DB_VERSION`, the constant `@Database(version = …)` itself uses — it used to show its own constant, "7.0.0", that nobody updated while the schema went to 19. The company is `ExtSystemConfig.companyName`, read from `Company('…')` in the document lines URL (percent-decoded, OData's doubled apostrophe undone) rather than stored separately: it is the company the device actually addresses, and a stored name could disagree with the URL. That is how the test configurations of Mebel, Mobilis and Pohištvo were found still pointing at Prima Commerce (fixed 2026-10). `SettingsIcon` and `SettingsDivider` are `internal` in `SettingsScreen.kt` so the card can share them.
+
+### `SignInScreen.kt`
+The gate itself — see §B.7 for why it exists and what it may open. Lists the operators the device knows (tap to fill the name), takes name and password, and signs in by QR from the hardware trigger or, on a device without a scanner, the camera (`parseLoginQr`, the same as `LoginSheet`). Two outlined buttons below: "Postava vanjskog sustava" (`onOpenConfig`) and "O aplikaciji" (`onOpenAppInfo`).
+
 ### `SettingsScreen.kt`
-Buffered-edit-then-confirm-on-exit pattern (identical to `ExtSystemConfigScreen`'s): every field is local `remember` state; `attemptExit()` compares the rebuilt `AppSettings` (plus `pendingExtSystemConfig != null`) against `initial`; only diverges → "Save changes?" dialog. Sections: Appearance, Scanning, Sync, External System Configuration (single row → `ExtSystemConfigScreen`), Debug (Debugger active, Export data, **Insert system defaults** [3-option picker, stages into `pendingExtSystemConfig`, only persisted via Settings' own save], **Clear cache** [red, wipes the signed-in operator's credentials + documents + recordings; leaves settings, the device’s ERP config, and every other operator alone], **Delete all documents and recordings** [red, wipes only documents/recordings, not settings/sign-in]), System Info (read-only version/schema info), Account (avatar/name, immediate Sign out — no confirmation).
+Buffered-edit-then-confirm-on-exit pattern (identical to `ExtSystemConfigScreen`'s): every field is local `remember` state; `attemptExit()` compares the rebuilt `AppSettings` (plus `pendingExtSystemConfig != null`) against `initial`; only diverges → "Save changes?" dialog. Sections: Appearance, Scanning, Sync, External System Configuration (single row → `ExtSystemConfigScreen`), Debug (Debugger active, Export data, **Insert system defaults** [3-option picker, stages into `pendingExtSystemConfig`, only persisted via Settings' own save], **Clear cache** [red, wipes the signed-in operator's credentials + documents + recordings; leaves settings, the device’s ERP config, and every other operator alone], **Delete all documents and recordings** [red, wipes only documents/recordings, not settings/sign-in]), System Info (read-only version/schema info), Account (avatar/name, immediate Sign out — no confirmation). The System info section is `AppInfoCard` (§`AppInfo.kt`), shared with the sign-in screen.
 
 ### `ProfilesScreen.kt`
 Route `profiles`, reached from Settings → Account → "Operators on this device". Lists every enrolled profile; the signed-in one is marked and carries **no** delete affordance.
@@ -1108,3 +1118,50 @@ Separately, a full audit (2026-08, same pass) checked every one of the then-247 
 - **The upload payload is intentionally flat and per-row**, not batched — if ERP-side batching is ever desired, `AppViewModel.runUpload`'s row loop is the place to change, but note the per-row-immediate-delete behavior is what makes partial-failure retries safe; batching would need an equivalent all-or-nothing safety guarantee.
 - **`NavResponsibilityCenter` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
 - **`Document.isSourceRetail`** (`documentHeader.isSourceRetail`) — written on every download/merge from NAV's `Retail_Location` flag, and since 2026-09 it is what an uploaded recording sends back in `Retail_Location` (§A.5.4). Note the two sides use different sources on purpose: the *download filter* comes from `DocumentType.retailLocation` (the bucket being fetched), the *upload value* from `isSourceRetail` (what NAV said about that specific document). They agree whenever NAV populates the field. The one case where they don't is a document downloaded before `Retail_Location` was exposed on the OData page — `isSourceRetail` was stored `false` then, including for retail documents, and re-downloading is what refreshes it.
+
+## B.18 The NAV side — C/AL objects in `NAV/`
+
+The app's half of the integration is the OData pages it calls; the other half is C/AL in NAV 2018. `NAV/` holds text exports of those objects, as the user exported them from C/SIDE. Nothing in this repository can compile or run them: the user imports them back into C/SIDE.
+
+### Files and objects
+
+| File | Objects |
+|---|---|
+| `barcode_scanning.txt` | Tables 50111 Scanned Document Lines, 50112 Scanned Document Lines Archive, 50113 Scanned Document Lines Buffer, 50180 Barcode App Recordings; codeunits 50106 BarcodeMgmt, 50107 BEMF Mgmt, **50112 Barcode App Mgmt**; pages 50108–50110 (the three scanned-lines tables) |
+| `pages_barcode.txt` | The document pages that start scanning work or change its status: 5768 Warehouse Receipt, 7332 Warehouse Receipts, 7335 Warehouse Shipment, 7339 Warehouse Shipment List, 50031–50034 Complaint (lists and cards), 50040 Transport Sheet, 50042 Transport Sheet List, 50055 Receiving Complaint Shpts., 50145 Retail Warehouse Receipt, 50146 Retail Warehouse Shipment |
+| `transport.txt` | Tables 50015 Transport Sheet Header, 50016 Transport Sheet Line; codeunit 50093 Transport Sheet Mgmt; pages 50040–50042 |
+
+Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the two copies have to stay identical. Not exported, and therefore not visible here: table 50179 Barcode App Entry (what the app downloads), the OData pages published over 50179/50180 and the location list, and the Warehouse Shipment/Receipt header tables (7320/7316).
+
+### Editing rules
+
+- **Encoding is CP852 with CRLF.** Read through `iconv -f CP852 -t UTF-8` into a scratch copy. Write back only through a script that decodes and encodes `cp852` and asserts a lossless round trip first. A UTF-8 editor corrupts every Croatian character in the file.
+- **Every change is marked with its request's tag**, `PRICO-2025-67` for the scanner-app work, and **old code is never deleted**. NAV keeps no history of its own here, so the comment is the history:
+  - A single replaced line is kept above the new one as `//`.
+  - Two or more replaced lines go inside `{ }` at their original indentation, then the new code, then the closing tag.
+  - A purely added line may carry a trailing `// <PRICO-2025-67/>`.
+  - A variable declaration cannot hold a comment: the old one stays, and the new variable gets a free ID.
+
+### How a scan travels
+
+1. **Release** of a warehouse shipment (subscriber on codeunit 7310 `OnBeforeRelease`) or receipt (codeunit 50127) creates the document's rows in **Barcode App Entry (50179)** through 50112's `CreateBarcodeAppEntries` / `Fill*BarcodeEntries`. Transport sheets and complaint shipments have their own `Fill*` procedures. **Reopen** deletes them again (`DeleteBarcodeEntries`), and refuses while the document's Barcode Status is Processed. 50179 is what the app downloads (§A.5.3).
+2. **Upload:** every recording the app sends is one row in **Barcode App Recordings (50180)**. Its primary key is `Recording Guid`, so a repeated GUID is refused while the first copy is still there (§A.5.4). `Barcode` is `Text30`.
+3. **Processing:** `CreateScanningEntriesOnDocument` (50112, called from page 50110, the document cards and the bulk status updates) does the following:
+   - `FindScannedEntries` moves the document's rows from 50180 into **Scanned Document Lines (50111)** and deletes them from 50180, then deletes the document's 50179 rows.
+   - It loads the scans and lays the document's lines into an in-memory buffer. It allocates exact-quantity scans first, then the rest. Whatever no line can take becomes surplus lines, including items not on the document at all.
+   - It writes the result once to **Scanned Document Lines Buffer (50113)**, the comparison page 50110 shows.
+   - Last, `ChangeDocumentStatus` sets the document's Barcode Status. A completed document's 50179 rows are deleted.
+4. **Job queue:** 50112's `OnRun` runs `AutoUpdateBarcodeStatusOnSync`. 50107's `OnRun` still calls its own copy, which only hands over to 50112, so a job queue entry on either codeunit works.
+5. **Transport sheets** are scanned at the *receiving* location against `Qty. to Receive`. Each posted partial receipt starts a new round: `StartNextTransportReceipt` archives the scans to 50112 and resets the Barcode Status.
+
+### What the app's `Document_Line_No` means
+
+It is the **Barcode App Entry (50179) line number**, not the warehouse document's line. 50179 rows are deleted once recordings are processed, so NAV-side matching goes by item, never by that number. A `BARCODE|UOM|QTY` scan is resolved to its item on the NAV side too: older 50111 rows written before 2026-10-06 may have a blank `Item No.`, which `LoadScans` resolves when it reads them.
+
+### Document type codes
+
+The app sends `ExtSystemConfig.documentTypeCodes`; the bundled configurations use `SHIPMENT`, `RECEIPT`, `TRANSPORT`, `COMPLAINT` and `INVENTORY`. Retail and warehouse documents share `SHIPMENT`/`RECEIPT` and are told apart by `Retail_Location` (§A.5.4). NAV's own option list in 50112 also carries the cross-dock types (`WHCDSHIP`, `WHCDREC`, `WHCDSHFROM`, `CPCDSHIP`, `CPCDREC`, `CPCDSHFROM`), `Prereceipt` and `RetailShpt`/`RetailRcpt`.
+
+### Legacy
+
+Codeunits **50106 BarcodeMgmt** and **50107 BEMF Mgmt** belong to the earlier BE-Mobile scanner integration. The scanning logic is being moved off them into 50112 step by step. Since 2026-10-06, 50112 has no reference to 50106. 50107's BEMF `Fill*` procedures still use it, and 50107's `Bulk*StatusUpdate` and `IsCrossDock*` remain as wrappers for callers not yet found.
