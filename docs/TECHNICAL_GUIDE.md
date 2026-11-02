@@ -1170,7 +1170,10 @@ Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the t
    - It loads the scans and lays the document's lines into an in-memory buffer. It allocates exact-quantity scans first, then the rest. Whatever no line can take becomes surplus lines, including items not on the document at all.
    - It writes the result once to **Scanned Document Lines Buffer (50113)**, the comparison page 50110 shows.
    - Last, `ChangeDocumentStatus` sets the document's Barcode Status. A completed document's 50179 rows are deleted.
-4. **Job queue:** 50112's `OnRun` runs `AutoUpdateBarcodeStatusOnSync`. 50107's `OnRun` still calls its own copy, which only hands over to 50112, so a job queue entry on either codeunit works.
+4. **Job queue:** 50112's `OnRun` runs `ProcessSyncedDocuments` (`PRICO-2026-43`). It collects the documents synced more than five minutes ago and runs each through the new codeunit **50116 Barcode App Sync Document** with `IF NOT CODEUNIT.RUN`, committing before each one.
+   - **A failing document no longer stops the rest.** Its changes since its last commit are rolled back, its sync records stay unprocessed so the next run tries it again, and the other documents go on. Before this, the whole run was one `[TryFunction]`, and a document that kept failing was first in line on every run, so nothing after it was ever processed again.
+   - **50116 marks the document's sync records processed** only once the document has gone through.
+   - **The job queue entry must run 50112.** `AutoUpdateBarcodeStatusOnSync` is kept, unchanged, because 50107's `OnRun` still reaches it through its own copy. An entry on 50107 therefore still uses the old path, without the isolation.
 5. **Transport sheets** are scanned at the *receiving* location against `Qty. to Receive`. Each posted partial receipt starts a new round: `StartNextTransportReceipt` archives the scans to 50112 and resets the Barcode Status.
 
 ### What the app's `Document_Line_No` means
@@ -1202,7 +1205,7 @@ These two types are done in NAV under the tag **`PRICO-2026-43`**, in `PRIMA NAV
   - Processing goes through `ChangeComplaintShipmentBarcodeStatus`. There is no "synchronized with discrepancies" as on a warehouse shipment: the status becomes Processed only when **every package of every complaint** has been scanned (every buffer line complete), and otherwise stays Synchronized.
   - Set by hand, it needs the user's **Scanned Barcodes Admin** (User Setup), and Processed only when the scan is complete (`IsComplaintScanComplete`, the same comparison without changing the status).
 - **No partial receipt.** Receiving on page 50206 (`CheckComplaintShptReceivable`) requires the Barcode Status to be Processed. If a package did not arrive, a new complaint is opened for it.
-- **Processing paths:** the job queue (`AutoUpdateBarcodeStatusOnSync`), "Update Barcode Status" on cards 50034 and 50206 and on list 50055 (`BulkComplaintSheetStatusUpdate`), and opening card 50034 (for `REKOTPR`) or 50206 (for `REKZAPR`).
+- **Processing paths:** the job queue (`ProcessSyncedDocuments`), "Update Barcode Status" on cards 50034 and 50206 and on list 50055 (`BulkComplaintSheetStatusUpdate`), and opening card 50034 (for `REKOTPR`) or 50206 (for `REKZAPR`).
 - **The legacy call** `BEMFMgmt.FindScannedEntries` (marked `//temporary` in 50112) is skipped for both types. 50107 has no case for them, and their scans are read from 50180 anyway.
 
 ### Inventory (`INVENTORY`, `PRICO-2026-43`)
@@ -1228,7 +1231,7 @@ Done in NAV under **`PRICO-2026-43`**, the same tag as the complaint types, in `
 
 Batch names are reused for every count, while the document no. from the batch's number series is new each time. That is why the app keys a count by the document no.
 
-**What the app downloads.** One 50179 row per journal line. A BOM parent becomes one row per component (its packages), as on a shipment.
+**What the app downloads.** One 50179 row per journal line. A set (BOM parent) is counted either by its own label or by its packages, never both, so it is sent as both: a row for the set itself and one per component (its packages).
 - **`Line No.`** is a running number, as for every type. Processing finds the journal line by the item, never by this number, and NAV reads `Document_Line_No` from 50180 for no type.
 - **Rows with the same barcode and item** are one row with the quantities added.
 
@@ -1249,12 +1252,13 @@ Batch names are reused for every count, while the document no. from the batch's 
 
 **Processing.** It runs from the job queue after every sync, or from **Update from Barcode** on page 392. It is `CreateScanningEntriesOnDocument`, with these differences:
 - **The 50179 rows stay.** `FindScannedEntries` does not delete them for an inventory, so the batch stays on the devices' download list however often it is processed.
-- **The buffer comes from the journal.** 50113, shown by **Scanned Lines**, is built from the journal lines (`CreateInventoryJournalLines`), with the usual allocation and surplus lines.
+- **The buffer comes from the journal.** 50113, shown by **Scanned Lines**, is built from the journal lines (`CreateInventoryJournalLines`), with the usual allocation and surplus lines. A set whose own barcode was scanned is shown as one line, otherwise by its packages.
 - **The journal gets the counted quantity.** Instead of a status change, `UpdatePhysInventoryQty` writes `Qty. (Phys. Inventory)` on every line:
   - It is everything found for the line's item on all devices. Unlike the buffer, it is not capped at the calculated quantity.
   - It is recomputed every time, so processing twice changes nothing.
   - A line nobody scanned becomes 0.
-  - A BOM parent gets the number of complete sets, and the scarcest package decides. Packages that make no complete set are not written.
+  - A BOM parent gets what was scanned with its own barcode plus the number of complete sets made of its packages, and the scarcest package decides. The two are added because a set is counted one way or the other, never both. Packages that make no complete set are not written.
+  - Each item's total is found through the key `Document Type,Document No.,Item No.` on the in-memory scan table, so a lookup is a search rather than a pass over every scan. This matters on a large count, where it runs for every line on every processing pass.
   - Quantities are taken once (`ConsumeScannedQty`), so two lines of one item, or two sets sharing a package, never count the same scan twice.
 - **An item not on the count gets a journal line of its own** (`AddPhysInventoryLine`):
   - same posting date, document no. and location as the count;
@@ -1274,12 +1278,14 @@ Batch names are reused for every count, while the document no. from the batch's 
 
 **Posting.**
 - **Codeunit 241** and page 392's **Post and Print** refuse a batch that was sent for scanning and is not Processed (`CheckPhysInventoryCanBePosted`).
-- **After posting**, once the counted lines are gone, `PhysInventoryPosted` archives the scans (50111 to 50112), clears the buffer and the 50179 rows, and resets the batch to blank for the next count.
+- **After posting**, once the counted lines are gone, the scans are archived (50111 to 50112), the buffer and the 50179 rows are cleared, and the batch is reset to blank for the next count (`ClearFinishedPhysInventoryCount`).
+- **A count whose lines are gone is over, however that happened.** Posting from the batch list goes around codeunit 241, and lines can be deleted by hand. So the same clearing also runs when the batch is sent again and before posting, whenever the remembered document no. has no lines left. It never runs from the job queue: lines deleted and calculated again under the same document no. are back before anyone sends or posts, and that count simply goes on with its scans.
 - **Deleting a batch** removes its 50179 rows.
 
 **Known limits.**
 - Quantities are not converted between units of measure. A scan counts in the journal line's unit, as on every other type.
 - An item listed twice in one BOM, and a component that is also a journal line of its own, are not handled specially.
+- Moving scans from 50180 to 50111 looks each GUID up among the document's rows in 50111, as for every type. On a count of many thousands of scans that lookup grows with the count; a key on 50111 (`Document Type,Document No.,uuid`) would make it direct, and has not been added.
 
 ### Legacy
 

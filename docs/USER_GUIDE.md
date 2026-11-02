@@ -169,7 +169,7 @@ An inventory document is one **inventory journal batch** from the central system
 - **Several people can count the same batch**, each on their own device. The central system adds up everyone's scans; each device shows only its own.
 - Lines nobody scanned are counted as **0** when the central system processes the count.
 - **The office sends the batch for scanning and finishes the count.** A batch appears in the download list once it has been sent and disappears when the count is finished. After that the device can no longer send scans for it, so send yours before the office finishes.
-- **Sets are counted by their packages.** Scan every package; the central system counts a set only when all of its packages are there.
+- **A set is counted either by its own label or by its packages, not both.** The batch lists the set and its packages, so the way you do not use stays at 0. Counted by packages, the central system counts a set only when all of its packages are there.
 - **Quantity labels** (BARCODE|UOM|QTY) count the quantity printed on them.
 - **The expected quantity can be 0 or negative** when the system's stock is wrong. Such a line turns blue at the first scan, without an over-scan warning.
 

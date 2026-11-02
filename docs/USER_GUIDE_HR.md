@@ -171,7 +171,7 @@ Dokument inventure je jedna **serija temeljnice inventure** iz vanjskog sustava:
 - **Istu seriju može brojati više ljudi**, svatko na svom uređaju. Vanjski sustav zbraja skeniranja svih; svaki uređaj prikazuje samo svoja.
 - Redci koje nitko nije skenirao računaju se kao **0** kad vanjski sustav obradi inventuru.
 - **Seriju na skeniranje šalje ured, a ured i završava brojanje.** Serija se pojavljuje na popisu za preuzimanje kad je poslana i nestaje kad je brojanje završeno. Nakon toga uređaj za nju više ne može slati skeniranja, pa pošaljite svoja prije nego što ured završi.
-- **Kompleti se broje po paketima.** Skenirajte svaki paket; vanjski sustav komplet broji tek kad su svi njegovi paketi tu.
+- **Komplet se broji ili po svojoj naljepnici ili po paketima, ne oboje.** Na seriji su i komplet i njegovi paketi, pa način koji ne koristite ostaje na 0. Kad se broji po paketima, vanjski sustav komplet broji tek kad su svi njegovi paketi tu.
 - **Naljepnice s količinom** (BARKOD|JM|KOLIČINA) broje količinu otisnutu na njima.
 - **Očekivana količina može biti 0 ili negativna** kad je zaliha u sustavu pogrešna. Takav redak postaje plav već pri prvom skeniranju, bez upozorenja na višak.
 
