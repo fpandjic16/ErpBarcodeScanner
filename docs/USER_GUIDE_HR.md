@@ -144,11 +144,20 @@ Ovaj ekran otvarate dodirom na bilo koju od dvije oznake na glavnom izborniku.
 | **MP skladišna otpremnica** | Roba koja izlazi iz trgovine prema kupcu |
 | **MP skladišna primka** | Roba i povrati koji iz trgovine dolaze natrag u skladište |
 | **Transportni list** | Dokumenti prijenosa između lokacija |
-| **Otprema reklamacija** | Roba po reklamaciji koja izlazi (zadano se filtrira po centru odgovornosti) |
-| **Zaprimanje reklamacija** | Roba po reklamaciji koja ulazi (zadano se filtrira po centru odgovornosti) |
+| **Otprema reklamacija** | Paketi reklamacija koji izlaze na otpremi reklamacija (zadano se filtrira po centru odgovornosti) |
+| **Zaprimanje reklamacija** | Zaprimanje paketa iste otpreme reklamacija (zadano se filtrira po centru odgovornosti) |
 | **Inventura** | Dokumenti inventure |
 
 Koje od njih vidite (i filtriraju li se po lokaciji ili po centru odgovornosti) ovisi o tome kako je vaša tvrtka postavila aplikaciju. Ako se neka vrsta ponaša neočekivano, pitajte administratora ili konzultanta.
+
+### Otprema reklamacija i Zaprimanje reklamacija
+
+Obje su ista otprema reklamacija u vanjskom sustavu, u dvije faze.
+
+- **Otprema reklamacija** prikazuje otpremu reklamacija dok je otpuštena i čeka slanje. **Zaprimanje reklamacija** prikazuje je kad je otpremljena i čeka zaprimanje. Najprije odaberite centar odgovornosti; ni jedna od ovih vrsta ne koristi lokaciju.
+- **Jedan redak po reklamaciji** na otpremi. Broj retka je broj reklamacije, a očekivana količina je broj njezinih **paketa**. Naljepnicu svakog paketa skenirajte jednom.
+- **Svaki paket mora biti skeniran.** Vanjski sustav skeniranje označava završenim tek kad su skenirani svi paketi svih reklamacija, a otprema reklamacija ne može se zaprimiti prije toga. Ako paket nije stigao, za njega se otvara nova reklamacija; otprema se ne zaprima djelomično.
+- Centri odgovornosti koji rade preko cross-dock skladišta ne koriste ove dvije vrste.
 
 ---
 

@@ -142,11 +142,20 @@ Open this screen by tapping either pill on the Main Menu.
 | **Retail Shipment** | Goods going out from a store to a customer |
 | **Retail Whse. Receipt** | Goods/returns coming in from a store back to a warehouse |
 | **Transport Sheet** | Inter-location transfer documents |
-| **Complaint Shipment** | Complaint goods going out (scoped by responsibility centre by default) |
-| **Complaint Receipt** | Complaint goods coming in (scoped by responsibility centre by default) |
+| **Complaint Shipment** | Complaint packages going out on a complaint shipment (scoped by responsibility centre by default) |
+| **Complaint Receipt** | The same complaint shipment's packages being received (scoped by responsibility centre by default) |
 | **Inventory** | Stocktaking documents |
 
 Which of these you see (and whether they're filtered by Location or by Responsibility Center) depends on how your company has configured the app — ask your administrator/consultant if a type behaves unexpectedly.
+
+### Complaint Shipment and Complaint Receipt
+
+Both are the same complaint shipment in the central system, at two points in its life.
+
+- **Complaint Shipment** lists a complaint shipment while it is released and waiting to go. **Complaint Receipt** lists it once it has been shipped and is waiting to be received. Choose the responsibility centre first; neither type uses a location.
+- **One line per complaint** on the shipment. The line's number is the complaint number, and the expected quantity is its number of **packages**. Scan each package's label once.
+- **Every package has to be scanned.** The central system marks the scanning complete only when all packages of all complaints are scanned, and a complaint shipment cannot be received before that. If a package did not arrive, a new complaint is opened for it; the shipment is not received in part.
+- Responsibility centres that work through a cross-dock warehouse do not use these two types.
 
 ---
 

@@ -29,14 +29,14 @@ data class NavBarcodeAppRecording(
 // recordingGuid comes from the stored recording and is the same on every attempt, rather than
 // being generated per attempt as it once was.
 //
-// Be careful about what that does and does not buy. The Barcode App Recordings table performs no
-// validation and never refuses a row: a duplicate is simply recorded, and shows up as surplus.
-// So a stable GUID does not make a retry safe by itself — it only makes a duplicate *identifiable*
-// afterwards, and gives NAV something to check against if a guard is ever added there.
+// What that buys: `Recording Guid` is the primary key of Barcode App Recordings (50180), and NAV's
+// processing skips a GUID it already holds in Scanned Document Lines (50111). So a resent row is
+// never counted twice (TECHNICAL_GUIDE §A.5.4).
 //
 // The window it cannot close: if NAV commits a row and the response is lost, the device cannot
-// distinguish that from a failure and will send it again. Nothing on this side can tell those
-// apart; only a NAV-side check on this GUID could.
+// distinguish that from a failure and will send it again. Resent before NAV has processed the
+// document, that copy is refused as "already exists" and the row shows as failed although NAV has
+// it. That case is deliberately left to be resolved by hand.
 
 fun RecordingEntity.toNavRecording(
     documentTypeCode: String,
