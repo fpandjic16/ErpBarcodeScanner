@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.AssignmentReturn
+import androidx.compose.material.icons.outlined.AssignmentReturned
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Inventory
@@ -83,6 +84,8 @@ fun MainMenuScreen(
     shiftOver: Int = 0,
     onChangeLocationRc: () -> Unit,
     onOpenSettings: () -> Unit,
+    /** Where document types are switched on; offered when none is. */
+    onOpenExtSystemConfig: () -> Unit = {},
     onTypeTap: (DocumentType) -> Unit,
     onDocumentOverview: () -> Unit,
     onShowErrors: () -> Unit = {},
@@ -225,6 +228,37 @@ fun MainMenuScreen(
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.main_documents_header), style = monoLabel.copy(color = PrimaPalette.Ink3))
             }
+            // Every type starts switched off on a new installation, so this is the first thing a
+            // fresh device shows. An empty list under the header would only look broken.
+            if (docTypes.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+                            .padding(16.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.main_no_doc_types_title),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.main_no_doc_types_text),
+                            style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink3),
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = onOpenExtSystemConfig,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                        ) {
+                            Text(stringResource(R.string.ext_config_title), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
             items(docTypes) { dt ->
                 DocumentTypeList(
                     summary = dt,
@@ -329,7 +363,8 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
         DocumentType.WAREHOUSE_RECEIPT                                -> Icons.Outlined.MoveToInbox
         DocumentType.RETAIL_RECEIPT                                   -> Icons.Outlined.Store
         DocumentType.TRANSPORT_SHEET                                  -> Icons.Outlined.Description
-        DocumentType.COMPLAINT                                        -> Icons.AutoMirrored.Outlined.AssignmentReturn
+        DocumentType.COMPLAINT_SHIPMENT                               -> Icons.AutoMirrored.Outlined.AssignmentReturn
+        DocumentType.COMPLAINT_RECEIPT                                -> Icons.Outlined.AssignmentReturned
         DocumentType.INVENTORY                                        -> Icons.Outlined.Inventory
     }
 

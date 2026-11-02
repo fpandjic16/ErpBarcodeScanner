@@ -111,6 +111,7 @@ class DatabaseProvider @Inject constructor(
             PrimaDatabase.MIGRATION_16_17,
             PrimaDatabase.MIGRATION_17_18,
             PrimaDatabase.MIGRATION_18_19,
+            PrimaDatabase.MIGRATION_19_20,
         ).build()
     }
 }

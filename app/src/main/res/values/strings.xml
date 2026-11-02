@@ -28,7 +28,8 @@
     <string name="doctype_retail_shipment">Retail Shipment</string>
     <string name="doctype_retail_receipt">Retail Whse. Receipt</string>
     <string name="doctype_transport_sheet">Transport Sheet</string>
-    <string name="doctype_complaint">Complaint</string>
+    <string name="doctype_complaint_shipment">Complaint Shipment</string>
+    <string name="doctype_complaint_receipt">Complaint Receipt</string>
     <string name="doctype_inventory">Inventory</string>
     <!-- Doc list screen -->
     <string name="doc_list_tab_orders">ORDERS</string>
@@ -282,6 +283,8 @@
     <string name="login_connect_failed">Could not connect. Check your username and password and try again.</string>
     <string name="main_blocked_title">Location required</string>
     <string name="main_blocked_text">Choose a location or responsibility centre before opening documents.</string>
+    <string name="main_no_doc_types_title">No document types switched on</string>
+    <string name="main_no_doc_types_text">Switch on the document types this device works with in the external system configuration.</string>
     <string name="recording_lines_progress">%1$d/%2$d lines</string>
     <!-- Recordings tree -->
     <string name="recordings_sent_chip">%d sent</string>

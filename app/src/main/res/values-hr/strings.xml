@@ -28,7 +28,8 @@
     <string name="doctype_retail_shipment">MP skladišna otpremnica</string>
     <string name="doctype_retail_receipt">MP skladišna primka</string>
     <string name="doctype_transport_sheet">Transportni list</string>
-    <string name="doctype_complaint">Reklamacija</string>
+    <string name="doctype_complaint_shipment">Otprema reklamacija</string>
+    <string name="doctype_complaint_receipt">Zaprimanje reklamacija</string>
     <string name="doctype_inventory">Inventura</string>
     <!-- Doc list screen -->
     <string name="doc_list_tab_orders">NALOZI</string>
@@ -283,6 +284,8 @@
     <string name="login_connect_failed">Povezivanje nije uspjelo. Provjerite korisničko ime i lozinku pa pokušajte ponovno.</string>
     <string name="main_blocked_title">Potrebna lokacija</string>
     <string name="main_blocked_text">Odaberite lokaciju ili centar odgovornosti prije otvaranja dokumenata.</string>
+    <string name="main_no_doc_types_title">Nijedna vrsta dokumenta nije uključena</string>
+    <string name="main_no_doc_types_text">U konfiguraciji vanjskog sustava uključite vrste dokumenata s kojima ovaj uređaj radi.</string>
     <string name="recording_lines_progress">%1$d/%2$d stavki</string>
     <!-- Recordings tree -->
     <string name="recordings_sent_chip">%d poslano</string>

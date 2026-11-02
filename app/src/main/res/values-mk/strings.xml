@@ -28,7 +28,8 @@
     <string name="doctype_retail_shipment">Малопродажна испорака</string>
     <string name="doctype_retail_receipt">Малопродажен прием</string>
     <string name="doctype_transport_sheet">Транспортен лист</string>
-    <string name="doctype_complaint">Рекламација</string>
+    <string name="doctype_complaint_shipment">Испорака на рекламации</string>
+    <string name="doctype_complaint_receipt">Прием на рекламации</string>
     <string name="doctype_inventory">Инвентура</string>
     <!-- Doc list screen -->
     <string name="doc_list_tab_orders">НАРАЧКИ</string>
@@ -282,6 +283,8 @@
     <string name="login_connect_failed">Поврзувањето не успеа. Проверете го корисничкото име и лозинката па обидете се повторно.</string>
     <string name="main_blocked_title">Потребна е локација</string>
     <string name="main_blocked_text">Изберете локација или центар на одговорност пред отворање документи.</string>
+    <string name="main_no_doc_types_title">Ниеден вид документ не е вклучен</string>
+    <string name="main_no_doc_types_text">Во конфигурацијата на надворешниот систем вклучете ги видовите документи со кои работи овој уред.</string>
     <string name="recording_lines_progress">%1$d/%2$d ставки</string>
     <!-- Recordings tree -->
     <string name="recordings_sent_chip">%d испратени</string>

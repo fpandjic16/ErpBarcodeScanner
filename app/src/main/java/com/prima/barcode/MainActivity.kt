@@ -161,6 +161,10 @@ class MainActivity : AppCompatActivity() {
                 warnOnOver = s.warnOnOver
                 backgroundSync = s.backgroundSync
                 debuggerActive = s.debuggerActive
+                // A configuration loaded from Settings brings these two. Left out, the main menu
+                // kept the old set of document types until the app was restarted.
+                disabledDocTypes = s.disabledDocTypes
+                docTypeFilters = s.docTypeFilters
                 appVm.saveSettings(s)
             }
 
@@ -580,6 +584,7 @@ private fun PrimaBarcodeApp(
                 shiftOver = overDocs.size,
                 onChangeLocationRc = { nav.navigate("location_rc_pick") },
                 onOpenSettings = { nav.navigate("settings") },
+                onOpenExtSystemConfig = { nav.navigate("ext_system_config") },
                 onTypeTap = { type ->
                     selectedDocType = type
                     nav.navigate("docs")

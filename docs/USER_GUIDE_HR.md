@@ -91,7 +91,7 @@ Ako skenirate barkod koji nije naveden kao očekivani artikl na trenutnom dokume
 
 Dvoje vas može istovremeno raditi na istom dokumentu. Svatko ima svoju kopiju sa svojim skeniranjima, oboje ide u vanjski sustav i ondje se količine zbrajaju — a to i želite kad dijelite jedan posao.
 
-**Postavljanje potpuno novog uređaja dolazi prije svega ovoga.** Uređaj tek izvađen iz kutije ne zna gdje je vanjski sustav, a ekran za prijavu bez njega ne može provjeriti lozinku. Zato ekran za prijavu ima gumb **Postava vanjskog sustava**, koji otvara postavke veze bez prijave. Obično IT ili konzultant ondje jednom odabere tvrtku, čime se popune sve adrese, a od tada se svi samo prijavljuju. Uz njega je gumb **O aplikaciji**, koji također bez prijave prikazuje podatke o aplikaciji (vidi [§16](#16-postavke--objašnjenje-svake-opcije), Informacije o sustavu).
+**Postavljanje potpuno novog uređaja dolazi prije svega ovoga.** Uređaj tek izvađen iz kutije ne zna gdje je vanjski sustav, a ekran za prijavu bez njega ne može provjeriti lozinku. Zato ekran za prijavu ima gumb **Postava vanjskog sustava**, koji otvara postavke veze bez prijave. Obično IT ili konzultant ondje jednom odabere tvrtku, čime se popune sve adrese, a od tada se svi samo prijavljuju. Na istom se ekranu uključuju vrste dokumenata s kojima lokacija radi; nova instalacija nema nijednu uključenu. Uz njega je gumb **O aplikaciji**, koji također bez prijave prikazuje podatke o aplikaciji (vidi [§16](#16-postavke--objašnjenje-svake-opcije), Informacije o sustavu).
 
 **Svaka prijava traži da je vanjski sustav dostupan**, jer samo on može potvrditi vašu lozinku. Ako ne radi, nitko ne može ući u aplikaciju — ni vi, pa ni do posla koji ste već skenirali. Taj posao nije izgubljen: ostaje na uređaju i čeka da sustav ponovno odgovori.
 
@@ -111,11 +111,12 @@ Ovo je početni ekran na koji dolazite svaki put kad otvorite aplikaciju.
 - **Gornja traka**: prikazuje vaše ime. Okrugli gumb s vašim inicijalima gore lijevo otvara **Podatke o korisniku** — ID korisnika, ime, centar odgovornosti, lokaciju i gumb za odjavu. Ikona zupčanika ⚙️ gore desno otvara **Postavke**.
 - **Kartica DANAS** (dodirnite bilo gdje na njoj): sažetak današnje aktivnosti — ukupan broj skeniranih stavki te broj dokumenata u stanju Gotovo / Djelomično / Prekoračenje / Greška. Dodir na karticu otvara **Pregled**.
 - **Traka lokacije i CC-a**: dvije oznake jedna uz drugu, sa šifrom trenutnog centra odgovornosti i šifrom lokacije. Dodirnite **bilo koju** da otvorite odabir lokacije i CC-a i promijenite ih. Uz njih, kad je uređaj postavljen za neki sustav, piše s kojim radi: **Test** (narančasto) ili **Produkcija**. Na Testu skeniranja idu u testnu tvrtku, a ne na stvarnu robu.
-- **Popis vrsta dokumenata**: jedan redak po vrsti dokumenta (Skladišna otpremnica, Skladišna primka, MP skladišna otpremnica, MP skladišna primka, Transportni list, Reklamacija, Inventura). Svaki redak prikazuje:
+- **Popis vrsta dokumenata**: jedan redak po vrsti dokumenta koja je na ovom uređaju uključena (Skladišna otpremnica, Skladišna primka, MP skladišna otpremnica, MP skladišna primka, Transportni list, Otprema reklamacija, Zaprimanje reklamacija, Inventura). Svaki redak prikazuje:
   - ikonu i naziv vrste,
   - tanku traku u bojama (ako ima aktivnosti) koja pokazuje omjer statusa dokumenata te vrste,
   - broj dokumenata te vrste koje trenutno imate.
-  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Reklamacija traži centar odgovornosti, a sve ostale vrste lokaciju.
+  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Otprema reklamacija i Zaprimanje reklamacija traže centar odgovornosti, a sve ostale vrste lokaciju.
+  - **Na novoj instalaciji sve su vrste isključene.** Popis to kaže i nudi gumb za konfiguraciju vanjskog sustava, gdje svaka vrsta ima svoj prekidač. Uređaj nadograđen sa starije verzije zadržava vrste koje je imao; dvije vrste reklamacija i ondje su na početku isključene.
 - **Redak ZAPISI**, pod vlastitim naslovom: otvara popis svih dokumenata u koje ste išta skenirali, svih vrsta. Kad niste ništa skenirali, pokazuje nulu. Vidi [§7a](#7a-odjeljak-zapisi).
 
 ---
@@ -143,7 +144,8 @@ Ovaj ekran otvarate dodirom na bilo koju od dvije oznake na glavnom izborniku.
 | **MP skladišna otpremnica** | Roba koja izlazi iz trgovine prema kupcu |
 | **MP skladišna primka** | Roba i povrati koji iz trgovine dolaze natrag u skladište |
 | **Transportni list** | Dokumenti prijenosa između lokacija |
-| **Reklamacija** | Roba vraćena po reklamaciji (zadano se filtrira po centru odgovornosti) |
+| **Otprema reklamacija** | Roba po reklamaciji koja izlazi (zadano se filtrira po centru odgovornosti) |
+| **Zaprimanje reklamacija** | Roba po reklamaciji koja ulazi (zadano se filtrira po centru odgovornosti) |
 | **Inventura** | Dokumenti inventure |
 
 Koje od njih vidite (i filtriraju li se po lokaciji ili po centru odgovornosti) ovisi o tome kako je vaša tvrtka postavila aplikaciju. Ako se neka vrsta ponaša neočekivano, pitajte administratora ili konzultanta.
@@ -332,7 +334,7 @@ Greške možete i skupno **obrisati** s kartice Greške na popisu dokumenata ili
 Do njega dolazite dodirom na karticu DANAS na glavnom izborniku. To je prikaz preko svih vrsta dokumenata, s tri kartice:
 
 - **Greške** — svaki neuspjeli dokument, svih vrsta.
-- **Moja lokacija** — svaki dokument na vašoj trenutnoj lokaciji i svaka reklamacija vašeg trenutnog centra odgovornosti. Prazno dok ništa nije odabrano.
+- **Moja lokacija** — svaki dokument na vašoj trenutnoj lokaciji i svaki dokument reklamacije vašeg trenutnog centra odgovornosti. Prazno dok ništa nije odabrano.
 - **Sve** — svaki dokument na uređaju, bez filtriranja.
 
 Prazna kartica umjesto praznog ekrana prikazuje zelenu kvačicu i „Nema problema”. Ako na trenutnoj kartici ima dokumenata sa skeniranjima, na dnu se pojavljuje gumb **Pošalji** kojim ih šaljete sve odjednom.
@@ -410,7 +412,7 @@ Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde)
 ## 18. Česte situacije i što učiniti
 
 ### 18.1 „Dodir na vrstu dokumenta kaže da treba odabrati lokaciju”
-Svaka vrsta dokumenta traži da najprije nešto odaberete: **Reklamacija** centar odgovornosti, a sve ostale vrste lokaciju. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
+Svaka vrsta dokumenta traži da najprije nešto odaberete: **Otprema reklamacija** i **Zaprimanje reklamacija** centar odgovornosti, a sve ostale vrste lokaciju. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
 
 ### 18.2 „Skenirana je pogrešna količina”
 Dodirnite stavku pa upotrijebite −1/+1 ili dodirnite broj i izravno upišite točnu ukupnu količinu — ona zamjenjuje zabilježenu količinu stavke, ne dodaje joj se. Ne možete ići ispod onoga što je već poslano u vanjski sustav; vidi [§9.3](#93-ručna-izmjena-stavke).

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.prima.barcode.R
 import com.prima.barcode.data.auth.AppSettings
 import com.prima.barcode.data.auth.AppSettingsStore
+import com.prima.barcode.data.auth.DOC_TYPES_BEFORE_COMPLAINT_SPLIT
 import com.prima.barcode.data.auth.ExtSystemConfig
 import com.prima.barcode.data.auth.ExtSystemConfigStore
 import com.prima.barcode.data.auth.ExtSystemCredentialStore
@@ -515,8 +516,10 @@ class AppViewModel @Inject constructor(
                 serverBaseUrl            = dto.serverBaseUrl.orEmpty(),
                 credentialTtlHours       = dto.credentialTtlHours ?: 24,
                 documentLinesUrl         = dto.documentLinesUrl.orEmpty(),
+                // A type the file does not mention keeps the device's code. A file written before
+                // the complaint types existed would otherwise blank their codes.
                 documentTypeCodes        = DocumentType.entries.associateWith { type ->
-                    dto.documentTypeCodes?.get(type.name).orEmpty()
+                    dto.documentTypeCodes?.get(type.name) ?: extSystemConfig.value.docTypeCodeFor(type)
                 },
                 locationsUrl     = dto.locationsUrl.orEmpty(),
                 recordingSyncUrl = dto.recordingSyncUrl.orEmpty(),
@@ -541,9 +544,19 @@ class AppViewModel @Inject constructor(
             // Keyed by `DocumentType.name` in the file to match `documentTypeCodes` beside it,
             // and stored by `DocumentType.key`; a name nothing matches is dropped rather than
             // carried, so a typo cannot invent a document type.
-            disabledDocTypes = dto.disabledDocTypes
-                ?.mapNotNull { name -> docTypeByName(name)?.key }?.toSet()
-                ?: current.disabledDocTypes,
+            //
+            // Files now list the types switched on. An older file lists those switched off, which
+            // is read against the types that existed when it was written, so it cannot switch on a
+            // type it never mentioned (see DOC_TYPES_BEFORE_COMPLAINT_SPLIT). The bundled files
+            // carry neither, so loading built-in defaults leaves the device's choice alone.
+            disabledDocTypes = when {
+                dto.enabledDocTypes != null -> allDocTypeKeys -
+                    dto.enabledDocTypes.mapNotNull { name -> docTypeByName(name)?.key }.toSet()
+                dto.disabledDocTypes != null -> allDocTypeKeys -
+                    (DOC_TYPES_BEFORE_COMPLAINT_SPLIT.map { it.key }.toSet() -
+                        dto.disabledDocTypes.mapNotNull { name -> docTypeByName(name)?.key }.toSet())
+                else -> current.disabledDocTypes
+            },
             docTypeFilters = dto.docTypeFilters
                 ?.mapNotNull { (name, mode) ->
                     val type = docTypeByName(name) ?: return@mapNotNull null
@@ -558,6 +571,8 @@ class AppViewModel @Inject constructor(
 
     private fun docTypeByName(name: String): DocumentType? =
         DocumentType.entries.firstOrNull { it.name == name }
+
+    private val allDocTypeKeys: Set<String> get() = DocumentType.entries.map { it.key }.toSet()
 
     /** Loads predefined parameters from a bundled `ext_system_defaults_*.json` asset. */
     fun loadExtSystemDefaults(fileName: String): DeviceConfiguration? = runCatching {
@@ -600,7 +615,7 @@ class AppViewModel @Inject constructor(
             // Never exported. Gson omits nulls, so the field is absent rather than empty, which
             // is what parseExtSystemConfigJson reads as "leave the key alone".
             loginQrKey         = null,
-            disabledDocTypes   = DocumentType.entries.filter { it.key in settings.disabledDocTypes }.map { it.name },
+            enabledDocTypes    = DocumentType.entries.filter { it.key !in settings.disabledDocTypes }.map { it.name },
             docTypeFilters     = DocumentType.entries.associate {
                 it.name to (settings.docTypeFilters[it.key] ?: it.defaultFilterMode).name
             },
@@ -672,6 +687,8 @@ class AppViewModel @Inject constructor(
         val domain: String? = null,
         val loginQrKey: String? = null,
         // The device half of AppSettings. Keyed by DocumentType.name, like documentTypeCodes.
+        val enabledDocTypes: List<String>? = null,
+        // Written by builds before the complaint split; read, never written.
         val disabledDocTypes: List<String>? = null,
         val docTypeFilters: Map<String, String>? = null,
         val debuggerActive: Boolean? = null,

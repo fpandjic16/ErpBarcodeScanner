@@ -31,13 +31,17 @@ enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
  * alone no longer identifies a bucket. Every download filter and every uploaded recording for
  * these four carries `Retail_Location` alongside the code to disambiguate.
  *
- * Null means the type doesn't participate: transport sheets, complaints and inventory each carry
- * their own `Document_Type` code, so there is nothing to disambiguate — they get no
- * `Retail_Location` clause on download nor the field on upload.
+ * Null means the type doesn't participate: transport sheets, complaint shipments and receipts, and
+ * inventory each carry their own `Document_Type` code, so there is nothing to disambiguate — they
+ * get no `Retail_Location` clause on download nor the field on upload.
  *
  * [defaultFilterMode] is the scope a type falls back to until the user sets one in Settings.
  * Location suits the document types that move goods between two places; complaints are tracked
  * by responsibility centre instead.
+ *
+ * [key] is what the database stores in every row's `type` column, so a key is never reused for a
+ * different type. The single COMPLAINT type ("COMPLAINT") was replaced by the two below; its rows
+ * are deleted by `MIGRATION_19_20`.
  */
 enum class DocumentType(
     val key: String,
@@ -50,7 +54,8 @@ enum class DocumentType(
     RETAIL_SHIPMENT(   "RT_SHIP",   "Retail Shipment",       retailLocation = true),
     RETAIL_RECEIPT(    "RT_RCPT",   "Retail Whse. Receipt",  retailLocation = true),
     TRANSPORT_SHEET(   "TRANSPORT", "Transport Sheet"),
-    COMPLAINT(         "COMPLAINT", "Complaint",             defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
+    COMPLAINT_SHIPMENT("CPL_SHIP",  "Complaint Shipment",    defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
+    COMPLAINT_RECEIPT( "CPL_RCPT",  "Complaint Receipt",     defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     // Counted against quantities NAV supplies, exactly like the document types above, so nothing
     // about scanning, status colours or upload differs. Note the consequence: an item found on
     // the shelf that NAV didn't send is still rejected as "barcode not found" (§A.3), the same as

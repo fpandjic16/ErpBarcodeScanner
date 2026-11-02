@@ -217,11 +217,11 @@ There is deliberately **no separate "SyncRepository"** — NAV networking (downl
 
 ## B.2 Database Schema (Room)
 
-The schema version is `PRIMA_DB_VERSION` in `PrimaDatabase.kt` (19 as of 2026-10), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
+The schema version is `PRIMA_DB_VERSION` in `PrimaDatabase.kt` (20 as of 2026-11), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
 
 Two databases, and which one a table lives in is the whole of the per-user isolation.
 
-**`PrimaDatabase`** — one file **per operator**, `prima_<sha256-prefix>.db`, **schema version 19**. Holds `documentHeader`, `documentLine` and `recordings`. Opened by `DatabaseProvider`, not by Dagger: a `@Singleton PrimaDatabase` would have pinned the first operator's file for the life of the process. Built with `.addMigrations(MIGRATION_7_8 … MIGRATION_18_19)` and **no `fallbackToDestructiveMigration`** — see `DatabaseModule` for why that must never come back.
+**`PrimaDatabase`** — one file **per operator**, `prima_<sha256-prefix>.db`, **schema version 20**. Holds `documentHeader`, `documentLine` and `recordings`. Opened by `DatabaseProvider`, not by Dagger: a `@Singleton PrimaDatabase` would have pinned the first operator's file for the life of the process. Built with `.addMigrations(MIGRATION_7_8 … MIGRATION_19_20)`. `MIGRATION_19_20` changes no schema: it deletes every row of the retired `COMPLAINT` type (§B.17) and **no `fallbackToDestructiveMigration`** — see `DatabaseModule` for why that must never come back.
 
 **`SharedDatabase`** — one file for the device, `prima_shared.db`, version 1. Holds `locations` and `responsibility_centers`. They describe the site, not the person; per-profile copies would have forced every new operator to re-download them before they could pick a location, which needs a server that may not be reachable.
 
@@ -405,8 +405,11 @@ That's the whole function — it never touches the `recordings` table. Recording
 | RETAIL_SHIPMENT | `RT_SHIP` | "Retail Shipment" |
 | RETAIL_RECEIPT | `RT_RCPT` | "Retail Whse. Receipt" |
 | TRANSPORT_SHEET | `TRANSPORT` | "Transport Sheet" |
+| COMPLAINT_SHIPMENT | `CPL_SHIP` | "Complaint Shipment" |
+| COMPLAINT_RECEIPT | `CPL_RCPT` | "Complaint Receipt" |
+| INVENTORY | `INVENTORY` | "Inventory" |
 
-`String.toDocumentType()` defaults to `WAREHOUSE_SHIPMENT` on an unrecognized key.
+`String.toDocumentType()` defaults to `WAREHOUSE_SHIPMENT` on an unrecognized key — which is why a retired type's rows are deleted by a migration rather than left behind (the `COMPLAINT` key, §B.17). A `key` is never reused for a different type.
 
 ### `DocState` (sealed interface, `Models.kt`)
 ```kotlin
@@ -592,7 +595,7 @@ Two things about these files that are assumptions rather than facts, and are wor
 
 `exportConfigurationJson()` backs "export as file": it builds an `ExtSystemDefaultsDto` from the live `ExtSystemConfig` and `AppSettingsStore.get()`, and serializes it pretty-printed via a separate `exportGson`. `loginQrKey` is passed as `null` and Gson omits nulls, so the field is *absent* rather than empty — which is exactly what the import reads as "leave the device's key alone". It then checks the live key is not in the output and refuses to return anything if it is, so a renamed field or a value that happens to carry it fails the export (the caller's save-failed toast) rather than leaking. Every document type is written out explicitly, present or not, so the file shows the whole shape of what it controls.
 
-**A configuration file is a `DeviceConfiguration`, not just an `ExtSystemConfig`.** Alongside the eight ERP fields it carries the device half of `AppSettings` — `disabledDocTypes`, `docTypeFilters`, `debuggerActive` — keyed in the file by `DocumentType.name` to match `documentTypeCodes`, and stored by `DocumentType.key`; a name nothing matches is dropped rather than carried, so a typo cannot invent a document type. The personal half (text size, language, haptics, working location) is deliberately absent: it belongs to a person, and a deployment file that reset it on every load would undo the reason those settings are per-operator.
+**A configuration file is a `DeviceConfiguration`, not just an `ExtSystemConfig`.** Alongside the eight ERP fields it carries the device half of `AppSettings` — `enabledDocTypes`, `docTypeFilters`, `debuggerActive` — keyed in the file by `DocumentType.name` to match `documentTypeCodes`, and stored by `DocumentType.key`; a name nothing matches is dropped rather than carried, so a typo cannot invent a document type. Files list the types switched **on** (`enabledDocTypes`). A file from before the complaint split lists those switched off (`disabledDocTypes`); it is still read, but against `DOC_TYPES_BEFORE_COMPLAINT_SPLIT`, so it cannot switch on a type it never mentioned, and it is never written. The bundled files carry neither, so loading built-in defaults leaves the device's choice of types alone. A type the file has no `documentTypeCodes` entry for keeps the device's code. The personal half (text size, language, haptics, working location) is deliberately absent: it belongs to a person, and a deployment file that reset it on every load would undo the reason those settings are per-operator.
 
 Every field of the DTO is nullable and **absent means "leave this as it is"** — the same rule the QR key has always had, now extended to the device settings. A configuration written before these fields existed must not silently switch every document type back on.
 
@@ -625,9 +628,11 @@ Plain (unencrypted) `SharedPreferences`, split across two files while `AppSettin
 | warnOnOver | Boolean | true |
 | backgroundSync | Boolean | false |
 | lastLocationCode / lastRcCode | String | "" |
-| disabledDocTypes | `Set<String>` (comma-joined `DocumentType.key`) | emptySet |
+| disabledDocTypes | `Set<String>`; stored inverted, as `enabledDocTypes` (comma-joined `DocumentType.key`) | every type — nothing switched on |
 | docTypeFilters | `Map<String, DocTypeFilterMode>` (`"key:MODE,..."`) | emptyMap |
 | debuggerActive | Boolean | false |
+
+**Document types are stored as the set switched on** (`enabledDocTypes` in the device file), and handed out as `disabledDocTypes` so nothing above the store changed. Older builds stored the switched-off set, which meant a type added later arrived switched on. The first read after the update settles each device once and writes the answer down: an older list → everything that build knew and did not switch off stays on; no list but a server URL configured → an upgraded device that never saved settings, so all of the older types are on; neither → a fresh installation, nothing on. In every case the two complaint types start off. The first read happens at app start, before anything can be configured, so setting up a fresh device cannot make it look upgraded.
 
 ### `ExtSystemConfig` / `ExtSystemConfigStore`
 Plain `SharedPreferences("ext_system_config")` (non-secret — no credentials stored here).
@@ -758,7 +763,7 @@ Two tabs — **Orders** (`Downloaded`/`InProgress`/`PendingUpload`/`UploadFailed
 The third tab, **Recordings**, was removed along with the 5-second long-press that lived on it: the tab listed documents Orders already held, and the thing it was really for — seeing what has been scanned — is now the main menu's RECORDINGS section, which shows individual scans rather than the documents carrying them. The long-press moved to `RecordingsTreeScreen`'s summary card.
 
 ### `DocumentOverviewScreen.kt` (the "Dashboard")
-Cross-type view, 3 tabs: **Errors**, **My Location** (per-type `DocTypeFilterMode` match; with nothing selected it shows nothing, and complaints only once a centre is selected), **All**. Opening the filter from the "My Location" tab locks source/RC to the current selection. Empty-state green checkmark + "No issues" shown on any empty tab, not just Errors.
+Cross-type view, 3 tabs: **Errors**, **My Location** (per-type `DocTypeFilterMode` match; with nothing selected it shows nothing, and the two complaint types only once a centre is selected), **All**. Opening the filter from the "My Location" tab locks source/RC to the current selection. Empty-state green checkmark + "No issues" shown on any empty tab, not just Errors.
 
 ### `DocumentFilterScreen.kt`
 Generic filter editor shared by DocumentListScreen and DocumentOverviewScreen. Sections: Status (multi-select chips), Document Type (checkboxes, hidden if `showDocTypeFilter=false`), Document Date (from/to, cross-clamping date pickers), Destination/Source code, Responsibility Center (dropdown-only `ExposedDropdownMenuBox`, or locked/greyed field if `lockedSourceCode`/`lockedRcCode` passed). Reset / Apply footer.
@@ -767,7 +772,7 @@ Generic filter editor shared by DocumentListScreen and DocumentOverviewScreen. S
 Pre-download filter form: date range, destination text field, and **exactly one** of Source/RC picker rows shown (the other hidden entirely, not just disabled) depending on which is fixed via `fixedSourceCode`/`fixedRcCode`. Auto-opens `LoginSheet` on entry if `!hasCredentials`.
 
 ### `ExtSystemConfigScreen.kt`
-Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Recording sync URL. "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
+Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Recording sync URL. "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
 
 ### `LocationRcPickScreen.kt`
 Two picker rows (RC, then Location filtered to that RC) opening bottom sheets (`RcPickerSheet`/`LocationPickerSheet`, also reused by `DownloadFilterScreen`). Refresh icon triggers `onRefresh` directly if credentials exist, else opens `LoginSheet` first. Selecting a different RC clears the selected location; selecting a location auto-syncs its owning RC.
@@ -1113,7 +1118,8 @@ Separately, a full audit (2026-08, same pass) checked every one of the then-247 
 ## B.17 Extension Points & Notes for Future Developers
 
 - **Adding a new document type**: add an enum value to `DocumentType` (Models.kt) with a `key`/`display`, plus `retailLocation` if it shares a `Document_Type` code with another type and `defaultFilterMode` if location isn't the right scope; add it to the four bundled `ext_system_defaults_*.json` — `documentTypeCodes` **and** `docTypeFilters`, both keyed by the enum name; add a localized name in all four `strings.xml`. It will automatically appear in `MainMenuScreen`'s type list and all downstream screens, since they iterate `DocumentType.entries` — but note the compiler will also stop you in seven exhaustive `when` blocks that must each get a branch: six duplicated `localizedDisplay()` helpers (one per screen) and `MainMenuScreen`'s icon mapping. That the compiler catches every one of them is the reason the duplication is survivable.
-- **`COMPLAINT` and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies, exactly like the other types — nothing about scanning, status colours or upload differs, and the §A.3 rule still applies, so an item found on the shelf that NAV didn't send is rejected as "barcode not found" rather than added.
+- **`COMPLAINT_SHIPMENT` and `COMPLAINT_RECEIPT`** (2026-11, codes `REK-OTPR` and `REK-ZAPR`) replaced the single `COMPLAINT` type. Both are scoped by responsibility centre and carry their own code, so neither filters on `Retail_Location`. Because no old complaint document could be told apart as shipment or receipt, and none were being scanned yet, `MIGRATION_19_20` deletes the `COMPLAINT` rows. `ExtSystemConfigStore` falls back to the two codes when a device has none stored (the code field is read-only), so a device configured before the split needs no reload. The NAV side (filling Barcode App Entry with these codes, processing them from 50180) is not part of that change.
+- **`COMPLAINT` (since replaced) and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies, exactly like the other types — nothing about scanning, status colours or upload differs, and the §A.3 rule still applies, so an item found on the shelf that NAV didn't send is rejected as "barcode not found" rather than added.
 - **Adding a new AppSettings field**: add to the `AppSettings` data class + `AppSettingsStore` serialization, add local `remember` state + callback wiring in `MainActivity.kt`, and a control in `SettingsScreen.kt`. Remember the buffered-edit pattern — don't persist directly from the toggle, let it flow through `buildSettings()`/exit-save.
 - **The upload payload is intentionally flat and per-row**, not batched — if ERP-side batching is ever desired, `AppViewModel.runUpload`'s row loop is the place to change, but note the per-row-immediate-delete behavior is what makes partial-failure retries safe; batching would need an equivalent all-or-nothing safety guarantee.
 - **`NavResponsibilityCenter` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
@@ -1160,7 +1166,7 @@ It is the **Barcode App Entry (50179) line number**, not the warehouse document'
 
 ### Document type codes
 
-The app sends `ExtSystemConfig.documentTypeCodes`; the bundled configurations use `SHIPMENT`, `RECEIPT`, `TRANSPORT`, `COMPLAINT` and `INVENTORY`. Retail and warehouse documents share `SHIPMENT`/`RECEIPT` and are told apart by `Retail_Location` (§A.5.4). NAV's own option list in 50112 also carries the cross-dock types (`WHCDSHIP`, `WHCDREC`, `WHCDSHFROM`, `CPCDSHIP`, `CPCDREC`, `CPCDSHFROM`), `Prereceipt` and `RetailShpt`/`RetailRcpt`.
+The app sends `ExtSystemConfig.documentTypeCodes`; the bundled configurations use `SHIPMENT`, `RECEIPT`, `TRANSPORT`, `REK-OTPR`, `REK-ZAPR` and `INVENTORY`. Codeunit 50112 does not yet know `REK-OTPR`/`REK-ZAPR`: `FindScannedEntries` filters 50180 by its own option names, so their uploaded rows wait in 50180 until the NAV side is added. Retail and warehouse documents share `SHIPMENT`/`RECEIPT` and are told apart by `Retail_Location` (§A.5.4). NAV's own option list in 50112 also carries the cross-dock types (`WHCDSHIP`, `WHCDREC`, `WHCDSHFROM`, `CPCDSHIP`, `CPCDREC`, `CPCDSHFROM`), `Prereceipt` and `RetailShpt`/`RetailRcpt`.
 
 ### Legacy
 

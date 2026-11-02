@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * The schema version of [PrimaDatabase], written once. The app info shows this value; it used to
  * show a constant of its own, "7.0.0", that nobody updated while the schema went on to 19.
  */
-const val PRIMA_DB_VERSION = 19
+const val PRIMA_DB_VERSION = 20
 
 /**
  * One operator's work: their documents, lines and recordings.
@@ -313,6 +313,25 @@ abstract class PrimaDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP TABLE IF EXISTS locations")
                 db.execSQL("DROP TABLE IF EXISTS responsibility_centers")
+            }
+        }
+
+        /**
+         * Removes the COMPLAINT document type's rows; the schema itself is unchanged.
+         *
+         * Complaint was split into Complaint Shipment and Complaint Receipt, and nothing can tell
+         * which of the two an old complaint document was. Complaints were not yet being scanned
+         * in production when the split was made, so the old type's documents are dropped rather
+         * than guessed at. Left in place, they would read back as warehouse shipments — the
+         * fallback for a type key this build does not know.
+         *
+         * Child rows first, so this does not depend on the foreign keys cascading.
+         */
+        val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DELETE FROM recordings WHERE type = 'COMPLAINT'")
+                db.execSQL("DELETE FROM documentLine WHERE type = 'COMPLAINT'")
+                db.execSQL("DELETE FROM documentHeader WHERE type = 'COMPLAINT'")
             }
         }
     }

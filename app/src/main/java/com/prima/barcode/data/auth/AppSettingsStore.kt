@@ -3,6 +3,7 @@ package com.prima.barcode.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import com.prima.barcode.data.model.DocTypeFilterMode
+import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.ui.theme.Language
 import com.prima.barcode.ui.theme.TextSize
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,9 +30,48 @@ import javax.inject.Singleton
 class AppSettingsStore @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val profileStore: UserProfileStore,
+    private val extSystemConfigStore: ExtSystemConfigStore,
 ) {
 
     private val devicePrefs by lazy { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
+
+    private val allDocTypeKeys: Set<String> get() = DocumentType.entries.map { it.key }.toSet()
+
+    /**
+     * The document types switched on, stored as exactly that.
+     *
+     * Older builds stored the opposite — the types switched *off* — under `disabledDocTypes`, so
+     * an empty list meant "everything", and a type added later arrived switched on. Every type now
+     * starts off, and a device keeps only what someone deliberately switched on.
+     *
+     * The first read after the upgrade settles which case this device is, and writes the answer
+     * down so it is never guessed at again:
+     * - an older list exists: everything that build knew and did not switch off stays on;
+     * - no list, but the device was already pointed at a server: it is an upgraded device whose
+     *   settings were never saved, which in the older build meant everything was on;
+     * - neither: a fresh installation, so nothing is on.
+     *
+     * In all three, a type the older build did not know stays off. The first read happens at app
+     * start, before anything can be configured, so a fresh device cannot be mistaken for an
+     * upgraded one by being set up first.
+     */
+    private fun enabledDocTypes(): Set<String> {
+        devicePrefs.getString(KEY_ENABLED_DOC_TYPES, null)?.let { return it.splitKeys() }
+        val knownBefore = DOC_TYPES_BEFORE_COMPLAINT_SPLIT.map { it.key }.toSet()
+        val enabled: Set<String> = when {
+            devicePrefs.contains(LEGACY_KEY_DISABLED_DOC_TYPES) ->
+                knownBefore - devicePrefs.getString(LEGACY_KEY_DISABLED_DOC_TYPES, "").orEmpty().splitKeys()
+            extSystemConfigStore.get().serverBaseUrl.isNotBlank() -> knownBefore
+            else -> emptySet()
+        }
+        devicePrefs.edit()
+            .putString(KEY_ENABLED_DOC_TYPES, enabled.joinToString(","))
+            .remove(LEGACY_KEY_DISABLED_DOC_TYPES)
+            .apply()
+        return enabled
+    }
+
+    private fun String.splitKeys(): Set<String> = split(",").filter { it.isNotEmpty() }.toSet()
 
     /**
      * Falls back to the device file when nobody is signed in, so a read before sign-in returns
@@ -58,7 +98,8 @@ class AppSettingsStore @Inject constructor(
             backgroundSync      = personal.getBoolean("backgroundSync", false),
             lastLocationCode = personal.getString("lastLocationCode", "") ?: "",
             lastRcCode       = personal.getString("lastRcCode", "") ?: "",
-            disabledDocTypes = devicePrefs.getString("disabledDocTypes", "")?.split(",")?.filter { it.isNotEmpty() }?.toSet() ?: emptySet(),
+            // Still handed out as the switched-off set, so nothing above this class changed.
+            disabledDocTypes = allDocTypeKeys - enabledDocTypes(),
             docTypeFilters = devicePrefs.getString("docTypeFilters", "")
                 ?.split(",")?.filter { it.isNotEmpty() }
                 ?.mapNotNull { entry ->
@@ -96,9 +137,15 @@ class AppSettingsStore @Inject constructor(
             .putString ("lastRcCode",         settings.lastRcCode)
             .apply()
         devicePrefs.edit()
-            .putString ("disabledDocTypes",   settings.disabledDocTypes.joinToString(","))
+            .putString (KEY_ENABLED_DOC_TYPES, (allDocTypeKeys - settings.disabledDocTypes).joinToString(","))
+            .remove    (LEGACY_KEY_DISABLED_DOC_TYPES)
             .putString ("docTypeFilters",     settings.docTypeFilters.entries.joinToString(",") { "${it.key}:${it.value.name}" })
             .putBoolean("debuggerActive",     settings.debuggerActive)
             .apply()
+    }
+
+    private companion object {
+        const val KEY_ENABLED_DOC_TYPES = "enabledDocTypes"
+        const val LEGACY_KEY_DISABLED_DOC_TYPES = "disabledDocTypes"
     }
 }
