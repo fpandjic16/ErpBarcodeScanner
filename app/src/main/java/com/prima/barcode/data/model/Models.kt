@@ -42,12 +42,21 @@ enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
  * [key] is what the database stores in every row's `type` column, so a key is never reused for a
  * different type. The single COMPLAINT type ("COMPLAINT") was replaced by the two below; its rows
  * are deleted by `MIGRATION_19_20`.
+ *
+ * [isStockCount] marks a count of what is on the shelf rather than a check against a document.
+ * Two things follow from it:
+ * - **One document per download.** The operator picks the inventory journal batch first
+ *   ([InventoryBatch]); a location usually has several open at once.
+ * - **An item the document does not list is still counted.** On the shelf it is a surplus the
+ *   count has to report, not a wrong scan. It becomes a line added on the device
+ *   ([Line.isAddedOnDevice]).
  */
 enum class DocumentType(
     val key: String,
     val display: String,
     val retailLocation: Boolean? = null,
     val defaultFilterMode: DocTypeFilterMode = DocTypeFilterMode.LOCATION,
+    val isStockCount: Boolean = false,
 ) {
     WAREHOUSE_SHIPMENT("WHSE_SHIP", "Warehouse Shipment",    retailLocation = false),
     WAREHOUSE_RECEIPT( "WHSE_RCPT", "Warehouse Receipt",     retailLocation = false),
@@ -56,12 +65,26 @@ enum class DocumentType(
     TRANSPORT_SHEET(   "TRANSPORT", "Transport Sheet"),
     COMPLAINT_SHIPMENT("CPL_SHIP",  "Complaint Shipment",    defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     COMPLAINT_RECEIPT( "CPL_RCPT",  "Complaint Receipt",     defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
-    // Counted against quantities NAV supplies, exactly like the document types above, so nothing
-    // about scanning, status colours or upload differs. Note the consequence: an item found on
-    // the shelf that NAV didn't send is still rejected as "barcode not found" (§A.3), the same as
-    // everywhere else in the app.
-    INVENTORY(         "INVENTORY", "Inventory"),
+    // One inventory journal batch (Phys. Inventory Journal) per document. Counted against the
+    // calculated quantity NAV supplies, the same as the types above. An item NAV didn't send is
+    // added on the device instead of being rejected (see isStockCount).
+    INVENTORY(         "INVENTORY", "Inventory",            isStockCount = true),
 }
+
+/**
+ * One inventory journal batch the ERP has made available for scanning, as the download offers it.
+ *
+ * [documentNo] is the journal's `Document No.`, not the batch name. Batch names are reused for
+ * every count, while the device never deletes recordings during a sync. Keyed by the batch name,
+ * last year's scans would attach themselves to this year's count.
+ */
+data class InventoryBatch(
+    val documentNo: String,
+    val journalTemplateName: String,
+    val journalBatchName: String,
+    val documentDate: java.time.LocalDate?,
+    val lineCount: Int,
+)
 
 data class Item(
     val no:   String,
@@ -93,6 +116,15 @@ data class Line(
     val status: LineStatus get() = LineStatus.of(scanned, expected)
     /** True once part of this line is in the ERP, which makes [sentQuantity] a hard lower bound. */
     val hasSentQuantity: Boolean get() = sentQuantity > 0.0
+    /**
+     * Created on the device for an item the stock count did not list ([DocumentType.isStockCount]).
+     *
+     * Such a line has a negative [lineNo]. The ERP numbers its own lines from 1 up, so the two can
+     * never collide. It has no expected quantity, and its item number is the barcode, because the
+     * device does not know which item the barcode belongs to. The ERP resolves that from the
+     * barcode when it processes the upload.
+     */
+    val isAddedOnDevice: Boolean get() = lineNo < 0
 }
 
 /**

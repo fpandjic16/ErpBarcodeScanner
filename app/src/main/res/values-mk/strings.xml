@@ -354,4 +354,17 @@
     <string name="app_info_environment">Систем</string>
     <string name="app_info_company">Компанија</string>
     <string name="app_info_not_set">Не е поставено</string>
+    <!-- Inventory: picking the journal batch before download, and items the batch does not list -->
+    <string name="download_inventory_batch">Серија на дневник за инвентура</string>
+    <string name="download_inventory_batches_loading">Се вчитуваат сериите…</string>
+    <string name="download_inventory_batches_empty">Тука нема серија на дневник за инвентура подготвена за скенирање.</string>
+    <string name="download_inventory_batches_retry">Обиди се повторно</string>
+    <plurals name="download_inventory_batch_lines">
+        <item quantity="one">%d ред</item>
+        <item quantity="other">%d редови</item>
+    </plurals>
+    <string name="recording_not_on_document_title">Не е во серијата</string>
+    <string name="recording_not_on_document_text">Баркодот %s не е во оваа серија за инвентура. Да се брои како артикл пронајден на полица?</string>
+    <string name="recording_not_on_document_add">Брои</string>
+    <string name="recording_not_on_document_label">Не е во серијата</string>
 </resources>

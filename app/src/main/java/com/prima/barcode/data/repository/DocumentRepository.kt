@@ -42,12 +42,25 @@ interface DocumentRepository {
     fun observeDocument(documentNo: String, type: String): Flow<Document?>
     /** Individual recordings for one document — what [observeDocument] sums away. */
     fun observeRecordings(documentNo: String, type: String): Flow<List<RecordingEntity>>
-    suspend fun replaceDownloadedDocuments(type: DocumentType, docs: List<Document>)
+    /**
+     * [pruneMissing] false keeps the type's other documents. A stock count downloads one batch at
+     * a time, and the batches it did not ask for are not gone from the ERP.
+     */
+    suspend fun replaceDownloadedDocuments(type: DocumentType, docs: List<Document>, pruneMissing: Boolean = true)
     suspend fun recordScan(
         documentNo: String,
         type: String,
         lineNo: Int,
         barcodeNo: String,
+        userId: String,
+        quantity: Double,
+    )
+    /** A scan of an item the stock count does not list; see [Line.isAddedOnDevice]. */
+    suspend fun recordScanNotOnDocument(
+        documentNo: String,
+        type: String,
+        barcodeNo: String,
+        unitOfMeasureCode: String,
         userId: String,
         quantity: Double,
     )
@@ -136,10 +149,10 @@ class DocumentRepositoryImpl @Inject constructor(
             database?.recordingDao()?.observeByDoc(documentNo, type) ?: flowOf(emptyList())
         }
 
-    override suspend fun replaceDownloadedDocuments(type: DocumentType, docs: List<Document>) {
+    override suspend fun replaceDownloadedDocuments(type: DocumentType, docs: List<Document>, pruneMissing: Boolean) {
         val db = provider.current()
         db.withTransaction {
-            val existingHeaders = db.documentHeaderDao().getAll().filter { it.type == type.key }
+            val existingHeaders = if (pruneMissing) db.documentHeaderDao().getAll().filter { it.type == type.key } else emptyList()
             val downloadedKeys = docs.map { it.documentNo }.toSet()
 
             // A document no longer in this download is only removed if it has no
@@ -166,18 +179,35 @@ class DocumentRepositoryImpl @Inject constructor(
         // Header first: documentLine has a foreign key to it, so a new document needs its parent
         // row before any line can be inserted. docState is corrected at the end.
         db.documentHeaderDao().upsert(doc.toEntity())
+        // Lines added on the device are not NAV's to replace: NAV never sent them. One survives
+        // until NAV sends a line with its barcode, which is what processing the upload does. From
+        // then on its scans belong on NAV's line, sent ones included. The re-attachment below
+        // only moves queued scans, so a sent one left behind would show as an orphan and leave
+        // NAV's line looking unscanned.
+        val navLineNoByBarcode = doc.lines.sortedBy { it.lineNo }
+            .groupBy { it.barcodeNo }
+            .mapValues { (_, sameBarcode) -> sameBarcode.first().lineNo }
+        val (replacedByNav, addedOnDevice) = db.documentLineDao().getByDoc(doc.documentNo, type)
+            .filter { it.lineNo < 0 }
+            .partition { it.barcodeNo in navLineNoByBarcode }
         db.documentLineDao().deleteAllForDoc(doc.documentNo, type)
-        db.documentLineDao().upsertAll(doc.lines.map { it.toEntity(type) })
+        db.documentLineDao().upsertAll(doc.lines.map { it.toEntity(type) } + addedOnDevice)
+        val recordings = db.recordingDao().getByDoc(doc.documentNo, type)
+        for (line in replacedByNav) {
+            val target = navLineNoByBarcode.getValue(line.barcodeNo)
+            for (rec in recordings.filter { it.documentLine == line.lineNo }) {
+                db.recordingDao().deleteByPk(doc.documentNo, type, rec.documentLine, rec.recordingLineNo)
+                val nextNo = db.recordingDao().getNextRecordingLineNo(doc.documentNo, type, target)
+                db.recordingDao().insert(rec.copy(documentLine = target, recordingLineNo = nextNo))
+            }
+        }
 
         // Only once the new lines are in place, so matching runs against what NAV just sent.
         reattachOrphansByBarcode(db, doc.documentNo, type)
 
         // State last, from recordings as they stand after re-attachment — computing it earlier
         // would measure against line numbers that re-attachment is about to change.
-        val recordings = db.recordingDao().getByDoc(doc.documentNo, type)
-        db.documentHeaderDao().updateState(
-            doc.documentNo, type, computeStateAfterMerge(doc.lines, recordings).toDbString(),
-        )
+        refreshStateFromRecordings(db, doc.documentNo, type)
     }
 
     /**
@@ -259,6 +289,48 @@ class DocumentRepositoryImpl @Inject constructor(
             )
             advanceToInProgressIfNeeded(db, documentNo, type)
             regressFromCompletedIfNeeded(db, documentNo, type)
+        }
+    }
+
+    /**
+     * Records the scan on the device-added line for this barcode, creating that line on the first
+     * scan.
+     *
+     * A second scan of the same barcode lands on the line the first one created, including one
+     * that arrives before the screen has seen that line, because the lookup runs in the same
+     * transaction as the insert.
+     */
+    override suspend fun recordScanNotOnDocument(
+        documentNo: String,
+        type: String,
+        barcodeNo: String,
+        unitOfMeasureCode: String,
+        userId: String,
+        quantity: Double,
+    ) {
+        val db = provider.current()
+        db.withTransaction {
+            val header = db.documentHeaderDao().getByKey(documentNo, type) ?: return@withTransaction
+            val lines = db.documentLineDao().getByDoc(documentNo, type)
+            val lineNo = lines.firstOrNull { it.barcodeNo == barcodeNo }?.lineNo ?: run {
+                val newLineNo = minOf(0, lines.minOfOrNull { it.lineNo } ?: 0) - 1
+                db.documentLineDao().upsertAll(listOf(
+                    DocumentLineEntity(
+                        documentNo = documentNo,
+                        type = type,
+                        lineNo = newLineNo,
+                        itemNo = barcodeNo,
+                        itemName = "",
+                        barcodeNo = barcodeNo,
+                        expected = 0.0,
+                        destinationCode = header.destinationCode,
+                        sourceCode = header.sourceCode,
+                        unitOfMeasureCode = unitOfMeasureCode,
+                    )
+                ))
+                newLineNo
+            }
+            recordScan(documentNo, type, lineNo, barcodeNo, userId, quantity)
         }
     }
 
@@ -350,6 +422,7 @@ class DocumentRepositoryImpl @Inject constructor(
                 }
             }
         }
+        dropEmptyLinesAddedOnDevice(db, documentNo, type)
         advanceToInProgressIfNeeded(db, documentNo, type)
         regressFromCompletedIfNeeded(db, documentNo, type)
         regressToDownloadedIfNeeded(db, documentNo, type)
@@ -470,7 +543,19 @@ class DocumentRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * A device-added line exists only to carry its scans. Once they are all gone it is a red line
+     * with nothing expected, which would keep the document from ever reading as complete.
+     */
+    private suspend fun dropEmptyLinesAddedOnDevice(db: PrimaDatabase, documentNo: String, type: String) {
+        val linesWithScans = db.recordingDao().getByDoc(documentNo, type).mapTo(HashSet()) { it.documentLine }
+        db.documentLineDao().getByDoc(documentNo, type)
+            .filter { it.lineNo < 0 && it.lineNo !in linesWithScans }
+            .forEach { db.documentLineDao().deleteByKey(documentNo, type, it.lineNo) }
+    }
+
     private suspend fun refreshStateFromRecordings(db: PrimaDatabase, documentNo: String, type: String) {
+        dropEmptyLinesAddedOnDevice(db, documentNo, type)
         val lines = db.documentLineDao().getByDoc(documentNo, type).map { it.toDomain(0.0) }
         val recordings = db.recordingDao().getByDoc(documentNo, type)
         db.documentHeaderDao().updateState(

@@ -76,6 +76,8 @@ fun RecordingScreen(
     docTypeCode: String = "",
     onBack: () -> Unit,
     onScan: (barcode: String, multiplier: Double) -> Unit,
+    /** A stock count's scan of an item the document does not list, once the operator confirms it. */
+    onScanNotOnDocument: (barcode: String, unitOfMeasureCode: String, quantity: Double) -> Unit = { _, _, _ -> },
     /**
      * [onRefused] fires when the edit asked to go below what the ERP already holds for the line,
      * and is handed that quantity. The screen blocks most of those itself — the steppers stop at
@@ -98,6 +100,7 @@ fun RecordingScreen(
     var overScanWarning by remember { mutableStateOf<OverScanInfo?>(null) }
     var sentFloorWarning by remember { mutableStateOf<SentFloorInfo?>(null) }
     var barcodeNotFoundError by remember { mutableStateOf<String?>(null) }
+    var notOnDocumentScan by remember { mutableStateOf<NotOnDocumentScan?>(null) }
     var uomMismatchWarning by remember { mutableStateOf<UomMismatchInfo?>(null) }
     // The hardware trigger (DataWedge) and the camera can both be "live" at the same time —
     // nothing stops a user from pulling the trigger while the camera is also pointed at a
@@ -197,7 +200,14 @@ fun RecordingScreen(
             // The same warning sound as an over-scan: every scan that brings up a warning sounds
             // alike, so the operator learns one signal for "look at the screen".
             if (soundEnabled) soundEngine.warning()
-            barcodeNotFoundError = barcode
+            // On a stock count an unlisted item is a finding, not a mistake, but it is also what a
+            // stray scan of the wrong label looks like. So it is asked about rather than counted
+            // straight away. Only the first scan of a barcode asks: after that it has its line.
+            if (doc.type.isStockCount) {
+                notOnDocumentScan = NotOnDocumentScan(barcode, parsedUom.orEmpty(), parsedQty ?: 1.0)
+            } else {
+                barcodeNotFoundError = barcode
+            }
         } else {
             val qty = parsedQty ?: matchedLine.scanningQty
             onScan(barcode, qty)
@@ -207,7 +217,9 @@ fun RecordingScreen(
             val newScanned = base + qty
             scannedRunningTotal[matchedLine.lineNo] = newScanned
             val newStatus = LineStatus.of(newScanned, matchedLine.expected)
-            val overScan = warnOnOver && newStatus == LineStatus.OVER
+            // A line added on the device expects nothing, so every scan of it is "over". The
+            // operator already confirmed that when adding it.
+            val overScan = warnOnOver && newStatus == LineStatus.OVER && !matchedLine.isAddedOnDevice
             // Every accepted scan makes a sound, not only the one that completes a line — this is
             // the operator's confirmation that the pull counted; the haptic below marks something
             // else, that the line is now exact.
@@ -259,6 +271,15 @@ fun RecordingScreen(
     }
 
     BackHandler { handleBack() }
+
+    // A line added on the device disappears once its quantity is set to 0. Without this the
+    // screen would stay on a line that no longer exists, showing nothing.
+    LaunchedEffect(activeLine == null, view) {
+        if (activeLine == null && view != RecordingView.OVERVIEW) {
+            view = RecordingView.OVERVIEW
+            activeLineNo = null
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
@@ -424,7 +445,7 @@ fun RecordingScreen(
                                 onLineUpdate(line.lineNo, qty) { sent ->
                                     sentFloorWarning = SentFloorInfo(line.item.no, sent, line.unitOfMeasureCode)
                                 }
-                                if (warnOnOver && qty > line.expected) {
+                                if (warnOnOver && qty > line.expected && !line.isAddedOnDevice) {
                                     overScanWarning = OverScanInfo(line.item.no, line.item.name, line.barcodeNo, line.expected, qty)
                                 }
                                 localScanned = null
@@ -480,6 +501,23 @@ fun RecordingScreen(
             text = { Text(stringResource(R.string.recording_barcode_not_found_text, barcode)) },
             confirmButton = {
                 Button(onClick = { barcodeNotFoundError = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
+            },
+        )
+    }
+
+    notOnDocumentScan?.let { scan ->
+        AlertDialog(
+            onDismissRequest = { notOnDocumentScan = null },
+            title = { Text(stringResource(R.string.recording_not_on_document_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.color) },
+            text = { Text(stringResource(R.string.recording_not_on_document_text, scan.barcode)) },
+            confirmButton = {
+                Button(onClick = {
+                    notOnDocumentScan = null
+                    onScanNotOnDocument(scan.barcode, scan.unitOfMeasureCode, scan.quantity)
+                }) { Text(stringResource(R.string.recording_not_on_document_add), fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { notOnDocumentScan = null }) { Text(stringResource(R.string.btn_cancel)) }
             },
         )
     }
@@ -547,6 +585,12 @@ fun RecordingScreen(
     }
 
 }
+
+private data class NotOnDocumentScan(
+    val barcode: String,
+    val unitOfMeasureCode: String,
+    val quantity: Double,
+)
 
 private data class SentFloorInfo(
     val itemNo: String,
@@ -618,13 +662,14 @@ private fun BigNumberLineRow(line: Line, highlight: Float = 0f, onClick: () -> U
                 .weight(1f)
                 .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 16.dp),
         ) {
+            val itemName = if (line.isAddedOnDevice) stringResource(R.string.recording_not_on_document_label) else line.item.name
             val itemText = buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.Normal)) {
                     append(line.item.no)
                 }
                 append(" - ")
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(line.item.name)
+                    append(itemName)
                 }
             }
             Text(
@@ -725,7 +770,7 @@ private fun ItemQtyDetails(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                line.item.name,
+                if (line.isAddedOnDevice) stringResource(R.string.recording_not_on_document_label) else line.item.name,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Medium,
                     color = PrimaPalette.Ink,

@@ -81,6 +81,8 @@ Ako slanje ne uspije, dokument umjesto toga postaje **Slanje neuspješno**, prik
 
 Ako skenirate barkod koji nije naveden kao očekivani artikl na trenutnom dokumentu, aplikacija ga **uopće ne bilježi**. Vidjet ćete poruku „Barkod nije pronađen”, traka za skeniranje kratko zatreperi crveno, a uređaj zavibrira. Ništa se nigdje ne dodaje; provjerite jeste li na pravom dokumentu i jeste li skenirali pravi artikl, pa pokušajte ponovno.
 
+**Iznimka je inventura.** Tamo je artikl koji nije na seriji nešto što ste našli na polici, pa aplikacija umjesto toga pita treba li ga brojati (vidi [Inventura](#inventura)).
+
 ---
 
 ## 3. Prvo pokretanje
@@ -146,7 +148,7 @@ Ovaj ekran otvarate dodirom na bilo koju od dvije oznake na glavnom izborniku.
 | **Transportni list** | Dokumenti prijenosa između lokacija |
 | **Otprema reklamacija** | Paketi reklamacija koji izlaze na otpremi reklamacija (zadano se filtrira po centru odgovornosti) |
 | **Zaprimanje reklamacija** | Zaprimanje paketa iste otpreme reklamacija (zadano se filtrira po centru odgovornosti) |
-| **Inventura** | Dokumenti inventure |
+| **Inventura** | Brojanje zaliha: jedna serija temeljnice inventure iz vanjskog sustava |
 
 Koje od njih vidite (i filtriraju li se po lokaciji ili po centru odgovornosti) ovisi o tome kako je vaša tvrtka postavila aplikaciju. Ako se neka vrsta ponaša neočekivano, pitajte administratora ili konzultanta.
 
@@ -158,6 +160,16 @@ Obje su ista otprema reklamacija u vanjskom sustavu, u dvije faze.
 - **Jedan redak po reklamaciji** na otpremi. Broj retka je broj reklamacije, a očekivana količina je broj njezinih **paketa**. Naljepnicu svakog paketa skenirajte jednom.
 - **Svaki paket mora biti skeniran.** Vanjski sustav skeniranje označava završenim tek kad su skenirani svi paketi svih reklamacija, a otprema reklamacija ne može se zaprimiti prije toga. Ako paket nije stigao, za njega se otvara nova reklamacija; otprema se ne zaprima djelomično.
 - Centri odgovornosti koji rade preko cross-dock skladišta ne koriste ove dvije vrste.
+
+### Inventura
+
+Dokument inventure je jedna **serija temeljnice inventure** iz vanjskog sustava: artikli na vašoj lokaciji, s količinom koju sustav očekuje.
+
+- **Seriju birate pri preuzimanju** (vidi [§8](#8-preuzimanje-dokumenata)). Može ih biti otvoreno više odjednom, a svaka se preuzima zasebno.
+- **Prebrojite sve na polici.** Očekivana količina je prikazana, pa vidite gdje se vaše brojanje razlikuje od sustava.
+- **Artikl koji nije na seriji svejedno se broji.** Aplikacija pita „Nije na seriji – brojati?”; potvrdite s **Broji**. Artikl se pojavljuje na vrhu popisa kao svoj barkod, označen s „Nije na seriji”, a daljnja skeniranja broje se bez pitanja. Ako ste ga dodali greškom, otvorite ga i postavite količinu na 0 pa nestaje.
+- **Istu seriju može brojati više ljudi**, svatko na svom uređaju. Vanjski sustav zbraja skeniranja svih; svaki uređaj prikazuje samo svoja.
+- Redci koje nitko nije skenirao računaju se kao **0** kad vanjski sustav obradi inventuru.
 
 ---
 
@@ -225,6 +237,7 @@ Na kartici **Nalozi** dodirnite **PREUZMI**.
    - **Datum dokumenta** — raspon Od/Do.
    - **Šifra odredišta** — slobodan tekst.
    - **Šifra izvora** ili **Centar odgovornosti** — ovisno o tome kako je postavljena ova vrsta dokumenta, vidjet ćete *jedno* od to dvoje kao odabir (drugo je zaključano na vaš trenutni odabir i skriveno).
+   - Za **Inventuru** umjesto raspona datuma vidite popis **serija temeljnice inventure** spremnih za skeniranje na vašoj lokaciji, svaku s brojem, datumom i brojem redaka. Dodirnite jednu da je odaberete; **U redu** nije dostupan dok to ne učinite. Preuzima se samo ta serija, a serije koje su već na uređaju ostaju kakve jesu.
 3. Dodirnite **Poništi** za brisanje polja filtra ili **U redu** za početak preuzimanja.
 4. Dok se dokumenti preuzimaju, prikazuje se oznaka napretka („Preuzimanje…”). Ako nešto ne uspije, vidjet ćete poruku s popisom onoga što je pošlo krivo.
 
@@ -258,7 +271,7 @@ Skenirati možete na tri načina:
 
 **Što se događa kad skenirate:**
 - **Poklapa se sa stavkom** → skenirana količina te stavke raste (obično za 1 ili za onoliko koliko dokument određuje po skeniranju), a status stavke i dokumenta odmah se ažurira. **Popis također skoči na tu stavku i označi je** — boja joj se pojača oko pet sekundi, a zatim izblijedi natrag. Tako na dugom dokumentu na prvi pogled vidite što ste upravo skenirali, umjesto da to tražite. Ako je stavka već bila na ekranu, popis ostaje gdje jest i označava je samo boja.
-- **Ne poklapa se ni s jednom stavkom** → ništa se ne bilježi. Vidjet ćete poruku „Barkod nije pronađen”, a traka za skeniranje kratko zatreperi crveno, da znate da se nije poklopio ni s jednom stvarnom stavkom (vidi [§2.3](#23-neusklađena-skeniranja)).
+- **Ne poklapa se ni s jednom stavkom** → ništa se ne bilježi. Vidjet ćete poruku „Barkod nije pronađen”, a traka za skeniranje kratko zatreperi crveno, da znate da se nije poklopio ni s jednom stvarnom stavkom (vidi [§2.3](#23-neusklađena-skeniranja)). Na dokumentu **Inventure** aplikacija umjesto toga pita treba li ga brojati.
 ### 9.3 Ručna izmjena stavke
 
 Dodirnite bilo koju stavku da otvorite njezin detaljni prikaz, gdje možete:
@@ -291,6 +304,7 @@ Dodir na natrag vraća vas izravno na popis dokumenata — napredak se sprema do
 | **Prekoračeno** | Skenirali ste više od očekivane količine za stavku (ako je uključena postavka „Upozori pri prekoračenju”) | Samo informacija — dodirnite U redu. Višak je i dalje zabilježen (prikazuje se plavo, kao „Prekoračenje”). |
 | **Neusklađena jedinica mjere** | Koristili ste [posebni format barkoda](#11-posebni-format-barkoda-barkodjmkoličina), a skenirana jedinica mjere ne odgovara onoj koju dokument očekuje za taj artikl | Informacija — skeniranje je zabilježeno sa skeniranom količinom. Dodirnite U redu i javite uredu ako izgleda kao stvarna razlika. |
 | **Barkod nije pronađen** | Skenirali ste nešto što nije očekivani artikl na ovom dokumentu | Ništa nije zabilježeno — provjerite artikl i dokument, pa skenirajte ponovno. |
+| **Nije na seriji** | Na inventuri ste skenirali artikl kojeg nema na seriji | Još ništa nije brojano. **Broji** ako je artikl stvarno na polici, **Odustani** ako je skeniranje bila greška. |
 
 Nijedno od ovih upozorenja ne blokira niti poništava vaše skeniranje — sva su to obavijesti „obratite pažnju”. Kad vidite dijalog, skeniranje je već zabilježeno.
 

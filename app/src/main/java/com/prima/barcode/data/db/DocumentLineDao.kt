@@ -28,4 +28,7 @@ interface DocumentLineDao {
 
     @Query("DELETE FROM documentLine WHERE documentNo = :documentNo AND type = :type")
     suspend fun deleteAllForDoc(documentNo: String, type: String)
+
+    @Query("DELETE FROM documentLine WHERE documentNo = :documentNo AND type = :type AND lineNo = :lineNo")
+    suspend fun deleteByKey(documentNo: String, type: String, lineNo: Int)
 }

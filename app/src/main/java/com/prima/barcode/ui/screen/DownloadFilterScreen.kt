@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.data.model.DownloadFilter
+import com.prima.barcode.data.model.InventoryBatch
 import com.prima.barcode.data.model.Location
 import com.prima.barcode.data.model.ResponsibilityCenter
 import com.prima.barcode.ui.component.PrimaTopBar
@@ -36,6 +37,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
 
@@ -59,10 +61,26 @@ fun DownloadFilterScreen(
     rcs: List<ResponsibilityCenter> = emptyList(),
     onConfirm: (filter: DownloadFilter, username: String?, password: String?) -> Unit,
     onTestConnection: (username: String, password: String, onResult: (success: Boolean, error: String?) -> Unit) -> Unit = { _, _, cb -> cb(true, null) },
+    /** A stock count's batches for the filter's scope: the list, or else an error message. */
+    onLoadInventoryBatches: (
+        filter: DownloadFilter,
+        username: String?,
+        password: String?,
+        onResult: (batches: List<InventoryBatch>?, error: String?) -> Unit,
+    ) -> Unit = { _, _, _, cb -> cb(emptyList(), null) },
     onCancel: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    // A stock count downloads one batch the operator picks, so a date range means nothing here.
+    val stockCount = docType?.isStockCount == true
+    // Local, because hasCredentials is read once: after signing in on the sheet below, this
+    // screen would otherwise keep asking for the sign-in again.
+    var signedIn        by remember { mutableStateOf(hasCredentials) }
+    var batches         by remember { mutableStateOf<List<InventoryBatch>?>(null) }
+    var batchesLoading  by remember { mutableStateOf(false) }
+    var batchesError    by remember { mutableStateOf<String?>(null) }
+    var selectedBatchNo by remember { mutableStateOf<String?>(null) }
 
     var dateFrom        by remember { mutableStateOf<LocalDate?>(null) }
     var dateTo          by remember { mutableStateOf<LocalDate?>(null) }
@@ -89,15 +107,31 @@ fun DownloadFilterScreen(
     // No destinationCode — the destination filter was dropped from this screen, so the field
     // stays at DownloadFilter's default and no Destination_No clause is sent.
     fun currentFilter() = DownloadFilter(
-        dateFrom   = dateFrom,
-        dateTo     = dateTo,
+        dateFrom   = if (stockCount) null else dateFrom,
+        dateTo     = if (stockCount) null else dateTo,
         sourceCode = sourceCode.trim(),
         rcCode     = rcCode.trim(),
+        documentNo = if (stockCount) selectedBatchNo.orEmpty() else "",
     )
 
+    fun loadBatches(username: String?, password: String?) {
+        batchesLoading = true
+        batchesError = null
+        onLoadInventoryBatches(currentFilter(), username, password) { loaded, error ->
+            batchesLoading = false
+            batches = loaded
+            batchesError = error
+            if (loaded?.none { it.documentNo == selectedBatchNo } != false) selectedBatchNo = null
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (stockCount && hasCredentials) loadBatches(null, null)
+    }
+
     fun onOkClick() {
-        if (hasCredentials) onConfirm(currentFilter(), null, null)
-        else showLogin = true
+        if (!signedIn) showLogin = true
+        else if (!stockCount || selectedBatchNo != null) onConfirm(currentFilter(), null, null)
     }
 
     Column(modifier = Modifier
@@ -121,7 +155,16 @@ fun DownloadFilterScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            DlFilterSection(label = stringResource(R.string.filter_document_date)) {
+            if (stockCount) DlFilterSection(label = stringResource(R.string.download_inventory_batch)) {
+                InventoryBatchList(
+                    batches = batches,
+                    loading = batchesLoading,
+                    error = batchesError,
+                    selectedDocumentNo = selectedBatchNo,
+                    onSelect = { selectedBatchNo = it.documentNo },
+                    onRetry = { if (signedIn) loadBatches(null, null) else showLogin = true },
+                )
+            } else DlFilterSection(label = stringResource(R.string.filter_document_date)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DlDateChip(
                         label    = stringResource(R.string.filter_date_from),
@@ -222,11 +265,14 @@ fun DownloadFilterScreen(
                     dateFrom = null; dateTo = null
                     sourceCode = fixedSourceCode ?: ""
                     rcCode = fixedRcCode ?: ""
+                    selectedBatchNo = null
                 },
                 modifier = Modifier.weight(1f).height(52.dp),
             ) { Text(stringResource(R.string.btn_reset), style = monoLabel.copy(fontWeight = FontWeight.Medium)) }
             Button(
                 onClick = ::onOkClick,
+                // Signed out, OK is how the sign-in is reached, so it stays enabled.
+                enabled = !stockCount || !signedIn || selectedBatchNo != null,
                 modifier = Modifier.weight(1f).height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaPalette.Coral),
             ) { Text(stringResource(R.string.btn_ok), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium)) }
@@ -291,7 +337,11 @@ fun DownloadFilterScreen(
             onTestConnection = onTestConnection,
             onSubmit = { username, password ->
                 showLogin = false
-                onConfirm(currentFilter(), username, password)
+                signedIn = true
+                // A stock count cannot download yet: the batch has to be picked first, from a
+                // list only the sign-in makes available.
+                if (stockCount) loadBatches(username, password)
+                else onConfirm(currentFilter(), username, password)
             },
             onDismiss = { showLogin = false },
         )
@@ -303,6 +353,71 @@ private fun DlFilterSection(label: String, content: @Composable ColumnScope.() -
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, style = monoLabel.copy(color = PrimaPalette.Ink3, fontWeight = FontWeight.Medium))
         content()
+    }
+}
+
+/** null [batches] means not loaded yet, which is not the same as an empty list. */
+@Composable
+private fun InventoryBatchList(
+    batches: List<InventoryBatch>?,
+    loading: Boolean,
+    error: String?,
+    selectedDocumentNo: String?,
+    onSelect: (InventoryBatch) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val messageStyle = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink3)
+    val resources = LocalContext.current.resources
+    when {
+        loading -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.download_inventory_batches_loading), style = messageStyle)
+        }
+        error != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(error, style = messageStyle.copy(color = PrimaPalette.Coral))
+            OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
+        }
+        batches == null -> OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
+        batches.isEmpty() -> Text(stringResource(R.string.download_inventory_batches_empty), style = messageStyle)
+        else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            batches.forEach { batch ->
+                val selected = batch.documentNo == selectedDocumentNo
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selected) PrimaPalette.Teal else Color.White)
+                        .border(1.dp, if (selected) PrimaPalette.Teal else Color(0x28000000), RoundedCornerShape(8.dp))
+                        .clickable { onSelect(batch) }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        listOf(batch.journalTemplateName, batch.journalBatchName)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" · ")
+                            .ifEmpty { batch.documentNo },
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selected) Color.White else PrimaPalette.Ink,
+                        ),
+                    )
+                    Text(
+                        listOfNotNull(
+                            batch.documentNo,
+                            batch.documentDate?.format(dlDateFmt),
+                            resources.getQuantityString(
+                                R.plurals.download_inventory_batch_lines, batch.lineCount, batch.lineCount,
+                            ),
+                        ).joinToString(" · "),
+                        style = monoLabel.copy(color = if (selected) Color(0xC5FFFFFF) else PrimaPalette.Ink3),
+                    )
+                }
+            }
+        }
     }
 }
 

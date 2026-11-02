@@ -31,6 +31,12 @@ class RecordingViewModel @Inject constructor(
         }
     }
 
+    fun recordScanNotOnDocument(barcodeNo: String, unitOfMeasureCode: String, userId: String, quantity: Double) {
+        viewModelScope.launch {
+            repository.recordScanNotOnDocument(documentNo, type, barcodeNo, unitOfMeasureCode, userId, quantity)
+        }
+    }
+
     /**
      * [onRefused] is handed the quantity the ERP already holds for this line, when the edit asked
      * to go below it. The repository refuses rather than clamps, so somebody has to say why —

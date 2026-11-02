@@ -37,6 +37,10 @@ data class NavBarcodeAppRecording(
 // distinguish that from a failure and will send it again. Resent before NAV has processed the
 // document, that copy is refused as "already exists" and the row shows as failed although NAV has
 // it. That case is deliberately left to be resolved by hand.
+//
+// A line added on the device (negative number, see Line.isAddedOnDevice) goes out as line 0:
+// "not on the document, find the item by its Barcode". Its own number means something only on
+// this one device, so two devices could send the same number for different items.
 
 fun RecordingEntity.toNavRecording(
     documentTypeCode: String,
@@ -45,7 +49,7 @@ fun RecordingEntity.toNavRecording(
     documentType             = documentTypeCode,
     retailLocation           = retailLocation,
     documentNo               = documentNo,
-    documentLineNo           = documentLine,
+    documentLineNo           = documentLine.coerceAtLeast(0),
     recordingLineNo          = recordingLineNo,
     recordingGuid            = recordingGuid,
     barcode                  = barcodeNo,
@@ -80,6 +84,18 @@ data class NavBarcodeAppEntry(
     @SerializedName("Scanning_Qty")          val scanningQty:       Double  = 1.0,
     @SerializedName("Item_UoM")              val unitOfMeasureCode: String  = "",
     @SerializedName("Barcode")               val barcodeNo:         String  = "",
+)
+
+// The same Barcode App Entry rows, reduced by $select to what the inventory batch list needs. An
+// inventory row carries its journal template and batch, which no other type fills.
+// Every field has a default, so Gson builds this through the no-argument constructor and a field
+// the ERP leaves out keeps its default instead of becoming null.
+data class NavInventoryBatchRow(
+    @SerializedName("Document_No")           val documentNo:          String  = "",
+    @SerializedName("Line_No")               val lineNo:              Int     = 0,
+    @SerializedName("Document_Date")         val documentDate:        String? = null,
+    @SerializedName("Journal_Template_Name") val journalTemplateName: String  = "",
+    @SerializedName("Journal_Batch_Name")    val journalBatchName:    String  = "",
 )
 
 data class NavLocation(

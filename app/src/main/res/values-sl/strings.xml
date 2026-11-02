@@ -356,4 +356,19 @@
     <string name="app_info_environment">Sistem</string>
     <string name="app_info_company">Podjetje</string>
     <string name="app_info_not_set">Ni nastavljeno</string>
+    <!-- Inventory: picking the journal batch before download, and items the batch does not list -->
+    <string name="download_inventory_batch">Serija dnevnika inventure</string>
+    <string name="download_inventory_batches_loading">Nalaganje serij…</string>
+    <string name="download_inventory_batches_empty">Tu ni serije dnevnika inventure, pripravljene za skeniranje.</string>
+    <string name="download_inventory_batches_retry">Poskusi znova</string>
+    <plurals name="download_inventory_batch_lines">
+        <item quantity="one">%d vrstica</item>
+        <item quantity="two">%d vrstici</item>
+        <item quantity="few">%d vrstice</item>
+        <item quantity="other">%d vrstic</item>
+    </plurals>
+    <string name="recording_not_on_document_title">Ni v seriji</string>
+    <string name="recording_not_on_document_text">Črtne kode %s ni v tej seriji inventure. Jo štejem kot artikel, najden na polici?</string>
+    <string name="recording_not_on_document_add">Štej</string>
+    <string name="recording_not_on_document_label">Ni v seriji</string>
 </resources>

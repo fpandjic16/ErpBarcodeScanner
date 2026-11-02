@@ -79,6 +79,8 @@ If an upload fails, the document instead becomes **Upload Failed**, shown on the
 
 If you scan a barcode that isn't listed as an expected item on the current document, the app **doesn't record it at all** — you'll see a "Barcode not found" message, the scan bar briefly flashes red, and the device vibrates. Nothing is added anywhere; double-check you're on the right document and that you scanned the right item, then try again.
 
+**Inventory is the exception.** There an item that is not on the batch is something you found on the shelf, so the app asks whether to count it instead (see [Inventory](#inventory)).
+
 ---
 
 ## 3. First-Time Setup
@@ -144,7 +146,7 @@ Open this screen by tapping either pill on the Main Menu.
 | **Transport Sheet** | Inter-location transfer documents |
 | **Complaint Shipment** | Complaint packages going out on a complaint shipment (scoped by responsibility centre by default) |
 | **Complaint Receipt** | The same complaint shipment's packages being received (scoped by responsibility centre by default) |
-| **Inventory** | Stocktaking documents |
+| **Inventory** | Counting stock: one inventory journal batch from the central system |
 
 Which of these you see (and whether they're filtered by Location or by Responsibility Center) depends on how your company has configured the app — ask your administrator/consultant if a type behaves unexpectedly.
 
@@ -156,6 +158,16 @@ Both are the same complaint shipment in the central system, at two points in its
 - **One line per complaint** on the shipment. The line's number is the complaint number, and the expected quantity is its number of **packages**. Scan each package's label once.
 - **Every package has to be scanned.** The central system marks the scanning complete only when all packages of all complaints are scanned, and a complaint shipment cannot be received before that. If a package did not arrive, a new complaint is opened for it; the shipment is not received in part.
 - Responsibility centres that work through a cross-dock warehouse do not use these two types.
+
+### Inventory
+
+An inventory document is one **inventory journal batch** from the central system: the items at your location, with the quantity the system expects to find.
+
+- **You pick the batch when downloading** (see [§8](#8-downloading-documents)). Several can be open at once, and each is downloaded on its own.
+- **Count everything on the shelf.** The expected quantity is shown, so you can see where your count differs from the system.
+- **An item that is not on the batch is still counted.** The app asks "Not on the batch — count it?"; confirm with **Count it**. The item appears at the top of the list as its barcode, marked "Not on the batch", and further scans of it count without asking. If you added it by mistake, open it and set its quantity to 0, and it disappears.
+- **Several people can count the same batch**, each on their own device. The central system adds up everyone's scans; each device shows only its own.
+- Lines nobody scanned are counted as **0** when the central system processes the count.
 
 ---
 
@@ -223,6 +235,7 @@ From the **Orders** tab, tap **DOWNLOAD**.
    - **Document Date** — From/To date range.
    - **Destination Code** — free text.
    - **Source Code** or **Responsibility Center** — depending on how this document type is configured, you'll see *one* of these two as a picker (the other is locked to your current selection and hidden).
+   - For **Inventory** the date range is replaced by the list of **inventory journal batches** ready for scanning at your location, each with its number, date and number of lines. Tap one to select it; **OK** stays unavailable until you do. Only that batch is downloaded, and batches already on the device stay as they are.
 3. Tap **RESET** to clear the filter fields, or **OK** to start the download.
 4. A progress indicator shows while documents are pulled in. If anything fails, you'll see an error message listing what went wrong.
 
@@ -256,7 +269,7 @@ You can scan in three ways:
 
 **What happens when you scan:**
 - **Matches a line** → that line's scanned quantity goes up (usually by 1, or by whatever the document specifies per scan), and the line/document status updates live. **The list also jumps to that line and marks it** — its colour deepens for about five seconds and then fades back, so on a long document you can see at a glance what you just scanned instead of hunting for it. If the line was already on screen the list stays put; only the colour marks it.
-- **Doesn't match any line** → nothing is recorded. You'll see a "Barcode not found" message and the scan bar briefly flashes red so you know it didn't match a real line (see [§2.3](#23-unmatched-scans)).
+- **Doesn't match any line** → nothing is recorded. You'll see a "Barcode not found" message and the scan bar briefly flashes red so you know it didn't match a real line (see [§2.3](#23-unmatched-scans)). On an **Inventory** document you are asked instead whether to count it.
 ### 9.3 Editing a line manually
 
 Tap any line to open its detail view, where you can:
@@ -289,6 +302,7 @@ Tapping back takes you straight back to the document list — your progress is s
 | **Over-scanned** | You scanned more than the expected quantity for a line (if the "Warn on over-scan" setting is on) | Just informational — tap OK. The extra quantity is still recorded (shown as blue "Over-qty"). |
 | **Unit of measure mismatch** | You used the [special barcode format](#11-the-special-barcode-format-barcodeuomqty) and the unit of measure you scanned doesn't match what the document expects for that item | Informational — the scan was still recorded with the quantity you scanned. Tap OK, and flag it to the office if it looks like a real discrepancy. |
 | **Barcode not found** | You scanned something that isn't an expected item on this document | Nothing was recorded — double-check the item and document, then rescan. |
+| **Not on the batch** | On an inventory, you scanned an item the batch does not list | Nothing is counted yet. **Count it** if the item really is on the shelf, **Cancel** if the scan was a mistake. |
 
 None of these warnings block or undo your scan — they're all "heads up" notices. The scan has already been recorded by the time you see the dialog.
 

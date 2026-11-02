@@ -355,4 +355,18 @@
     <string name="app_info_environment">Sustav</string>
     <string name="app_info_company">Tvrtka</string>
     <string name="app_info_not_set">Nije postavljeno</string>
+    <!-- Inventory: picking the journal batch before download, and items the batch does not list -->
+    <string name="download_inventory_batch">Serija temeljnice inventure</string>
+    <string name="download_inventory_batches_loading">Učitavanje serija…</string>
+    <string name="download_inventory_batches_empty">Ovdje nema serije temeljnice inventure spremne za skeniranje.</string>
+    <string name="download_inventory_batches_retry">Pokušaj ponovo</string>
+    <plurals name="download_inventory_batch_lines">
+        <item quantity="one">%d redak</item>
+        <item quantity="few">%d retka</item>
+        <item quantity="other">%d redaka</item>
+    </plurals>
+    <string name="recording_not_on_document_title">Nije na seriji</string>
+    <string name="recording_not_on_document_text">Barkod %s nije na ovoj seriji inventure. Brojati ga kao artikl pronađen na polici?</string>
+    <string name="recording_not_on_document_add">Broji</string>
+    <string name="recording_not_on_document_label">Nije na seriji</string>
 </resources>

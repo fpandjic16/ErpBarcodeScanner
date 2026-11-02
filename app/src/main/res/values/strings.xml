@@ -354,4 +354,17 @@
     <string name="app_info_environment">System</string>
     <string name="app_info_company">Company</string>
     <string name="app_info_not_set">Not set</string>
+    <!-- Inventory: picking the journal batch before download, and items the batch does not list -->
+    <string name="download_inventory_batch">Inventory journal batch</string>
+    <string name="download_inventory_batches_loading">Loading batches…</string>
+    <string name="download_inventory_batches_empty">No inventory journal batch is ready for scanning here.</string>
+    <string name="download_inventory_batches_retry">Try again</string>
+    <plurals name="download_inventory_batch_lines">
+        <item quantity="one">%d line</item>
+        <item quantity="other">%d lines</item>
+    </plurals>
+    <string name="recording_not_on_document_title">Not on the batch</string>
+    <string name="recording_not_on_document_text">Barcode %s is not on this inventory batch. Count it as an item found on the shelf?</string>
+    <string name="recording_not_on_document_add">Count it</string>
+    <string name="recording_not_on_document_label">Not on the batch</string>
 </resources>

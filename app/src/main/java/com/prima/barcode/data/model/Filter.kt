@@ -22,4 +22,6 @@ data class DownloadFilter(
     val destinationCode: String = "",
     val sourceCode: String = "",
     val rcCode: String = "",
+    /** One document only — how a stock count downloads the batch the operator picked. */
+    val documentNo: String = "",
 )

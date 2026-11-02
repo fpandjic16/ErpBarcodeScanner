@@ -31,6 +31,7 @@ import com.prima.barcode.data.model.DocTypeFilterMode
 import com.prima.barcode.data.model.Document
 import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.data.model.DownloadFilter
+import com.prima.barcode.data.model.InventoryBatch
 import com.prima.barcode.data.model.Item
 import com.prima.barcode.data.model.Line
 import com.prima.barcode.data.model.Location
@@ -49,10 +50,12 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.prima.barcode.data.extsystem.NavBarcodeAppEntry
+import com.prima.barcode.data.extsystem.NavInventoryBatchRow
 import com.prima.barcode.data.extsystem.NavLocation
 import com.prima.barcode.data.extsystem.NavODataList
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import javax.inject.Inject
 import timber.log.Timber
 
@@ -197,7 +200,60 @@ class AppViewModel @Inject constructor(
         if (filter.destinationCode.isNotBlank()) clauses.add("Destination_No eq '${filter.destinationCode}'")
         if (filter.sourceCode.isNotBlank()) clauses.add("Source_No eq '${filter.sourceCode}'")
         if (filter.rcCode.isNotBlank()) clauses.add("Responsibility_Center eq '${filter.rcCode}'")
+        if (filter.documentNo.isNotBlank()) clauses.add("Document_No eq '${filter.documentNo}'")
         return if (clauses.isEmpty()) null else clauses.joinToString(" and ")
+    }
+
+    /**
+     * The inventory journal batches the ERP has made available for scanning in [filter]'s
+     * location or responsibility centre, for the operator to pick one before downloading.
+     *
+     * Read from the same Barcode App Entry endpoint as the documents, cut down by `$select` to five
+     * small fields per line. There is no endpoint that lists batches, and this way the ERP needs
+     * none. One batch can come back as more than one entry if its lines carry different document
+     * numbers. Each entry downloads separately, so that is shown as it is.
+     */
+    fun loadInventoryBatches(filter: DownloadFilter, onResult: (ExtSystemResult<List<InventoryBatch>>) -> Unit) {
+        viewModelScope.launch {
+            val config = extSystemConfig.value
+            val creds  = savedCredentials()
+            if (!config.isConfigured || creds == null) {
+                onResult(ExtSystemResult.Failure(
+                    if (creds == null) inAppText(R.string.ext_error_not_signed_in)
+                    else inAppText(R.string.ext_error_not_configured)
+                ))
+                return@launch
+            }
+            if (config.documentLinesUrl.isBlank()) {
+                onResult(ExtSystemResult.Failure(inAppText(R.string.ext_error_document_lines_url_missing)))
+                return@launch
+            }
+            extSystemClient.configure(config, creds)
+            val type = DocumentType.INVENTORY
+            val filterStr = buildODataFilterString(filter.copy(documentNo = ""), config.docTypeCodeFor(type), type)
+            val filtered = if (filterStr != null) appendODataFilter(config.documentLinesUrl, filterStr) else config.documentLinesUrl
+            val url = "$filtered${if ('?' in filtered) '&' else '?'}\$select=Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name"
+            val result = duringErpWork { extSystemClient.downloadRaw(url) }
+            onResult(when (result) {
+                is ExtSystemResult.Success -> {
+                    val typeToken = object : TypeToken<NavODataList<NavInventoryBatchRow>>() {}.type
+                    val odata = gson.fromJson<NavODataList<NavInventoryBatchRow>>(result.data, typeToken)
+                    ExtSystemResult.Success(
+                        odata.value.groupBy { it.documentNo }.map { (docNo, rows) ->
+                            val first = rows.first()
+                            InventoryBatch(
+                                documentNo          = docNo,
+                                journalTemplateName = first.journalTemplateName,
+                                journalBatchName    = first.journalBatchName,
+                                documentDate        = first.documentDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                                lineCount           = rows.count { it.lineNo > 0 },
+                            )
+                        }.sortedWith(compareBy({ it.journalTemplateName }, { it.journalBatchName }, { it.documentNo }))
+                    )
+                }
+                is ExtSystemResult.Failure -> result
+            })
+        }
     }
 
     private fun appendODataFilter(url: String, filterStr: String): String {
@@ -285,7 +341,8 @@ class AppViewModel @Inject constructor(
                                     state            = DocState.Downloaded,
                                 )
                             }
-                            repository.replaceDownloadedDocuments(type, documents)
+                            // A download of one picked document says nothing about the others.
+                            repository.replaceDownloadedDocuments(type, documents, pruneMissing = filter.documentNo.isBlank())
                         }
                         is ExtSystemResult.Failure -> {
                             Timber.w("Failed to download ${type.display}: ${result.message}")

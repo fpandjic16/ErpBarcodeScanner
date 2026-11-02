@@ -21,7 +21,7 @@ The functional loop:
 
 1. **Reference data sync** — pull Locations + derive Responsibility Centers from the ERP.
 2. **Download** — pull document lines for one or more document types from a single shared ERP table ("Barcode App Entry"), filtered by document type code + date range + destination/source/RC.
-3. **Scan** — record barcode scans locally against document lines. A scan that doesn't match any line's barcode is rejected outright with a "Barcode not found" error — it is never recorded.
+3. **Scan** — record barcode scans locally against document lines. A scan that doesn't match any line's barcode is rejected outright with a "Barcode not found" error — it is never recorded. The one exception is a stock count (`INVENTORY`), where it is asked about and can be added (§A.3).
 4. **Upload** — push each individual recorded scan as its own row to a second shared ERP table ("Barcode App Recordings"); on success the local document is fully removed; on failure it's flagged with the exact server error for retry.
 
 ## A.2 The Document Lifecycle (functional view)
@@ -41,6 +41,15 @@ Every document is always in exactly one of these states, computed automatically 
 ## A.3 Unmatched Scans
 
 A scanned barcode that doesn't match any line's `Barcode` field on the document is **not recorded**. The app shows a hard "Barcode not found" error (red flash + error haptic) and the user must re-scan the correct item or check the document. There is no offline/placeholder-document scanning and no automatic reconciliation step — every scan either lands on a real line at scan time or is rejected outright; there's nothing left over to resolve later.
+
+**The exception is a stock count** (`DocumentType.isStockCount`, which is `INVENTORY`). There an item NAV did not send is a finding the count has to report: it is on the shelf and not in the system. A scan that matches no line asks "Not on the batch — count it?" with the warning tone, as every scan that needs a look does; it is asked rather than counted straight away because a stray scan of the wrong label looks the same. Confirmed, `DocumentRepository.recordScanNotOnDocument` creates a **line added on the device** (`Line.isAddedOnDevice`):
+
+- Its `lineNo` is negative (-1, -2, …). NAV numbers its lines from 1 up, so the two cannot collide, and sorting by line number puts these at the top of the list, newest first.
+- Its item number is the barcode, it has no name (the screen shows "Not on the batch"), `expected` is 0, and its unit of measure comes from a `BARCODE|UOM|QTY` label if the scan was one.
+- Every later scan of that barcode lands on it without asking, and it never raises the over-scan warning: it expects nothing, so every scan is "over" by design.
+- It is uploaded with `Document_Line_No = 0` (§A.5.4).
+- It survives a re-download until NAV sends a line with the same barcode. Then all its scans, **sent ones included**, move onto NAV's line and the device line goes. Re-attachment of orphans alone would move only queued scans and leave NAV's line looking unscanned.
+- It is removed once its last scan is (`dropEmptyLinesAddedOnDevice`), so a line zeroed by mistake does not stay behind red with nothing expected.
 
 ## A.4 The Four-State Line Status Language
 
@@ -104,7 +113,7 @@ One flat OData row per document **line** (header fields repeated on every row of
 
 ### A.5.4 The "Barcode App Recordings" table (upload)
 
-One flat OData row **per individual scanned recording** — not one row per document, not batched. `Document_Line_No` is always a real line number the app knows about — the app no longer has any concept of an unmatched/"extra" recording (see §A.3), so it never sends `0` here.
+One flat OData row **per individual scanned recording** — not one row per document, not batched. `Document_Line_No` is always a real line number the app knows about — the app no longer has any concept of an unmatched/"extra" recording (see §A.3), so it never sends `0` here — except for a line added on the device during a stock count, which goes out as `0`, meaning "not on the document, find the item by `Barcode`" (§A.3).
 
 | NAV field | Meaning |
 |---|---|
@@ -352,10 +361,11 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 |---|---|
 | `observeAll(): Flow<List<Document>>` | Combines all headers + lines + recordings, assembles domain `Document`s via `assembleDocuments` (in-memory groupBy, avoids N+1 queries) |
 | `observeDocument(documentNo, type): Flow<Document?>` | Same, scoped to one document |
-| `replaceDownloadedDocuments(type, docs)` (suspend, transactional) | Deletes headers of `type` not present in `docs` **only if they have zero recordings**; calls `mergeDocument` for every doc in `docs` |
+| `replaceDownloadedDocuments(type, docs, pruneMissing = true)` (suspend, transactional) | Deletes headers of `type` not present in `docs` **only if they have zero recordings**, and only when `pruneMissing` (false for a download of one picked inventory batch, which says nothing about the others); calls `mergeDocument` for every doc in `docs` |
 | `mergeDocument(doc, type)` (private, suspend) | Refreshes header + fully replaces lines from the download, recomputes docState from whatever recordings already exist locally — see §B.4.1 for the exact code path |
 | `computeStateAfterMerge(lines, recordings)` (private) | `Downloaded` if no recordings; else `Completed` if every line's summed recordings exactly equal `expected`; else `InProgress`. Never returns `PendingUpload`/`UploadFailed` — those are only set via `updateDocState` from outside, and any subsequent merge will silently overwrite them |
 | `recordScan(documentNo, type, lineNo, barcodeNo, userId, quantity)` (suspend, transactional) | Looks up line+header, generates next `recordingLineNo`, **inserts** a new recording (always additive, never updates existing rows), calls `advanceToInProgressIfNeeded` + `regressFromCompletedIfNeeded` |
+| `recordScanNotOnDocument(documentNo, type, barcodeNo, unitOfMeasureCode, userId, quantity)` (suspend, transactional) | Stock count only (§A.3). Finds the device-added line for the barcode or creates one (`lineNo` = lowest existing, capped at 0, minus 1), then calls `recordScan` in the same transaction, so a second scan arriving before the screen has seen the line still lands on it |
 | `setLineScanned(documentNo, type, lineNo, scanned, userId): SetQuantityResult` (suspend, transactional) | Moves only the **queued** part of a line, and as a delta. Refuses with `BelowSent(sent)` if `scanned` is under what the ERP already holds. Otherwise: up appends one row like a scan would; down consumes queued rows newest-first and stops, trimming the last one it only partly needs. Runs all three state helpers (including `regressToDownloadedIfNeeded`, since zeroing a line could empty the doc entirely) |
 | `updateDocState(documentNo, type, state)` (suspend) | Direct state write — used by the upload flow for `PendingUpload`/`UploadFailed` |
 | `deleteDocument(documentNo, type)` (suspend) | Deletes header, cascades lines+recordings — used on upload success |
@@ -449,6 +459,7 @@ data class DocumentFilter(
 data class DownloadFilter(
     val dateFrom: LocalDate? = null, val dateTo: LocalDate? = null,
     val destinationCode: String = "", val sourceCode: String = "", val rcCode: String = "",
+    val documentNo: String = "",   // one document only: the picked inventory batch
 )
 ```
 
@@ -529,13 +540,15 @@ Keying by profile is what makes the TTL mean what it reads like: an operator sig
 2. `extSystemClient.configure(config, creds)`.
 3. For each `DocumentType` in scope (one, or all 5 if `docType == null`):
    - `typeCode = config.docTypeCodeFor(type)`.
-   - `buildODataFilterString(filter, typeCode, type)`: `Document_Type eq '<typeCode>'` (always, if non-blank) + `Retail_Location eq true/false` (whenever `type.retailLocation` is non-null, i.e. everything except transport sheets — see §A.5.3) + `Document_Date ge/le` (if set) + `Destination_No eq` (if set) + `Source_No eq` (if set) + `Responsibility_Center eq` (if set) — joined with `" and "`.
+   - `buildODataFilterString(filter, typeCode, type)`: `Document_Type eq '<typeCode>'` (always, if non-blank) + `Retail_Location eq true/false` (whenever `type.retailLocation` is non-null, i.e. everything except transport sheets — see §A.5.3) + `Document_Date ge/le` (if set) + `Destination_No eq` (if set) + `Source_No eq` (if set) + `Responsibility_Center eq` (if set) + `Document_No eq` (if set — the picked inventory batch) — joined with `" and "`.
    - `appendODataFilter`: appends `?$filter=<urlencoded>` (or `&$filter=` if `?` already present); `URLEncoder.encode(..., "UTF-8")` with a `+`→`%20` post-fix.
    - `downloadRaw(finalUrl)` — paginated GET.
    - Parses as `NavODataList<NavBarcodeAppEntry>`, groups by `documentNo`, builds `Document`+`Line`s, `state=Downloaded`.
-   - `repository.replaceDownloadedDocuments(type, documents)`.
+   - `repository.replaceDownloadedDocuments(type, documents, pruneMissing = filter.documentNo.isBlank())`.
    - On failure: increments `failures`, appends the message, **continues to the next doc type** (doesn't abort the whole batch).
 4. `onComplete(failures, errorMessages)`.
+
+**Inventory batch list:** `AppViewModel.loadInventoryBatches(filter, onResult)`, called by `DownloadFilterScreen` for a stock count in place of the date range. Same checks and same lines URL, filtered by type and scope, plus `$select=Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name`. Parsed as `NavInventoryBatchRow`, grouped by `Document_No` into `InventoryBatch` (template, batch, date, line count) and sorted by template, batch and number. The operator's pick becomes `DownloadFilter.documentNo`. Signed out, the screen's sign-in sheet loads the list instead of downloading (§B.18, Inventory).
 
 Locations: `realDownloadLocations()` — single `GET config.locationsUrl` → `NavODataList<NavLocation>` → derives distinct non-blank `rcCode`s → `locationDao.clearRcs()+upsertRcs()` then `clearLocations()+upsertLocations()`. No `$filter` applied.
 
@@ -742,7 +755,7 @@ val matchedLine = doc.lines.find { it.barcodeNo == barcode }
 ```
 - Trigger: **exactly 3 pipe-separated parts**, last part parses as `Double`. Anything else falls through to ordinary handling.
 - **Matched line**: `qty = parsedQty ?: matchedLine.scanningQty`; calls `onScan(barcode, qty)` (→ `RecordingViewModel.recordScan`), immediately. If `warnOnOver` is on and the new total pushes the line into Over, an over-scan warning dialog shows (informational only — the scan is already recorded). If `parsedUom != null && parsedUom != matchedLine.unitOfMeasureCode` → UoM mismatch dialog (also informational only).
-- **Unmatched**: nothing is recorded. `barcodeNotFoundError` is set (shows the "Barcode not found" dialog), the scan bar flashes red for 600ms (Slate → `#7A1A1A` → back), and an error haptic fires.
+- **Unmatched**: nothing is recorded. `barcodeNotFoundError` is set (shows the "Barcode not found" dialog), the scan bar flashes red for 600ms (Slate → `#7A1A1A` → back), and an error haptic fires. On a stock count `notOnDocumentScan` is set instead and the "Not on the batch" dialog asks; **Count it** calls `onScanNotOnDocument` → `RecordingViewModel.recordScanNotOnDocument` (§A.3). A line added on the device never raises the over-scan warning.
 
 **Fixed 2026-08**: the DataWedge receiver's callback is registered once via `DisposableEffect(Unit)` — since `handleScan` is a local function redefined on every recomposition, the receiver was pinned to the very first composition's `handleScan` (and therefore a stale `doc` snapshot) for the rest of the screen's lifetime, silently evaluating over-scan/UoM-mismatch checks against outdated data for every hardware scan after the first. Fixed via `rememberUpdatedState(::handleScan)` so the receiver always calls the current version.
 
@@ -1119,7 +1132,7 @@ Separately, a full audit (2026-08, same pass) checked every one of the then-247 
 
 - **Adding a new document type**: add an enum value to `DocumentType` (Models.kt) with a `key`/`display`, plus `retailLocation` if it shares a `Document_Type` code with another type and `defaultFilterMode` if location isn't the right scope; add it to the four bundled `ext_system_defaults_*.json` — `documentTypeCodes` **and** `docTypeFilters`, both keyed by the enum name; add a localized name in all four `strings.xml`. It will automatically appear in `MainMenuScreen`'s type list and all downstream screens, since they iterate `DocumentType.entries` — but note the compiler will also stop you in seven exhaustive `when` blocks that must each get a branch: six duplicated `localizedDisplay()` helpers (one per screen) and `MainMenuScreen`'s icon mapping. That the compiler catches every one of them is the reason the duplication is survivable.
 - **`COMPLAINT_SHIPMENT` and `COMPLAINT_RECEIPT`** (2026-11, codes `REKOTPR` and `REKZAPR`) replaced the single `COMPLAINT` type. Both are scoped by responsibility centre and carry their own code, so neither filters on `Retail_Location`. Because no old complaint document could be told apart as shipment or receipt, and none were being scanned yet, `MIGRATION_19_20` deletes the `COMPLAINT` rows. `ExtSystemConfigStore` falls back to the two codes when a device has none stored (the code field is read-only), so a device configured before the split needs no reload. The NAV side is `PRICO-2026-43`, §B.18.
-- **`COMPLAINT` (since replaced) and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies, exactly like the other types — nothing about scanning, status colours or upload differs, and the §A.3 rule still applies, so an item found on the shelf that NAV didn't send is rejected as "barcode not found" rather than added.
+- **`COMPLAINT` (since replaced) and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies (`Qty. (Calculated)`), with two differences flagged by `DocumentType.isStockCount`: the download picks one inventory journal batch first (§B.6), and an item NAV didn't send is added on the device rather than rejected (§A.3).
 - **Adding a new AppSettings field**: add to the `AppSettings` data class + `AppSettingsStore` serialization, add local `remember` state + callback wiring in `MainActivity.kt`, and a control in `SettingsScreen.kt`. Remember the buffered-edit pattern — don't persist directly from the toggle, let it flow through `buildSettings()`/exit-save.
 - **The upload payload is intentionally flat and per-row**, not batched — if ERP-side batching is ever desired, `AppViewModel.runUpload`'s row loop is the place to change, but note the per-row-immediate-delete behavior is what makes partial-failure retries safe; batching would need an equivalent all-or-nothing safety guarantee.
 - **`NavResponsibilityCenter` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
@@ -1191,6 +1204,35 @@ These two types are done in NAV under the tag **`PRICO-2026-43`**, in `PRIMA NAV
 - **No partial receipt.** Receiving on page 50206 (`CheckComplaintShptReceivable`) requires the Barcode Status to be Processed. If a package did not arrive, a new complaint is opened for it.
 - **Processing paths:** the job queue (`AutoUpdateBarcodeStatusOnSync`), "Update Barcode Status" on cards 50034 and 50206 and on list 50055 (`BulkComplaintSheetStatusUpdate`), and opening card 50034 (for `REKOTPR`) or 50206 (for `REKZAPR`).
 - **The legacy call** `BEMFMgmt.FindScannedEntries` (marked `//temporary` in 50112) is skipped for both types. 50107 has no case for them, and their scans are read from 50180 anyway.
+
+### Inventory (`INVENTORY`) — what the app expects, NAV side not built yet
+
+The app side is done; the NAV side will get its own request tag. Everything below is the contract the app is written against. The option value `Inventory` already exists in 50111–50113 and in 50112's procedures, and `UPPERCASE(FORMAT(option))` gives `INVENTORY`, the code the bundled configurations use.
+
+- **What a document is.** One document is the lines of one **Phys. Inventory Journal** batch (Item Journal Line, table 83) that have been sent to scanning, one Barcode App Entry (50179) row per journal line.
+- **`Document_No` is the journal line's `Document No.`, not the batch name.** Batch names are reused for every count, and the device never deletes recordings during a sync. Keyed by the batch name, last year's scans would attach themselves to this year's count, matched by line number and barcode. The `Document No.` from the batch's number series is new for every count. The journal template and batch are carried separately (below), so several templates are no problem: NAV finds template and batch from the 50179 rows of that `Document_No`.
+- **Row contents:**
+
+  | 50179 field (OData name) | From Item Journal Line |
+  |---|---|
+  | `Document_Type` | `INVENTORY` |
+  | `Document_No` | `Document No.` |
+  | `Line_No` | `Line No.` — the upload's `Document_Line_No` comes back as this |
+  | `Item_No`, `Item_Description` | item and its description |
+  | `Barcode`, `Scanning_Qty`, `Item_UoM` | as for every other type |
+  | `Item_Qty` | `Qty. (Calculated)`. The operator sees it: the count is not blind |
+  | `Source_No` | `Location Code`. The app's location scope filters on this |
+  | `Destination_No` | the batch name. Inventory has no destination, and the app shows this field next to the location |
+  | `Responsibility_Center` | the location's responsibility centre |
+  | `Document_Date` | `Posting Date` |
+  | **new** `Journal_Template_Name`, `Journal_Batch_Name` | `Journal Template Name`, `Journal Batch Name` |
+
+- **The two new fields must be on the OData page.** The app's batch list asks for them by `$select` (`Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name`), and NAV refuses a `$select` naming a field the page does not have, so until they exist the list fails with an error. The list is built on the device by grouping those rows by `Document_No`; no separate endpoint is needed.
+- **Download.** The operator picks one entry and the app downloads `Document_Type eq 'INVENTORY' and Source_No eq '<location>' and Document_No eq '<picked>'`. A batch with lines at several locations is therefore counted per location, each device getting only its own location's lines.
+- **Upload.** `Document_Line_No` is the journal `Line No.`, or **0 for an item the batch does not list** (§A.3). For a 0, NAV finds the item by `Barcode` and adds a journal line for it. Several rows can carry line 0, and even the same `Recording_Line_No`, from different devices or different items; they are told apart by `Barcode` and identified by `Recording_Guid`. A barcode NAV cannot resolve is an error to be handled by hand.
+- **The added line should also get its 50179 row.** The device keeps its own line for that barcode until a 50179 row with the same barcode arrives on a re-download, and then moves all its scans onto it.
+- **Processing.** `Qty. (Phys. Inventory)` becomes the sum of all processed scans of the line, from every device, **recomputed each time rather than added to**, so processing twice changes nothing. Lines with no scans are set to **0**. Recomputing means a line set to 0 by an early processing run is corrected by the next one once its scans arrive.
+- **After posting.** Posting deletes the journal lines, so the 50179 rows of that `Document_No` should go too, and `CheckDocumentStatus` should refuse uploads for a `Document_No` no longer in a journal.
 
 ### Legacy
 

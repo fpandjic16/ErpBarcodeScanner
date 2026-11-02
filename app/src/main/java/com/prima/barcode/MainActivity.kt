@@ -873,6 +873,15 @@ private fun PrimaBarcodeApp(
                 locations       = locations,
                 rcs             = rcs,
                 onTestConnection = ::testSignIn,
+                onLoadInventoryBatches = { filter, username, password, onResult ->
+                    if (username != null && password != null) appVm.saveCredentials(username, password)
+                    appVm.loadInventoryBatches(filter) { result ->
+                        when (result) {
+                            is ExtSystemResult.Success -> onResult(result.data, null)
+                            is ExtSystemResult.Failure -> onResult(null, result.message)
+                        }
+                    }
+                },
                 onConfirm = { filter, username, password ->
                     if (username != null && password != null) appVm.saveCredentials(username, password)
                     if (!scopeSelected) {
@@ -915,6 +924,9 @@ private fun PrimaBarcodeApp(
                         currentDoc.lines.find { it.barcodeNo == barcode }?.let { line ->
                             vm.recordScan(line.lineNo, barcode, activeProfile.id, multiplier)
                         }
+                    },
+                    onScanNotOnDocument = { barcode, uom, quantity ->
+                        vm.recordScanNotOnDocument(barcode, uom, activeProfile.id, quantity)
                     },
                     onLineUpdate = { lineNo, newScanned, onRefused ->
                         vm.setLineScanned(lineNo, newScanned, activeProfile.id, onRefused)
