@@ -55,8 +55,8 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
          * configuration over its own. These codes are the same in every company.
          */
         val CODES_OF_TYPES_ADDED_LATER = mapOf(
-            DocumentType.COMPLAINT_SHIPMENT to "REK-OTPR",
-            DocumentType.COMPLAINT_RECEIPT  to "REK-ZAPR",
+            DocumentType.COMPLAINT_SHIPMENT to "REKOTPR",
+            DocumentType.COMPLAINT_RECEIPT  to "REKZAPR",
         )
     }
 }
