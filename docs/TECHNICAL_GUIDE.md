@@ -1213,8 +1213,8 @@ These two types are done in NAV under the tag **`PRICO-2026-43`**, in `PRIMA NAV
 Done in NAV under **`PRICO-2026-43`**, the same tag as the complaint types, in `PRIMA NAV/INVENTURA-BARKOD.txt`.
 
 **Import order and what the file leaves out.**
-- **The file holds six objects:** tables 91, 233 and 50179, codeunits 241 and 50112, page 392.
-- **Import it after `REK-OTPR-ZAPR.txt`, never instead of it.** Tables 91 and 50179 and codeunit 50112 are taken from `REK-OTPR-ZAPR.txt` with its changes included.
+- **The file holds eight objects:** tables 91, 233, 50111 and 50179, codeunits 241, 50112 and the new 50116, page 392.
+- **Import it after `REK-OTPR-ZAPR.txt`, never instead of it.** Tables 91, 50111 and 50179 and codeunit 50112 are taken from `REK-OTPR-ZAPR.txt` with its changes included.
 - **`inventura.txt` beside it** is the unmodified export of 233, 241 and 392.
 - **Two things are added by hand in NAV**, because their objects were not exported:
   - the two new 50179 fields on the page published as `BarcodeAppEntries`. Their controls must be named after the fields, so OData calls them `Journal_Template_Name` and `Journal_Batch_Name`. Until they are there, the app's batch list fails;
@@ -1285,7 +1285,7 @@ Batch names are reused for every count, while the document no. from the batch's 
 **Known limits.**
 - Quantities are not converted between units of measure. A scan counts in the journal line's unit, as on every other type.
 - An item listed twice in one BOM, and a component that is also a journal line of its own, are not handled specially.
-- Moving scans from 50180 to 50111 looks each GUID up among the document's rows in 50111, as for every type. On a count of many thousands of scans that lookup grows with the count; a key on 50111 (`Document Type,Document No.,uuid`) would make it direct, and has not been added.
+- **Table 50111 has a new key, `Document Type,Document No.,uuid`.** Moving a scan from 50180 to 50111 (`InsertScannedEntries`) first checks whether its GUID is already there, once per scan and for every type. Through this key the check goes straight to the GUID instead of reading all of the document's scans, which on an inventory are many thousands. Importing the table builds the index on SQL, which takes a while on a large 50111.
 
 ### Legacy
 
