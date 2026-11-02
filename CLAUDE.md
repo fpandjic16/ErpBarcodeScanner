@@ -70,10 +70,10 @@ Outside the app:
 
 - **MainMenuScreen** — Document type list with counts/status bars; context strip for location/RC switching; a single RECORDINGS row opening `RecordingsListScreen`
 - **RecordingsListScreen** — Every document carrying a scan, newest first; a row opens its recordings tree
-- **RecordingScreen** — Core scanning interface: per-line progress, docked ScanBar, hardware wedge + camera fallback, keypad entry, over-scan/UoM-mismatch warnings. An accepted scan scrolls the list to the line it landed on (only when that line is off screen) and deepens its status tint for five seconds before fading back
+- **RecordingScreen** — Core scanning interface: per-line progress, docked ScanBar, hardware wedge + camera fallback, keypad entry, over-scan/UoM-mismatch warnings. On a stock count, an unlisted item is confirmed and added as a line of the device's own, a `BARCODE|UOM|QTY` label matches on its plain barcode, and a line expecting 0 or less gives no over-scan warning. An accepted scan scrolls the list to the line it landed on (only when that line is off screen) and deepens its status tint for five seconds before fading back
 - **DocumentListScreen** — Per-doc-type list with tabs, create/delete, filter, upload
 - **DocumentOverviewScreen** — Cross-type dashboard (errors/ready/partial/over tabs)
-- **DocumentFilterScreen** / **DownloadFilterScreen** — Filter builders for the list/overview and for NAV downloads
+- **DocumentFilterScreen** / **DownloadFilterScreen** — Filter builders for the list/overview and for NAV downloads. For a stock count the download screen lists the inventory journal batches instead of a date range, and downloads the one picked
 - **LocationRcPickScreen** — Location/RC switcher with NAV refresh
 - **ExtSystemConfigScreen** — NAV endpoint URLs, doc type codes, credential TTL, per-type enable switch and scope, JSON import/export. A configuration file carries a `DeviceConfiguration`: the whole of `ExtSystemConfig` **plus** the device half of `AppSettings` (`disabledDocTypes`, `docTypeFilters`, `debuggerActive`). The personal half is deliberately excluded — it belongs to a person, not to a deployment. Export writes what is on the device now, so a hand-tuned device can be the template for its fleet
 - **SettingsScreen** — Text size, language, scan behavior toggles, cache/export/sign-out, embeds ext-system config

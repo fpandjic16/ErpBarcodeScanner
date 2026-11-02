@@ -113,7 +113,7 @@ One flat OData row per document **line** (header fields repeated on every row of
 
 ### A.5.4 The "Barcode App Recordings" table (upload)
 
-One flat OData row **per individual scanned recording** — not one row per document, not batched. `Document_Line_No` is always a real line number the app knows about — the app no longer has any concept of an unmatched/"extra" recording (see §A.3), so it never sends `0` here — except for a line added on the device during a stock count, which goes out as `0`, meaning "not on the document, find the item by `Barcode`" (§A.3).
+One flat OData row **per individual scanned recording** — not one row per document, not batched. `Document_Line_No` is always a real line number the app knows about — the app no longer has any concept of an unmatched/"extra" recording (see §A.3), so it never sends `0` here — except for a line added on the device during a stock count, which goes out as `0` (§A.3). NAV reads this field for no type: it matches every scan to an item by `Barcode` (§B.18), so the `0` only tells a reader of 50180 that the line was not on the document.
 
 | NAV field | Meaning |
 |---|---|
@@ -335,6 +335,7 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 - `getAll(): List<DocumentLineEntity>` (suspend)
 - `upsertAll(lines)` (suspend, `@Upsert`)
 - `deleteAllForDoc(documentNo, type)` (suspend)
+- `deleteByKey(documentNo, type, lineNo)` (suspend) — removes one line; used for a line added on the device once its last scan is gone
 
 ### `RecordingDao`
 - `observeByDoc(documentNo, type): Flow<List<RecordingEntity>>` — `ORDER BY documentLine, recordingLineNo`
@@ -419,6 +420,8 @@ That's the whole function — it never touches the `recordings` table. Recording
 | COMPLAINT_RECEIPT | `CPL_RCPT` | "Complaint Receipt" |
 | INVENTORY | `INVENTORY` | "Inventory" |
 
+`isStockCount` is true for `INVENTORY` only. It makes the download pick one inventory journal batch first (§B.6) and lets a scan of an item the document does not list become a line added on the device (§A.3).
+
 `String.toDocumentType()` defaults to `WAREHOUSE_SHIPMENT` on an unrecognized key — which is why a retired type's rows are deleted by a migration rather than left behind (the `COMPLAINT` key, §B.17). A `key` is never reused for a different type.
 
 ### `DocState` (sealed interface, `Models.kt`)
@@ -463,7 +466,7 @@ data class DownloadFilter(
 )
 ```
 
-Other `Models.kt` types: `User`, `Location`, `ResponsibilityCenter`, `Item(no, name)`, `Line` (computed `status`), `Document` (computed `linesExact`, `linesTotal`, `scannedQty`, `expectedQty`, `hasProgress`, `totalScans`, `partlySent`), `ScanRecord` + `LineScans` (the recordings tree's UI models — see `RecordingsTreeScreen`), `Double.formatQty()` extension.
+Other `Models.kt` types: `User`, `Location`, `ResponsibilityCenter`, `Item(no, name)`, `Line` (computed `status`, `hasSentQuantity`, and `isAddedOnDevice`, true for a negative `lineNo`), `InventoryBatch` (one entry of the inventory batch list: `documentNo`, journal template and batch, date, line count), `Document` (computed `linesExact`, `linesTotal`, `scannedQty`, `expectedQty`, `hasProgress`, `totalScans`, `partlySent`), `ScanRecord` + `LineScans` (the recordings tree's UI models — see `RecordingsTreeScreen`), `Double.formatQty()` extension.
 
 ### Supporting: `DatabaseExporter`
 `data/export/DatabaseExporter.kt` — `suspend fun exportTo(uri: Uri)`, reads all headers/lines/recordings via DAOs, wraps as `{exportedAt, documentHeaders, documentLines, recordings}`, Gson-pretty-prints to the given `Uri`. Debug/support tool, invoked from `SettingsScreen`'s "Export data".
@@ -784,6 +787,11 @@ Generic filter editor shared by DocumentListScreen and DocumentOverviewScreen. S
 ### `DownloadFilterScreen.kt`
 Pre-download filter form: date range, destination text field, and **exactly one** of Source/RC picker rows shown (the other hidden entirely, not just disabled) depending on which is fixed via `fixedSourceCode`/`fixedRcCode`. Auto-opens `LoginSheet` on entry if `!hasCredentials`.
 
+For a stock count (`docType.isStockCount`) the date range is replaced by the inventory batch list (`InventoryBatchList`):
+- It is loaded through `onLoadInventoryBatches` → `AppViewModel.loadInventoryBatches` (§B.6) on entry, or right after the sign-in sheet when the operator was signed out. In that case the sheet loads the list instead of downloading, and a local `signedIn` stops the screen from asking again.
+- States: loading, error with **Try again**, empty, and the list. Each row shows template · batch, then document no. · date · line count (a `<plurals>` resource).
+- A tap selects; **OK** is disabled until something is selected (unless signed out, where OK is how the sign-in is reached). The pick goes out as `DownloadFilter.documentNo`.
+
 ### `ExtSystemConfigScreen.kt`
 Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Recording sync URL. "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
 
@@ -846,6 +854,13 @@ Four decisions worth keeping:
 - **Deepens the status tint rather than adding a colour.** The four-state language is the screen's whole vocabulary. It also means the fade lands on the status the line has *now*: a scan that completes a line fades into green, not back into orange.
 
 `highlightAlpha` is passed to `OverviewContent` as a lambda, not a `Float`, so reading it inside the `items` block invalidates one row per frame instead of the whole list.
+
+**On a stock count** (`doc.type.isStockCount`):
+- **A scan that matches no line** sets `notOnDocumentScan` and shows "Not on the batch" with **Count it** / **Cancel**, instead of "Barcode not found". **Count it** calls `onScanNotOnDocument` → `RecordingViewModel.recordScanNotOnDocument` (§A.3).
+- **A line added on the device** shows "Not on the batch" in place of the item name, in the list and in the detail view. It sorts first, because its `lineNo` is negative.
+- **A `BARCODE|UOM|QTY` label** that matches no line exactly lands on the line whose barcode is the part before the first `|` (§B.9.3).
+- **`warnsOnOver(line)`** keeps the over-scan dialog off a line added on the device and off a line expecting 0 or less.
+- **A `LaunchedEffect`** returns to `OVERVIEW` when the active line disappears, which a line added on the device does once it is set to 0.
 
 ### `AppInfo.kt` — `AppInfoCard` and `AppInfoScreen`
 One block, shown in two places: Settings → System info, and `AppInfoScreen` at the sign-in gate (§B.7). Rows: app version and build, Android and API, SDK (min/target, with the Android release each maps to), database version, ERP environment (`ExtSystemConfig.environment`, "Nije postavljeno" when null) and company. The database row reads `PRIMA_DB_VERSION`, the constant `@Database(version = …)` itself uses — it used to show its own constant, "7.0.0", that nobody updated while the schema went to 19. The company is `ExtSystemConfig.companyName`, read from `Company('…')` in the document lines URL (percent-decoded, OData's doubled apostrophe undone) rather than stored separately: it is the company the device actually addresses, and a stored name could disagree with the URL. That is how the test configurations of Mebel, Mobilis and Pohištvo were found still pointing at Prima Commerce (fixed 2026-10). `SettingsIcon` and `SettingsDivider` are `internal` in `SettingsScreen.kt` so the card can share them.
@@ -912,7 +927,7 @@ val overDocs    = filteredDocs.filter { it.state !is DocState.UploadFailed && it
 | `dashboard?tab={tab}` (Int, default 0) | `DocumentOverviewScreen` | `initialTab` from nav arg |
 | `filter` | `DocumentFilterScreen` | edits `docFilter`, `showDocTypeFilter=false` |
 | `overview_filter` | `DocumentFilterScreen` | edits `overviewFilter`, locked source/RC from dashboard drill-down |
-| `download_filter` | `DownloadFilterScreen` | fixed source/RC per filter mode; URLs via `buildDownloadUrls`; downloads via `realDownloadDocuments` |
+| `download_filter` | `DownloadFilterScreen` | fixed source/RC per filter mode; URLs via `buildDownloadUrls`; downloads via `realDownloadDocuments`; for a stock count, the batch list via `loadInventoryBatches` |
 | `recording/{documentNo}/{type}` (String args) | `RecordingScreen` | route-scoped `RecordingViewModel` via `hiltViewModel()` |
 | `recordings_list` | `RecordingsListScreen` | the main menu's RECORDINGS row; hands `recordedDocs` straight through |
 | `profiles` | `ProfilesScreen` | Settings → Account → Operators; re-reads `profileStore.profiles()` on a refresh counter after each deletion |
@@ -1150,7 +1165,18 @@ The app's half of the integration is the OData pages it calls; the other half is
 | `pages_barcode.txt` | The document pages that start scanning work or change its status: 5768 Warehouse Receipt, 7332 Warehouse Receipts, 7335 Warehouse Shipment, 7339 Warehouse Shipment List, 50031–50034 Complaint (lists and cards), 50040 Transport Sheet, 50042 Transport Sheet List, 50055 Receiving Complaint Shpts., 50145 Retail Warehouse Receipt, 50146 Retail Warehouse Shipment |
 | `transport.txt` | Tables 50015 Transport Sheet Header, 50016 Transport Sheet Line; codeunit 50093 Transport Sheet Mgmt; pages 50040–50042 |
 
-Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the two copies have to stay identical. Not exported, and therefore not visible here: table 50179 Barcode App Entry (what the app downloads), the OData pages published over 50179/50180 and the location list, and the Warehouse Shipment/Receipt header tables (7320/7316).
+Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the two copies have to stay identical. Not exported, and therefore not visible here: the OData pages published over 50179/50180 and the location list, the Warehouse Shipment/Receipt header tables (7320/7316), and table 50161 (the sync records).
+
+The later work lives beside this repository, in `../PRIMA NAV/`, also CP852 with CRLF:
+
+| File | What it is |
+|---|---|
+| `REK-OTPR-ZAPR.txt` | Complaint shipment and receipt (`PRICO-2026-43`): 29 objects, among them tables 50111–50113, 50179 and 50180 and codeunit 50112 in their current form |
+| `INVENTURA-BARKOD.txt` | Inventory (`PRICO-2026-43`): tables 91, 233, 50111, 50179, codeunits 241, 50112 and the new 50116, page 392. Imported **after** `REK-OTPR-ZAPR.txt`, whose versions of 91, 50111, 50179 and 50112 it builds on |
+| `inventura.txt` | The unmodified export of 233, 241 and 392 that `INVENTURA-BARKOD.txt` was made from |
+| `complaint.txt`, `complaint_BCKP.txt` | The unmodified export `REK-OTPR-ZAPR.txt` was made from |
+
+For anything in 50112, 50179 or 50111, the newest of these files is the current version, not `NAV/barcode_scanning.txt`.
 
 ### Editing rules
 
@@ -1163,13 +1189,13 @@ Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the t
 
 ### How a scan travels
 
-1. **Release** of a warehouse shipment (subscriber on codeunit 7310 `OnBeforeRelease`) or receipt (codeunit 50127) creates the document's rows in **Barcode App Entry (50179)** through 50112's `CreateBarcodeAppEntries` / `Fill*BarcodeEntries`. Transport sheets and complaint shipments have their own `Fill*` procedures. **Reopen** deletes them again (`DeleteBarcodeEntries`), and refuses while the document's Barcode Status is Processed. 50179 is what the app downloads (§A.5.3).
+1. **Release** of a warehouse shipment (subscriber on codeunit 7310 `OnBeforeRelease`) or receipt (codeunit 50127) creates the document's rows in **Barcode App Entry (50179)** through 50112's `CreateBarcodeAppEntries` / `Fill*BarcodeEntries`. Transport sheets and complaint shipments have their own `Fill*` procedures. An inventory is sent by hand, with **Send for Scanning** on page 392 (`FillPhysInventoryBarcodeEntries`). **Reopen** deletes them again (`DeleteBarcodeEntries`), and refuses while the document's Barcode Status is Processed. 50179 is what the app downloads (§A.5.3).
 2. **Upload:** every recording the app sends is one row in **Barcode App Recordings (50180)**. Its primary key is `Recording Guid`, so a repeated GUID is refused while the first copy is still there (§A.5.4). After processing it is accepted again but not counted twice, because processing skips a GUID already in 50111. `Barcode` is `Text30`.
 3. **Processing:** `CreateScanningEntriesOnDocument` (50112, called from page 50110, the document cards and the bulk status updates) does the following:
-   - `FindScannedEntries` moves the document's rows from 50180 into **Scanned Document Lines (50111)** and deletes them from 50180, then deletes the document's 50179 rows. `InsertScannedEntries` writes a 50111 row only if none with the same `uuid` (the recording's GUID) exists for that document.
+   - `FindScannedEntries` moves the document's rows from 50180 into **Scanned Document Lines (50111)** and deletes them from 50180, then deletes the document's 50179 rows. An inventory keeps its 50179 rows until the count is finished. `InsertScannedEntries` writes a 50111 row only if none with the same `uuid` (the recording's GUID) exists for that document.
    - It loads the scans and lays the document's lines into an in-memory buffer. It allocates exact-quantity scans first, then the rest. Whatever no line can take becomes surplus lines, including items not on the document at all.
    - It writes the result once to **Scanned Document Lines Buffer (50113)**, the comparison page 50110 shows.
-   - Last, `ChangeDocumentStatus` sets the document's Barcode Status. A completed document's 50179 rows are deleted.
+   - Last, `ChangeDocumentStatus` sets the document's Barcode Status. A completed document's 50179 rows are deleted. An inventory writes `Qty. (Phys. Inventory)` to its journal instead and keeps its status (§B.18, Inventory).
 4. **Job queue:** 50112's `OnRun` runs `ProcessSyncedDocuments` (`PRICO-2026-43`). It collects the documents synced more than five minutes ago and runs each through the new codeunit **50116 Barcode App Sync Document** with `IF NOT CODEUNIT.RUN`, committing before each one.
    - **A failing document no longer stops the rest.** Its changes since its last commit are rolled back, its sync records stay unprocessed so the next run tries it again, and the other documents go on. Before this, the whole run was one `[TryFunction]`, and a document that kept failing was first in line on every run, so nothing after it was ever processed again.
    - **50116 marks the document's sync records processed** only once the document has gone through.
@@ -1178,11 +1204,11 @@ Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the t
 
 ### What the app's `Document_Line_No` means
 
-It is the **Barcode App Entry (50179) line number**, not the warehouse document's line. 50179 rows are deleted once recordings are processed, so NAV-side matching goes by item, never by that number. A `BARCODE|UOM|QTY` scan is resolved to its item on the NAV side too: older 50111 rows written before 2026-10-06 may have a blank `Item No.`, which `LoadScans` resolves when it reads them.
+It is the **Barcode App Entry (50179) line number**, not the warehouse document's line, and `0` for a line the device added during a stock count. NAV reads it for no type: matching goes by barcode to item. That is just as well, because 50179 rows are deleted once recordings are processed, and an inventory rebuilds them every time it is sent again. A `BARCODE|UOM|QTY` scan is resolved to its item on the NAV side too: older 50111 rows written before 2026-10-06 may have a blank `Item No.`, which `LoadScans` resolves when it reads them.
 
 ### Document type codes
 
-The app sends `ExtSystemConfig.documentTypeCodes`; the bundled configurations use `SHIPMENT`, `RECEIPT`, `TRANSPORT`, `REKOTPR`, `REKZAPR` and `INVENTORY`. `REKOTPR` and `REKZAPR` are option values in 50111–50113 and in 50112's procedures, added under `PRICO-2026-43` (below); a code has to match an option name exactly, because `FindScannedEntries` filters 50180 by `UPPERCASE(FORMAT(option))`. Retail and warehouse documents share `SHIPMENT`/`RECEIPT` and are told apart by `Retail_Location` (§A.5.4). NAV's own option list in 50112 also carries the cross-dock types (`WHCDSHIP`, `WHCDREC`, `WHCDSHFROM`, `CPCDSHIP`, `CPCDREC`, `CPCDSHFROM`), `Prereceipt` and `RetailShpt`/`RetailRcpt`.
+The app sends `ExtSystemConfig.documentTypeCodes`; the bundled configurations use `SHIPMENT`, `RECEIPT`, `TRANSPORT`, `REKOTPR`, `REKZAPR` and `INVENTORY`. `REKOTPR` and `REKZAPR` are option values in 50111–50113 and in 50112's procedures, added under `PRICO-2026-43` (below). `INVENTORY` is the option `Inventory`, which was there from the start; a code has to match an option name exactly, because `FindScannedEntries` filters 50180 by `UPPERCASE(FORMAT(option))`. Retail and warehouse documents share `SHIPMENT`/`RECEIPT` and are told apart by `Retail_Location` (§A.5.4). NAV's own option list in 50112 also carries the cross-dock types (`WHCDSHIP`, `WHCDREC`, `WHCDSHFROM`, `CPCDSHIP`, `CPCDREC`, `CPCDSHFROM`), `Prereceipt` and `RetailShpt`/`RetailRcpt`.
 
 ### Complaint shipment and receipt (`REKOTPR` / `REKZAPR`, `PRICO-2026-43`)
 
@@ -1289,4 +1315,4 @@ Batch names are reused for every count, while the document no. from the batch's 
 
 ### Legacy
 
-Codeunits **50106 BarcodeMgmt** and **50107 BEMF Mgmt** belong to the earlier BE-Mobile scanner integration. The scanning logic is being moved off them into 50112 step by step. Since 2026-10-06, 50112 has no reference to 50106. 50107's BEMF `Fill*` procedures still use it, and 50107's `Bulk*StatusUpdate` and `IsCrossDock*` remain as wrappers for callers not yet found.
+Codeunits **50106 BarcodeMgmt** and **50107 BEMF Mgmt** belong to the earlier BE-Mobile scanner integration. The scanning logic is being moved off them into 50112 step by step. Since 2026-10-06, 50112 has no reference to 50106. 50107's BEMF `Fill*` procedures still use it, and 50107's `Bulk*StatusUpdate` and `IsCrossDock*` remain as wrappers for callers not yet found. 50107's own `AutoUpdateBarcodeStatusOnSync` still hands over to 50112's old procedure of that name, not to `ProcessSyncedDocuments`, so a job queue entry on 50107 does not get the per-document isolation.

@@ -325,6 +325,7 @@ This means: barcode `NTR1234|M|5.6` (the **whole string** is the barcode used fo
 - If this format is recognized (exactly two `|` characters, with a valid number at the end), the app records **exactly that quantity** — you won't be asked to type one in, even if your Settings normally ask for quantity on unrecognized barcodes.
 - If the unit of measure encoded in the label doesn't match what the document expects for that item, you'll see the **Unit of measure mismatch** warning (see above) — but the scan is still recorded as read.
 - If the barcode doesn't fit this exact pattern, it's treated as an ordinary barcode.
+- **On an inventory** the batch lists the plain barcode (`NTR1234`), because a label on the shelf prints whatever quantity it holds. Such a label lands on that line and counts the quantity printed on it.
 
 **Note**: because some barcode label types (Code 39) cannot physically encode the `|` character, labels using this format must be printed as **Code 128** (or another symbology that supports it). If a special-format barcode scans as garbled text, check the label's barcode type with the office/print team.
 
@@ -522,3 +523,5 @@ For the command line there is also `tools/make_login_qr.py`.
 | **Completed** | Every line scanned exactly. |
 | **Pending Upload** | Currently being sent to the central system. |
 | **Upload Failed** | The send attempt didn't succeed — see the Errors tab for the reason. |
+| **Inventory journal batch** | One stock count prepared in the central system for one location. You pick it when downloading an inventory. |
+| **Not on the batch** | An item counted on an inventory that the batch did not list; shown at the top of the list. |

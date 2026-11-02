@@ -327,6 +327,7 @@ To znači: barkod `NTR1234|M|5.6` (za uspoređivanje se koristi **cijeli niz**, 
 - Ako se format prepozna (točno dvije crte `|`, s ispravnim brojem na kraju), aplikacija bilježi **upravo tu količinu** — neće tražiti da je upišete, čak ni ako vaše postavke inače traže količinu za neprepoznate barkodove.
 - Ako jedinica mjere na etiketi ne odgovara onoj koju dokument očekuje za taj artikl, vidjet ćete upozorenje **Neusklađena jedinica mjere** (vidi gore) — ali skeniranje se svejedno bilježi kako je pročitano.
 - Ako barkod ne odgovara točno ovom obrascu, tretira se kao običan barkod.
+- **Na inventuri** serija sadrži sam barkod (`NTR1234`), jer naljepnica na polici nosi koju god količinu sadrži. Takva naljepnica pada na taj redak i broji količinu otisnutu na njoj.
 
 **Napomena**: neke vrste barkodova (Code 39) fizički ne mogu kodirati znak `|`, pa se etikete u ovom formatu moraju tiskati kao **Code 128** (ili u drugoj simbologiji koja ga podržava). Ako se barkod u posebnom formatu skenira kao nerazumljiv tekst, provjerite vrstu barkoda na etiketi s uredom ili timom za ispis.
 
@@ -531,3 +532,5 @@ Za naredbeni redak postoji i `tools/make_login_qr.py`.
 | **Završen** | Svaka stavka skenirana je točno. |
 | **Čeka slanje** | Dokument se upravo šalje u vanjski sustav. |
 | **Slanje neuspješno** | Pokušaj slanja nije uspio — razlog je na kartici Greške. |
+| **Serija temeljnice inventure** | Jedno brojanje zaliha pripremljeno u vanjskom sustavu za jednu lokaciju. Birate je pri preuzimanju inventure. |
+| **Nije na seriji** | Artikl prebrojan na inventuri kojeg serija nije sadržavala; prikazuje se na vrhu popisa. |
