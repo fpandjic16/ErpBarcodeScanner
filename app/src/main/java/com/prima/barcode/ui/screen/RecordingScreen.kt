@@ -75,7 +75,8 @@ fun RecordingScreen(
     doc: Document,
     docTypeCode: String = "",
     onBack: () -> Unit,
-    onScan: (barcode: String, multiplier: Double) -> Unit,
+    /** [lineNo] is the line the screen matched the scan to; [barcode] is the full scanned value. */
+    onScan: (lineNo: Int, barcode: String, quantity: Double) -> Unit,
     /** A stock count's scan of an item the document does not list, once the operator confirms it. */
     onScanNotOnDocument: (barcode: String, unitOfMeasureCode: String, quantity: Double) -> Unit = { _, _, _ -> },
     /**
@@ -176,6 +177,13 @@ fun RecordingScreen(
         highlightedLineNo = null
     }
 
+    // Whether going over this line's expected quantity is worth a dialog. Not on a line added on
+    // the device: it expects nothing, so every scan of it is "over", and the operator confirmed
+    // that when adding it. Not on a stock count's line that expects 0 or less either: the
+    // system's stock is already wrong there, and a dialog on every scan would say only that.
+    fun warnsOnOver(line: Line): Boolean =
+        !line.isAddedOnDevice && !(doc.type.isStockCount && line.expected <= 0.0)
+
     fun handleScan(rawInput: String) {
         val now = System.currentTimeMillis()
         if (rawInput == lastHandledBarcode && now - lastHandledAtMs < debounceTime) return
@@ -193,7 +201,11 @@ fun RecordingScreen(
         val parsedQty = if (pipeParts.size == 3) pipeParts[2].toDoubleOrNull() else null
         val parsedUom = if (parsedQty != null) pipeParts[1] else null
 
+        // A stock count's line carries the plain barcode, because a quantity label on the shelf
+        // prints whatever quantity it holds. Such a label lands on the line for the part before
+        // the first "|", and its printed quantity is what counts.
         val matchedLine = doc.lines.find { it.barcodeNo == barcode }
+            ?: if (doc.type.isStockCount && parsedQty != null) doc.lines.find { it.barcodeNo == pipeParts[0] } else null
         if (matchedLine == null) {
             scanErrorFlash = true
             if (hapticEnabled) hapticEngine.error()
@@ -210,16 +222,14 @@ fun RecordingScreen(
             }
         } else {
             val qty = parsedQty ?: matchedLine.scanningQty
-            onScan(barcode, qty)
+            onScan(matchedLine.lineNo, barcode, qty)
             highlightedLineNo = matchedLine.lineNo
             highlightTick++
             val base = maxOf(matchedLine.scanned, scannedRunningTotal[matchedLine.lineNo] ?: 0.0)
             val newScanned = base + qty
             scannedRunningTotal[matchedLine.lineNo] = newScanned
             val newStatus = LineStatus.of(newScanned, matchedLine.expected)
-            // A line added on the device expects nothing, so every scan of it is "over". The
-            // operator already confirmed that when adding it.
-            val overScan = warnOnOver && newStatus == LineStatus.OVER && !matchedLine.isAddedOnDevice
+            val overScan = warnOnOver && newStatus == LineStatus.OVER && warnsOnOver(matchedLine)
             // Every accepted scan makes a sound, not only the one that completes a line — this is
             // the operator's confirmation that the pull counted; the haptic below marks something
             // else, that the line is now exact.
@@ -445,7 +455,7 @@ fun RecordingScreen(
                                 onLineUpdate(line.lineNo, qty) { sent ->
                                     sentFloorWarning = SentFloorInfo(line.item.no, sent, line.unitOfMeasureCode)
                                 }
-                                if (warnOnOver && qty > line.expected && !line.isAddedOnDevice) {
+                                if (warnOnOver && qty > line.expected && warnsOnOver(line)) {
                                     overScanWarning = OverScanInfo(line.item.no, line.item.name, line.barcodeNo, line.expected, qty)
                                 }
                                 localScanned = null

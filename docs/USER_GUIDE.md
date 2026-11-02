@@ -168,6 +168,10 @@ An inventory document is one **inventory journal batch** from the central system
 - **An item that is not on the batch is still counted.** The app asks "Not on the batch — count it?"; confirm with **Count it**. The item appears at the top of the list as its barcode, marked "Not on the batch", and further scans of it count without asking. If you added it by mistake, open it and set its quantity to 0, and it disappears.
 - **Several people can count the same batch**, each on their own device. The central system adds up everyone's scans; each device shows only its own.
 - Lines nobody scanned are counted as **0** when the central system processes the count.
+- **The office sends the batch for scanning and finishes the count.** A batch appears in the download list once it has been sent and disappears when the count is finished. After that the device can no longer send scans for it, so send yours before the office finishes.
+- **Sets are counted by their packages.** Scan every package; the central system counts a set only when all of its packages are there.
+- **Quantity labels** (BARCODE|UOM|QTY) count the quantity printed on them.
+- **The expected quantity can be 0 or negative** when the system's stock is wrong. Such a line turns blue at the first scan, without an over-scan warning.
 
 ---
 

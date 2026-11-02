@@ -920,10 +920,8 @@ private fun PrimaBarcodeApp(
                     doc = currentDoc,
                     docTypeCode = extSystemConfig.docTypeCodeFor(currentDoc.type),
                     onBack = { nav.popBackStack() },
-                    onScan = { barcode, multiplier ->
-                        currentDoc.lines.find { it.barcodeNo == barcode }?.let { line ->
-                            vm.recordScan(line.lineNo, barcode, activeProfile.id, multiplier)
-                        }
+                    onScan = { lineNo, barcode, quantity ->
+                        vm.recordScan(lineNo, barcode, activeProfile.id, quantity)
                     },
                     onScanNotOnDocument = { barcode, uom, quantity ->
                         vm.recordScanNotOnDocument(barcode, uom, activeProfile.id, quantity)

@@ -754,7 +754,7 @@ val parsedUom = if (parsedQty != null) pipeParts[1] else null
 val matchedLine = doc.lines.find { it.barcodeNo == barcode }
 ```
 - Trigger: **exactly 3 pipe-separated parts**, last part parses as `Double`. Anything else falls through to ordinary handling.
-- **Matched line**: `qty = parsedQty ?: matchedLine.scanningQty`; calls `onScan(barcode, qty)` (→ `RecordingViewModel.recordScan`), immediately. If `warnOnOver` is on and the new total pushes the line into Over, an over-scan warning dialog shows (informational only — the scan is already recorded). If `parsedUom != null && parsedUom != matchedLine.unitOfMeasureCode` → UoM mismatch dialog (also informational only).
+- **Matched line**: `qty = parsedQty ?: matchedLine.scanningQty`; calls `onScan(lineNo, barcode, qty)` (→ `RecordingViewModel.recordScan`), immediately. On a stock count a `BARCODE|UOM|QTY` label that matches no line exactly lands on the line whose barcode is the part before the first `|`, with the printed quantity: NAV sends plain barcodes for an inventory, because a quantity label on the shelf prints whatever it holds. If `warnOnOver` is on and the new total pushes the line into Over, an over-scan warning dialog shows, except on a line added on the device and on a stock count's line expecting 0 or less (`warnsOnOver`), where every scan would raise it (informational only — the scan is already recorded). If `parsedUom != null && parsedUom != matchedLine.unitOfMeasureCode` → UoM mismatch dialog (also informational only).
 - **Unmatched**: nothing is recorded. `barcodeNotFoundError` is set (shows the "Barcode not found" dialog), the scan bar flashes red for 600ms (Slate → `#7A1A1A` → back), and an error haptic fires. On a stock count `notOnDocumentScan` is set instead and the "Not on the batch" dialog asks; **Count it** calls `onScanNotOnDocument` → `RecordingViewModel.recordScanNotOnDocument` (§A.3). A line added on the device never raises the over-scan warning.
 
 **Fixed 2026-08**: the DataWedge receiver's callback is registered once via `DisposableEffect(Unit)` — since `handleScan` is a local function redefined on every recomposition, the receiver was pinned to the very first composition's `handleScan` (and therefore a stale `doc` snapshot) for the rest of the screen's lifetime, silently evaluating over-scan/UoM-mismatch checks against outdated data for every hardware scan after the first. Fixed via `rememberUpdatedState(::handleScan)` so the receiver always calls the current version.
@@ -1155,7 +1155,7 @@ Pages 50040 and 50042 are in both `pages_barcode.txt` and `transport.txt`; the t
 ### Editing rules
 
 - **Encoding is CP852 with CRLF.** Read through `iconv -f CP852 -t UTF-8` into a scratch copy. Write back only through a script that decodes and encodes `cp852` and asserts a lossless round trip first. A UTF-8 editor corrupts every Croatian character in the file.
-- **Every change is marked with its request's tag** — `PRICO-2025-67` for the scanner-app work, `PRICO-2026-43` for complaint shipment and receipt — and **old code is never deleted**. NAV keeps no history of its own here, so the comment is the history:
+- **Every change is marked with its request's tag** — `PRICO-2025-67` for the scanner-app work, `PRICO-2026-43` for complaint shipment and receipt and for inventory — and **old code is never deleted**. NAV keeps no history of its own here, so the comment is the history:
   - A single replaced line is kept above the new one as `//`.
   - Two or more replaced lines go inside `{ }` at their original indentation, then the new code, then the closing tag.
   - A purely added line may carry a trailing `// <PRICO-2025-67/>`.
@@ -1205,34 +1205,81 @@ These two types are done in NAV under the tag **`PRICO-2026-43`**, in `PRIMA NAV
 - **Processing paths:** the job queue (`AutoUpdateBarcodeStatusOnSync`), "Update Barcode Status" on cards 50034 and 50206 and on list 50055 (`BulkComplaintSheetStatusUpdate`), and opening card 50034 (for `REKOTPR`) or 50206 (for `REKZAPR`).
 - **The legacy call** `BEMFMgmt.FindScannedEntries` (marked `//temporary` in 50112) is skipped for both types. 50107 has no case for them, and their scans are read from 50180 anyway.
 
-### Inventory (`INVENTORY`) — what the app expects, NAV side not built yet
+### Inventory (`INVENTORY`, `PRICO-2026-43`)
 
-The app side is done; the NAV side will get its own request tag. Everything below is the contract the app is written against. The option value `Inventory` already exists in 50111–50113 and in 50112's procedures, and `UPPERCASE(FORMAT(option))` gives `INVENTORY`, the code the bundled configurations use.
+Done in NAV under **`PRICO-2026-43`**, the same tag as the complaint types, in `PRIMA NAV/INVENTURA-BARKOD.txt`.
 
-- **What a document is.** One document is the lines of one **Phys. Inventory Journal** batch (Item Journal Line, table 83) that have been sent to scanning, one Barcode App Entry (50179) row per journal line.
-- **`Document_No` is the journal line's `Document No.`, not the batch name.** Batch names are reused for every count, and the device never deletes recordings during a sync. Keyed by the batch name, last year's scans would attach themselves to this year's count, matched by line number and barcode. The `Document No.` from the batch's number series is new for every count. The journal template and batch are carried separately (below), so several templates are no problem: NAV finds template and batch from the 50179 rows of that `Document_No`.
-- **Row contents:**
+**Import order and what the file leaves out.**
+- **The file holds six objects:** tables 91, 233 and 50179, codeunits 241 and 50112, page 392.
+- **Import it after `REK-OTPR-ZAPR.txt`, never instead of it.** Tables 91 and 50179 and codeunit 50112 are taken from `REK-OTPR-ZAPR.txt` with its changes included.
+- **`inventura.txt` beside it** is the unmodified export of 233, 241 and 392.
+- **Two things are added by hand in NAV**, because their objects were not exported:
+  - the two new 50179 fields on the page published as `BarcodeAppEntries`. Their controls must be named after the fields, so OData calls them `Journal_Template_Name` and `Journal_Batch_Name`. Until they are there, the app's batch list fails;
+  - the new User Setup field on page 119.
 
-  | 50179 field (OData name) | From Item Journal Line |
-  |---|---|
-  | `Document_Type` | `INVENTORY` |
-  | `Document_No` | `Document No.` |
-  | `Line_No` | `Line No.` — the upload's `Document_Line_No` comes back as this |
-  | `Item_No`, `Item_Description` | item and its description |
-  | `Barcode`, `Scanning_Qty`, `Item_UoM` | as for every other type |
-  | `Item_Qty` | `Qty. (Calculated)`. The operator sees it: the count is not blind |
-  | `Source_No` | `Location Code`. The app's location scope filters on this |
-  | `Destination_No` | the batch name. Inventory has no destination, and the app shows this field next to the location |
-  | `Responsibility_Center` | the location's responsibility centre |
-  | `Document_Date` | `Posting Date` |
-  | **new** `Journal_Template_Name`, `Journal_Batch_Name` | `Journal Template Name`, `Journal Batch Name` |
+**One count per batch.**
+- **Sending.** A Phys. Inventory batch is sent from page 392 with **Send for Scanning**. It refuses a batch that is not a Phys. Inventory template, or whose lines do not all share one `Document No.` and one location.
+- **Why one location.** Processing matches scans to lines by item only, and 50111 does not record where a scan was made, so two locations in one batch would take each other's counts.
+- **Sending again** while the count is open only refreshes the entries. The devices keep their scans.
 
-- **The two new fields must be on the OData page.** The app's batch list asks for them by `$select` (`Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name`), and NAV refuses a `$select` naming a field the page does not have, so until they exist the list fails with an error. The list is built on the device by grouping those rows by `Document_No`; no separate endpoint is needed.
-- **Download.** The operator picks one entry and the app downloads `Document_Type eq 'INVENTORY' and Source_No eq '<location>' and Document_No eq '<picked>'`. A batch with lines at several locations is therefore counted per location, each device getting only its own location's lines.
-- **Upload.** `Document_Line_No` is the journal `Line No.`, or **0 for an item the batch does not list** (§A.3). For a 0, NAV finds the item by `Barcode` and adds a journal line for it. Several rows can carry line 0, and even the same `Recording_Line_No`, from different devices or different items; they are told apart by `Barcode` and identified by `Recording_Guid`. A barcode NAV cannot resolve is an error to be handled by hand.
-- **The added line should also get its 50179 row.** The device keeps its own line for that barcode until a 50179 row with the same barcode arrives on a re-download, and then moves all its scans onto it.
-- **Processing.** `Qty. (Phys. Inventory)` becomes the sum of all processed scans of the line, from every device, **recomputed each time rather than added to**, so processing twice changes nothing. Lines with no scans are set to **0**. Recomputing means a line set to 0 by an early processing run is corrected by the next one once its scans arrive.
-- **After posting.** Posting deletes the journal lines, so the 50179 rows of that `Document_No` should go too, and `CheckDocumentStatus` should refuse uploads for a `Document_No` no longer in a journal.
+**The batch remembers its count.** Table 233 has two new fields:
+- **Barcode Status**: blank / Synchronized / Processed, the same options as on a warehouse shipment.
+- **Barcode Document No.**: the `Document No.` that was sent. Every procedure finds the journal from the document no. alone through it (`FindPhysInventoryBatch`).
+
+Batch names are reused for every count, while the document no. from the batch's number series is new each time. That is why the app keys a count by the document no.
+
+**What the app downloads.** One 50179 row per journal line. A BOM parent becomes one row per component (its packages), as on a shipment.
+- **`Line No.`** is a running number, as for every type. Processing finds the journal line by the item, never by this number, and NAV reads `Document_Line_No` from 50180 for no type.
+- **Rows with the same barcode and item** are one row with the quantities added.
+
+| 50179 field | Value |
+|---|---|
+| `Document Type` | `INVENTORY` |
+| `Document No.` | the journal's `Document No.` |
+| `Source No.` | the location, which the app's location scope filters on |
+| `Destination No.` | the batch name, which the app shows next to the location |
+| `Responsibility Center` | the location's centre (Responsibility Center Location) |
+| `Document Date` | the posting date |
+| `Item Qty.` | `Qty. (Calculated)`, times `Quantity per` for a component. Negative stock is sent as it is |
+| `Barcode` | `GetItemBarcode`. For a unit with **Insert Qty Barcode** it is still the plain barcode: a quantity label on the shelf prints whatever it holds, so the app matches it on the part before the first `|` |
+| `Scanning Qty.` | 1 for a quantity-label unit, whose label carries the quantity; otherwise the component's or the item's `Package Qty.`; otherwise 1 |
+| **new** `Journal Template Name` (140), `Journal Batch Name` (150) | from the journal line |
+
+**Upload.** `CheckDocumentStatus` accepts an `INVENTORY` row while a batch carries that `Barcode Document No.` and is not Processed, and sets it to Synchronized. Before this an `INVENTORY` row was refused as "Krivi tip".
+
+**Processing.** It runs from the job queue after every sync, or from **Update from Barcode** on page 392. It is `CreateScanningEntriesOnDocument`, with these differences:
+- **The 50179 rows stay.** `FindScannedEntries` does not delete them for an inventory, so the batch stays on the devices' download list however often it is processed.
+- **The buffer comes from the journal.** 50113, shown by **Scanned Lines**, is built from the journal lines (`CreateInventoryJournalLines`), with the usual allocation and surplus lines.
+- **The journal gets the counted quantity.** Instead of a status change, `UpdatePhysInventoryQty` writes `Qty. (Phys. Inventory)` on every line:
+  - It is everything found for the line's item on all devices. Unlike the buffer, it is not capped at the calculated quantity.
+  - It is recomputed every time, so processing twice changes nothing.
+  - A line nobody scanned becomes 0.
+  - A BOM parent gets the number of complete sets, and the scarcest package decides. Packages that make no complete set are not written.
+  - Quantities are taken once (`ConsumeScannedQty`), so two lines of one item, or two sets sharing a package, never count the same scan twice.
+- **An item not on the count gets a journal line of its own** (`AddPhysInventoryLine`):
+  - same posting date, document no. and location as the count;
+  - `Qty. (Calculated)` is the item's `Net Change` at the location up to the posting date, which is what Calculate Inventory would have written;
+  - a 50179 row with the barcode actually scanned is added, so a device that added the item itself moves its scans onto that row.
+
+  Only a stock item of its own is added. These are not: an unknown barcode, a blocked or non-inventory item, and an item that is a component of any BOM. A component is a package of a set, and stock is kept on the set.
+- **The status stays Synchronized.** An inventory has no "complete" state.
+
+**Finishing.**
+- **Finish Count** on page 392 needs the new User Setup field **Inventory Administrator** (50121). It runs a last processing pass, then asks for confirmation in two cases:
+  - nothing was scanned at all. The quantities are then left as they are;
+  - scanned units could not be written: unknown barcodes, incomplete sets, items not added.
+
+  It then sets the batch to Processed and deletes its 50179 rows. The batch leaves the devices, and later uploads are refused.
+- **Reopen Count**, also for an Inventory Administrator, goes back to Synchronized and sends the entries again.
+
+**Posting.**
+- **Codeunit 241** and page 392's **Post and Print** refuse a batch that was sent for scanning and is not Processed (`CheckPhysInventoryCanBePosted`).
+- **After posting**, once the counted lines are gone, `PhysInventoryPosted` archives the scans (50111 to 50112), clears the buffer and the 50179 rows, and resets the batch to blank for the next count.
+- **Deleting a batch** removes its 50179 rows.
+
+**Known limits.**
+- Quantities are not converted between units of measure. A scan counts in the journal line's unit, as on every other type.
+- An item listed twice in one BOM, and a component that is also a journal line of its own, are not handled specially.
 
 ### Legacy
 
