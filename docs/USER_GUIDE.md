@@ -239,7 +239,7 @@ From the **Orders** tab, tap **DOWNLOAD**.
    - **Document Date** — From/To date range.
    - **Destination Code** — free text.
    - **Source Code** or **Responsibility Center** — depending on how this document type is configured, you'll see *one* of these two as a picker (the other is locked to your current selection and hidden).
-   - For **Inventory** the date range is replaced by the list of **inventory journal batches** ready for scanning at your location, each with its number, date and number of lines. Tap one to select it; **OK** stays unavailable until you do. Only that batch is downloaded, and batches already on the device stay as they are.
+   - For **Inventory** the date range is replaced by an **Inventory journal batch** field, which works like the location field: tap it to open the list of batches ready for scanning at your location, each with its number, date and number of lines, and search it if it is long. Tap a batch to select it; **OK** stays unavailable until you do. Only that batch is downloaded, and batches already on the device stay as they are.
 3. Tap **RESET** to clear the filter fields, or **OK** to start the download.
 4. A progress indicator shows while documents are pulled in. If anything fails, you'll see an error message listing what went wrong.
 

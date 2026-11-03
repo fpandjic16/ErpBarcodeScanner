@@ -359,6 +359,7 @@
     <string name="download_inventory_batches_loading">Loading batches…</string>
     <string name="download_inventory_batches_empty">No inventory journal batch is ready for scanning here.</string>
     <string name="download_inventory_batches_retry">Try again</string>
+    <string name="download_inventory_batch_placeholder">Select batch</string>
     <plurals name="download_inventory_batch_lines">
         <item quantity="one">%d line</item>
         <item quantity="other">%d lines</item>

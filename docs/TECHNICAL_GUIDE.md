@@ -787,10 +787,11 @@ Generic filter editor shared by DocumentListScreen and DocumentOverviewScreen. S
 ### `DownloadFilterScreen.kt`
 Pre-download filter form: date range, destination text field, and **exactly one** of Source/RC picker rows shown (the other hidden entirely, not just disabled) depending on which is fixed via `fixedSourceCode`/`fixedRcCode`. Auto-opens `LoginSheet` on entry if `!hasCredentials`.
 
-For a stock count (`docType.isStockCount`) the date range is replaced by the inventory batch list (`InventoryBatchList`):
+For a stock count (`docType.isStockCount`) the date range is replaced by a batch picker built like the location one: a selection row (`InventoryBatchSelector`, on `LrcSelectionRow`) that opens a bottom sheet (`InventoryBatchPickerSheet`, the same shape as `LocationPickerSheet`, with search):
 - It is loaded through `onLoadInventoryBatches` → `AppViewModel.loadInventoryBatches` (§B.6) on entry, or right after the sign-in sheet when the operator was signed out. In that case the sheet loads the list instead of downloading, and a local `signedIn` stops the screen from asking again.
-- States: loading, error with **Try again**, empty, and the list. Each row shows template · batch, then document no. · date · line count (a `<plurals>` resource).
-- A tap selects; **OK** is disabled until something is selected (unless signed out, where OK is how the sign-in is reached). The pick goes out as `DownloadFilter.documentNo`.
+- **The row** reads "Select batch" until something is picked, then shows template · batch above document no. · date · line count (a `<plurals>` resource). While the list loads it shows a spinner and does nothing when tapped. After an error, or before the list has come back at all, a tap asks for the list again; an error also shows its message and **Try again** under the row.
+- **The sheet** searches template, batch and document no., ticks the current pick, and says when no batch is ready here. Picking closes it.
+- **OK** is disabled until a batch is picked (unless signed out, where OK is how the sign-in is reached). The pick goes out as `DownloadFilter.documentNo`.
 
 ### `ExtSystemConfigScreen.kt`
 Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Recording sync URL. "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.

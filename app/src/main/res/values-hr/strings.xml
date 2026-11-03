@@ -360,6 +360,7 @@
     <string name="download_inventory_batches_loading">Učitavanje serija…</string>
     <string name="download_inventory_batches_empty">Ovdje nema serije temeljnice inventure spremne za skeniranje.</string>
     <string name="download_inventory_batches_retry">Pokušaj ponovo</string>
+    <string name="download_inventory_batch_placeholder">Odaberite seriju</string>
     <plurals name="download_inventory_batch_lines">
         <item quantity="one">%d redak</item>
         <item quantity="few">%d retka</item>

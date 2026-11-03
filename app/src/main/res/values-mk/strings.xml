@@ -359,6 +359,7 @@
     <string name="download_inventory_batches_loading">Се вчитуваат сериите…</string>
     <string name="download_inventory_batches_empty">Тука нема серија на дневник за инвентура подготвена за скенирање.</string>
     <string name="download_inventory_batches_retry">Обиди се повторно</string>
+    <string name="download_inventory_batch_placeholder">Изберете серија</string>
     <plurals name="download_inventory_batch_lines">
         <item quantity="one">%d ред</item>
         <item quantity="other">%d редови</item>

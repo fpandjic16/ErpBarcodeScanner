@@ -241,7 +241,7 @@ Na kartici **Nalozi** dodirnite **PREUZMI**.
    - **Datum dokumenta** — raspon Od/Do.
    - **Šifra odredišta** — slobodan tekst.
    - **Šifra izvora** ili **Centar odgovornosti** — ovisno o tome kako je postavljena ova vrsta dokumenta, vidjet ćete *jedno* od to dvoje kao odabir (drugo je zaključano na vaš trenutni odabir i skriveno).
-   - Za **Inventuru** umjesto raspona datuma vidite popis **serija temeljnice inventure** spremnih za skeniranje na vašoj lokaciji, svaku s brojem, datumom i brojem redaka. Dodirnite jednu da je odaberete; **U redu** nije dostupan dok to ne učinite. Preuzima se samo ta serija, a serije koje su već na uređaju ostaju kakve jesu.
+   - Za **Inventuru** umjesto raspona datuma vidite polje **Serija temeljnice inventure**, koje radi kao polje lokacije: dodirnite ga i otvara se popis serija spremnih za skeniranje na vašoj lokaciji, svaka s brojem, datumom i brojem redaka, a dugi popis možete pretraživati. Dodirnite seriju da je odaberete; **U redu** nije dostupan dok to ne učinite. Preuzima se samo ta serija, a serije koje su već na uređaju ostaju kakve jesu.
 3. Dodirnite **Poništi** za brisanje polja filtra ili **U redu** za početak preuzimanja.
 4. Dok se dokumenti preuzimaju, prikazuje se oznaka napretka („Preuzimanje…”). Ako nešto ne uspije, vidjet ćete poruku s popisom onoga što je pošlo krivo.
 

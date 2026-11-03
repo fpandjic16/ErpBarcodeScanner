@@ -361,6 +361,7 @@
     <string name="download_inventory_batches_loading">Nalaganje serij…</string>
     <string name="download_inventory_batches_empty">Tu ni serije dnevnika inventure, pripravljene za skeniranje.</string>
     <string name="download_inventory_batches_retry">Poskusi znova</string>
+    <string name="download_inventory_batch_placeholder">Izberite serijo</string>
     <plurals name="download_inventory_batch_lines">
         <item quantity="one">%d vrstica</item>
         <item quantity="two">%d vrstici</item>

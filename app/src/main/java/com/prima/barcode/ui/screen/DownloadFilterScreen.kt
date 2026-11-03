@@ -7,9 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.Inventory
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,6 +94,7 @@ fun DownloadFilterScreen(
     var dateTarget      by remember { mutableStateOf<DlDateTarget?>(null) }
     var showLogin       by remember { mutableStateOf(false) }
     var showSourceSheet by remember { mutableStateOf(false) }
+    var showBatchSheet  by remember { mutableStateOf(false) }
     var showRcPickSheet by remember { mutableStateOf(false) }
     val selectedLocation = remember(sourceCode, locations) { locations.find { it.code == sourceCode } }
     val selectedRc       = remember(rcCode, rcs) { rcs.find { it.code == rcCode } }
@@ -156,12 +162,12 @@ fun DownloadFilterScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             if (stockCount) DlFilterSection(label = stringResource(R.string.download_inventory_batch)) {
-                InventoryBatchList(
-                    batches = batches,
+                InventoryBatchSelector(
+                    selected = batches?.find { it.documentNo == selectedBatchNo },
+                    loaded = batches != null,
                     loading = batchesLoading,
                     error = batchesError,
-                    selectedDocumentNo = selectedBatchNo,
-                    onSelect = { selectedBatchNo = it.documentNo },
+                    onOpen = { showBatchSheet = true },
                     onRetry = { if (signedIn) loadBatches(null, null) else showLogin = true },
                 )
             } else DlFilterSection(label = stringResource(R.string.filter_document_date)) {
@@ -319,6 +325,15 @@ fun DownloadFilterScreen(
         )
     }
 
+    if (showBatchSheet) {
+        InventoryBatchPickerSheet(
+            batches            = batches.orEmpty(),
+            selectedDocumentNo = selectedBatchNo,
+            onSelect           = { batch -> selectedBatchNo = batch.documentNo; showBatchSheet = false },
+            onDismiss          = { showBatchSheet = false },
+        )
+    }
+
     if (showRcPickSheet) {
         RcPickerSheet(
             availableRcs   = rcs,
@@ -356,67 +371,196 @@ private fun DlFilterSection(label: String, content: @Composable ColumnScope.() -
     }
 }
 
-/** null [batches] means not loaded yet, which is not the same as an empty list. */
+/** Journal template · batch, or the document no. when the ERP sends neither. */
+private val InventoryBatch.title: String
+    get() = listOf(journalTemplateName, journalBatchName)
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")
+        .ifEmpty { documentNo }
+
+/** Document no. · date · number of lines. */
 @Composable
-private fun InventoryBatchList(
-    batches: List<InventoryBatch>?,
+private fun InventoryBatch.details(): String = listOfNotNull(
+    documentNo,
+    documentDate?.format(dlDateFmt),
+    LocalContext.current.resources.getQuantityString(R.plurals.download_inventory_batch_lines, lineCount, lineCount),
+).joinToString(" · ")
+
+@Composable
+private fun InventoryBatchAvatar(selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) PrimaPalette.Teal else PrimaPalette.CreamAlt),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Outlined.Inventory,
+            contentDescription = null,
+            tint = if (selected) Color.White else PrimaPalette.Ink3,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/**
+ * The batch picker row, built like the location row above it: it shows the pick and opens a
+ * sheet to change it.
+ *
+ * [loaded] false means the list has not come back yet, which is not the same as an empty list.
+ * Tapping then asks for it again, which also covers an operator who is not signed in yet.
+ */
+@Composable
+private fun InventoryBatchSelector(
+    selected: InventoryBatch?,
+    loaded: Boolean,
     loading: Boolean,
     error: String?,
-    selectedDocumentNo: String?,
-    onSelect: (InventoryBatch) -> Unit,
+    onOpen: () -> Unit,
     onRetry: () -> Unit,
 ) {
-    val messageStyle = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink3)
-    val resources = LocalContext.current.resources
-    when {
-        loading -> Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White),
         ) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.download_inventory_batches_loading), style = messageStyle)
+            LrcSelectionRow(
+                avatar = {
+                    if (loading) {
+                        Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        InventoryBatchAvatar(selected = selected != null)
+                    }
+                },
+                title = when {
+                    selected != null -> selected.title
+                    loading -> stringResource(R.string.download_inventory_batches_loading)
+                    else -> stringResource(R.string.download_inventory_batch_placeholder)
+                },
+                subtitle = selected?.details(),
+                hasValue = selected != null,
+                onClick = {
+                    when {
+                        loading -> Unit
+                        error != null || !loaded -> onRetry()
+                        else -> onOpen()
+                    }
+                },
+            )
         }
-        error != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(error, style = messageStyle.copy(color = PrimaPalette.Coral))
+        if (error != null) {
+            Text(error, style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Coral))
             OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
         }
-        batches == null -> OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
-        batches.isEmpty() -> Text(stringResource(R.string.download_inventory_batches_empty), style = messageStyle)
-        else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            batches.forEach { batch ->
-                val selected = batch.documentNo == selectedDocumentNo
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) PrimaPalette.Teal else Color.White)
-                        .border(1.dp, if (selected) PrimaPalette.Teal else Color(0x28000000), RoundedCornerShape(8.dp))
-                        .clickable { onSelect(batch) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+    }
+}
+
+/** The same sheet as [LocationPickerSheet]: search on top, the batches below, the pick ticked. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InventoryBatchPickerSheet(
+    batches: List<InventoryBatch>,
+    selectedDocumentNo: String?,
+    onSelect: (InventoryBatch) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, batches) {
+        if (query.isBlank()) batches
+        else batches.filter {
+            it.title.contains(query, ignoreCase = true) || it.documentNo.contains(query, ignoreCase = true)
+        }
+    }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = PrimaPalette.Cream,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f),
+        ) {
+            LrcSearchField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = stringResource(R.string.lrc_search_placeholder),
+            )
+            if (filtered.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        listOf(batch.journalTemplateName, batch.journalBatchName)
-                            .filter { it.isNotBlank() }
-                            .joinToString(" · ")
-                            .ifEmpty { batch.documentNo },
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (selected) Color.White else PrimaPalette.Ink,
-                        ),
-                    )
-                    Text(
-                        listOfNotNull(
-                            batch.documentNo,
-                            batch.documentDate?.format(dlDateFmt),
-                            resources.getQuantityString(
-                                R.plurals.download_inventory_batch_lines, batch.lineCount, batch.lineCount,
-                            ),
-                        ).joinToString(" · "),
-                        style = monoLabel.copy(color = if (selected) Color(0xC5FFFFFF) else PrimaPalette.Ink3),
+                        if (batches.isEmpty()) stringResource(R.string.download_inventory_batches_empty)
+                        else stringResource(R.string.lrc_no_results),
+                        style = monoLabel.copy(color = PrimaPalette.Ink3),
                     )
                 }
+            } else {
+                val listState = rememberLazyListState()
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .verticalScrollbar(listState),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    state = listState,
+                ) {
+                    itemsIndexed(filtered, key = { _, batch -> batch.documentNo }) { index, batch ->
+                        InventoryBatchSelectRow(
+                            batch = batch,
+                            selected = batch.documentNo == selectedDocumentNo,
+                            onClick = { onSelect(batch) },
+                        )
+                        if (index < filtered.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                color = Color(0x0A000000),
+                            )
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun InventoryBatchSelectRow(batch: InventoryBatch, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        InventoryBatchAvatar(selected = selected)
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                batch.title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = PrimaPalette.Ink,
+                ),
+            )
+            Text(batch.details(), style = monoLabel.copy(color = PrimaPalette.Ink3))
+        }
+        if (selected) {
+            Icon(
+                Icons.Outlined.Check,
+                contentDescription = null,
+                tint = PrimaPalette.Teal,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
