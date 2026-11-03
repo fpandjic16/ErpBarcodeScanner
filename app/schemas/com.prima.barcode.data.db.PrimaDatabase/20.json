@@ -1,0 +1,334 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 20,
+    "identityHash": "801f093763de0238e931975dcef3c606",
+    "entities": [
+      {
+        "tableName": "documentHeader",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`documentNo` TEXT NOT NULL, `type` TEXT NOT NULL, `destinationCode` TEXT NOT NULL, `sourceCode` TEXT NOT NULL, `rcCode` TEXT NOT NULL, `isSourceRetail` INTEGER NOT NULL, `creationDateTime` INTEGER NOT NULL, `documentDate` INTEGER, `docState` TEXT NOT NULL, PRIMARY KEY(`documentNo`, `type`))",
+        "fields": [
+          {
+            "fieldPath": "documentNo",
+            "columnName": "documentNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destinationCode",
+            "columnName": "destinationCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceCode",
+            "columnName": "sourceCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rcCode",
+            "columnName": "rcCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSourceRetail",
+            "columnName": "isSourceRetail",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDateTime",
+            "columnName": "creationDateTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "documentDate",
+            "columnName": "documentDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "docState",
+            "columnName": "docState",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "documentNo",
+            "type"
+          ]
+        }
+      },
+      {
+        "tableName": "documentLine",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`documentNo` TEXT NOT NULL, `type` TEXT NOT NULL, `lineNo` INTEGER NOT NULL, `itemNo` TEXT NOT NULL, `itemName` TEXT NOT NULL, `barcodeNo` TEXT NOT NULL, `expected` REAL NOT NULL, `destinationCode` TEXT NOT NULL, `sourceCode` TEXT NOT NULL, `unitOfMeasureCode` TEXT NOT NULL, `scanningQty` REAL NOT NULL, PRIMARY KEY(`documentNo`, `type`, `lineNo`), FOREIGN KEY(`documentNo`, `type`) REFERENCES `documentHeader`(`documentNo`, `type`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "documentNo",
+            "columnName": "documentNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lineNo",
+            "columnName": "lineNo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemNo",
+            "columnName": "itemNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemName",
+            "columnName": "itemName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "barcodeNo",
+            "columnName": "barcodeNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expected",
+            "columnName": "expected",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destinationCode",
+            "columnName": "destinationCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceCode",
+            "columnName": "sourceCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unitOfMeasureCode",
+            "columnName": "unitOfMeasureCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scanningQty",
+            "columnName": "scanningQty",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "documentNo",
+            "type",
+            "lineNo"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_documentLine_documentNo_type",
+            "unique": false,
+            "columnNames": [
+              "documentNo",
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_documentLine_documentNo_type` ON `${TABLE_NAME}` (`documentNo`, `type`)"
+          },
+          {
+            "name": "index_documentLine_barcodeNo",
+            "unique": false,
+            "columnNames": [
+              "barcodeNo"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_documentLine_barcodeNo` ON `${TABLE_NAME}` (`barcodeNo`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "documentHeader",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "documentNo",
+              "type"
+            ],
+            "referencedColumns": [
+              "documentNo",
+              "type"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "recordings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`documentNo` TEXT NOT NULL, `type` TEXT NOT NULL, `documentLine` INTEGER NOT NULL, `recordingLineNo` INTEGER NOT NULL, `barcodeNo` TEXT NOT NULL, `quantity` REAL NOT NULL, `creationDateTime` TEXT NOT NULL, `userId` TEXT NOT NULL, `destinationCode` TEXT NOT NULL, `sourceCode` TEXT NOT NULL, `unitOfMeasureCode` TEXT NOT NULL, `rcCode` TEXT NOT NULL, `recordingGuid` TEXT NOT NULL, `sentAt` TEXT, `lastError` TEXT, PRIMARY KEY(`documentNo`, `type`, `documentLine`, `recordingLineNo`), FOREIGN KEY(`documentNo`, `type`) REFERENCES `documentHeader`(`documentNo`, `type`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "documentNo",
+            "columnName": "documentNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "documentLine",
+            "columnName": "documentLine",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordingLineNo",
+            "columnName": "recordingLineNo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "barcodeNo",
+            "columnName": "barcodeNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity",
+            "columnName": "quantity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDateTime",
+            "columnName": "creationDateTime",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destinationCode",
+            "columnName": "destinationCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceCode",
+            "columnName": "sourceCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unitOfMeasureCode",
+            "columnName": "unitOfMeasureCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rcCode",
+            "columnName": "rcCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordingGuid",
+            "columnName": "recordingGuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sentAt",
+            "columnName": "sentAt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "documentNo",
+            "type",
+            "documentLine",
+            "recordingLineNo"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_recordings_documentNo_type",
+            "unique": false,
+            "columnNames": [
+              "documentNo",
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recordings_documentNo_type` ON `${TABLE_NAME}` (`documentNo`, `type`)"
+          },
+          {
+            "name": "index_recordings_documentLine",
+            "unique": false,
+            "columnNames": [
+              "documentLine"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recordings_documentLine` ON `${TABLE_NAME}` (`documentLine`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "documentHeader",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "documentNo",
+              "type"
+            ],
+            "referencedColumns": [
+              "documentNo",
+              "type"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '801f093763de0238e931975dcef3c606')"
+    ]
+  }
+}

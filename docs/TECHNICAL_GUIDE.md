@@ -1253,6 +1253,10 @@ Done in NAV under **`PRICO-2026-43`**, the same tag as the complaint types, in `
 **One count per batch.**
 - **Sending.** A Phys. Inventory batch is sent from page 392 with **Send for Scanning**. It refuses a batch that is not a Phys. Inventory template, or whose lines do not all share one `Document No.` and one location.
 - **Why one location.** Processing matches scans to lines by item only, and 50111 does not record where a scan was made, so two locations in one batch would take each other's counts.
+- **Sending always asks first**, and the last two cases default to No:
+  - the first time: send the batch's lines (with the document no.) to the barcode devices?
+  - already sent with the same document no.: are you sure you want to send it again?
+  - already sent with a different one, which has no scans yet: are you sure you want to send the new document in its place?
 - **Sending again** while the count is open only refreshes the entries. The devices keep their scans.
 
 **The batch remembers its count.** Table 233 has two new fields:
