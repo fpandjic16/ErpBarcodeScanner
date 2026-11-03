@@ -987,8 +987,12 @@ The startup pass is deliberately narrow — it only fills a gap, never overrides
 
 | Startup state | Action |
 |---|---|
-| `AppCompatDelegate.getApplicationLocales()` non-empty | leave alone — a locale is already in effect, including one set from Android's own per-app language settings on API 33+ |
+| A locale already in effect | leave alone, including one set from Android's own per-app language settings on API 33+ |
 | No locale in effect | apply `AppSettingsStore.get().language` — the stored one, or the default, Croatian |
+
+**From API 33 the startup pass talks to the framework's `LocaleManager` directly** (fixed 2026-11), reached through the application context. Below 33 it still goes through `AppCompatDelegate`.
+- **Why not AppCompat there.** On API 33+ AppCompat (1.7.0) forwards both `getApplicationLocales` and `setApplicationLocales` to a `LocaleManager` it finds through a live activity's delegate (`getLocaleManagerForApplication`). In `Application.onCreate` no activity exists yet, so both calls silently did nothing.
+- **What it looked like.** A fresh install on a TC21 or TC22 showed sign-in, external system setup and About in the device's language, usually English. It switched to Croatian only after sign-in, when `MainActivity` set the operator's language with an activity alive. From then on the OS remembered the choice, so every later launch was right. The MC3300 (API 27) never showed it, because there AppCompat keeps the locale in memory without needing an activity.
 
 Nothing stored used to mean "leave it to the device locale", which needed a separate `savedLanguageOrNull()` to tell "never chose" from "chose English". With Croatian as the default that distinction is gone on purpose: these handhelds usually ship in English, and the app is meant to start in Croatian regardless. Adopting `autoStoreLocales` instead would also fix the original bug, but would put a second persistence mechanism alongside `AppSettings.language`; keeping the app's own store authoritative avoids the two disagreeing.
 
