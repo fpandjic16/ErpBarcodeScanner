@@ -55,6 +55,9 @@ import com.prima.barcode.ui.theme.monoLabel
 import com.prima.barcode.ui.theme.uppercased
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 data class DocTypeSummary(
     val type: DocumentType,
@@ -103,7 +106,7 @@ fun MainMenuScreen(
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(if (user != null) PrimaPalette.Coral else Color(0x20FFFFFF))
+                        .background(if (user != null) PrimaPalette.Coral else PrimaOnDark.Button)
                         .clickable(onClick = onUserInfoTap),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -145,7 +148,7 @@ fun MainMenuScreen(
                         .height(IntrinsicSize.Min)
                         .clip(RoundedCornerShape(14.dp))
                         .background(PrimaPalette.SlateAlt)
-                        .border(1.dp, Color(0x18FFFFFF), RoundedCornerShape(14.dp)),
+                        .border(1.dp, PrimaOnDark.Border, RoundedCornerShape(14.dp)),
                 ) {
                     Box(
                         modifier = Modifier
@@ -166,7 +169,7 @@ fun MainMenuScreen(
                         modifier = Modifier
                             .width(1.dp)
                             .fillMaxHeight()
-                            .background(Color(0x33FFFFFF)),
+                            .background(PrimaOnDark.Subtle),
                     )
                     Box(
                         modifier = Modifier
@@ -179,7 +182,7 @@ fun MainMenuScreen(
                         Text(
                             location?.code ?: "—",
                             style = monoLabel.copy(
-                                color = if (location != null) Color.White else Color(0x66FFFFFF),
+                                color = if (location != null) Color.White else PrimaOnDark.TextFaint,
                                 fontWeight = FontWeight.Medium,
                             ),
                             maxLines = 1,
@@ -199,7 +202,7 @@ fun MainMenuScreen(
                             modifier = Modifier
                                 .width(1.dp)
                                 .fillMaxHeight()
-                                .background(Color(0x33FFFFFF)),
+                                .background(PrimaOnDark.Subtle),
                         )
                         Box(
                             modifier = Modifier
@@ -212,7 +215,7 @@ fun MainMenuScreen(
                                 stringResource(env.labelRes),
                                 style = monoLabel.copy(
                                     color = when (env) {
-                                        ExtSystemEnvironment.TEST -> Color(0xFFC7943A)
+                                        ExtSystemEnvironment.TEST -> PrimaSignal.Warning
                                         ExtSystemEnvironment.PRODUCTION -> Color.White
                                     },
                                     fontWeight = FontWeight.Medium,
@@ -237,7 +240,7 @@ fun MainMenuScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color.White)
-                            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+                            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                             .padding(16.dp),
                     ) {
                         Text(
@@ -316,7 +319,7 @@ private fun RecordingsEntryRow(documentCount: Int, scanCount: Int, onClick: () -
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -376,7 +379,7 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

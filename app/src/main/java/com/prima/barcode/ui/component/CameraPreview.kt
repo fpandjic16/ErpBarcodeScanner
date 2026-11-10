@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import com.prima.barcode.data.barcode.BarcodeAnalyzer
 import timber.log.Timber
 import java.util.concurrent.Executors
+import com.prima.barcode.ui.theme.PrimaCamera
 
 // Shared by the drawn reticle and the aim filter that decides which barcodes count — keep
 // them driven off the same values so what the user sees can't drift from what's scanned.
@@ -147,7 +148,7 @@ fun CameraPreview(
                 .padding(end = 16.dp, top = 8.dp)
                 .size(44.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(Color(0x66000000))
+                .background(PrimaCamera.Scrim)
                 .clickable(onClick = { latestOnClose.value() }),
             contentAlignment = Alignment.Center,
         ) {
@@ -172,7 +173,7 @@ private fun ScanningOverlay(modifier: Modifier = Modifier) {
         val right  = left + reticleW
         val bottom = top  + reticleH
 
-        drawRect(color = Color(0x99000000))
+        drawRect(color = PrimaCamera.Mask)
         drawRect(
             color     = Color.Transparent,
             topLeft   = Offset(left, top),
@@ -186,13 +187,13 @@ private fun ScanningOverlay(modifier: Modifier = Modifier) {
         // pass under a crisp thin one — so it reads as a laser beam instead of a hairline.
         val aimY = top + reticleH / 2f
         drawLine(
-            color       = Color(0x55FF2D2D),
+            color       = PrimaCamera.LaserGlow,
             start       = Offset(left + 4f, aimY),
             end         = Offset(right - 4f, aimY),
             strokeWidth = 7.dp.toPx(),
         )
         drawLine(
-            color       = Color(0xFFFF2D2D),
+            color       = PrimaCamera.Laser,
             start       = Offset(left + 4f, aimY),
             end         = Offset(right - 4f, aimY),
             strokeWidth = 2.dp.toPx(),

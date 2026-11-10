@@ -32,6 +32,7 @@ import com.prima.barcode.ui.theme.monoLabel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.prima.barcode.ui.theme.PrimaLine
 
 private val lrcSyncFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy · HH:mm").withZone(ZoneId.systemDefault())
@@ -291,7 +292,7 @@ internal fun RcPickerSheet(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            color = Color(0x0A000000),
+                            color = PrimaLine.Divider,
                         )
                     }
                 }
@@ -314,7 +315,7 @@ internal fun RcPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = Color(0x0A000000),
+                                color = PrimaLine.Divider,
                             )
                         }
                     }
@@ -386,7 +387,7 @@ internal fun LocationPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = Color(0x0A000000),
+                                color = PrimaLine.Divider,
                             )
                         }
                     }
@@ -423,7 +424,7 @@ internal fun LrcSearchField(value: String, onValueChange: (String) -> Unit, plac
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 focusedBorderColor = PrimaPalette.Slate,
-                unfocusedBorderColor = Color(0x18000000),
+                unfocusedBorderColor = PrimaLine.CardBorder,
             ),
             textStyle = monoLabel.copy(color = PrimaPalette.Ink),
         )

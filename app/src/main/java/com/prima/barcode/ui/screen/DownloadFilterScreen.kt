@@ -46,6 +46,7 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaLine
 
 private val dlDateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -564,7 +565,7 @@ private fun InventoryBatchPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = Color(0x0A000000),
+                                color = PrimaLine.Divider,
                             )
                         }
                     }
@@ -618,7 +619,7 @@ private fun DlDateChip(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x28000000), RoundedCornerShape(8.dp))
+            .border(1.dp, PrimaLine.InputBorder, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             // 48 dp tall, and no right padding: the clear button below brings its own 48 dp.
             // Until 3.6.29 this was 10 dp all round, about 36 dp tall, with a 14 dp clear icon.

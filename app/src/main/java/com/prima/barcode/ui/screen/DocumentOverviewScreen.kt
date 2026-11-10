@@ -42,6 +42,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 private val dashDateFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
@@ -151,7 +154,7 @@ fun DocumentOverviewScreen(
                             if (count > 0) {
                                 Box(
                                     Modifier.clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0x22FFFFFF))
+                                        .background(PrimaOnDark.Button)
                                         .padding(horizontal = 5.dp, vertical = 1.dp),
                                 ) {
                                     Text(count.toString(), style = monoLabel.copy(color = Color.White))
@@ -181,7 +184,7 @@ fun DocumentOverviewScreen(
                         showErrorDetails = selectedTab == 0,
                         onClick = { if (selectedTab == 0 && doc.state is DocState.UploadFailed) onErrorTap(doc) else onDocTap(doc) },
                     )
-                    HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 }
             }
         }
@@ -231,7 +234,7 @@ fun DocumentOverviewScreen(
             confirmButton = {
                 Button(
                     onClick = { showClearErrorsDialog = false; onClearErrors() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -294,7 +297,7 @@ private fun DashboardDocRow(doc: Document, showErrorDetails: Boolean = false, on
                 Spacer(Modifier.height(8.dp))
                 Text(
                     doc.state.reason,
-                    style = monoLabel.copy(color = Color(0xFFCE3A3A), fontSize = (12 + sizeOffset).sp),
+                    style = monoLabel.copy(color = PrimaSignal.Danger, fontSize = (12 + sizeOffset).sp),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -320,7 +323,7 @@ private fun DashStateErrorChip() {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFFCE3A3A))
+            .background(PrimaSignal.Danger)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(stringResource(R.string.doc_chip_error).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))

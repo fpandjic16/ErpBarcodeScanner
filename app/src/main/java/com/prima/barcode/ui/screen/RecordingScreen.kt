@@ -61,6 +61,9 @@ import com.prima.barcode.data.barcode.DataWedgeManager
 import com.prima.barcode.ui.component.CameraPreview
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 private enum class RecordingView { OVERVIEW, ACTIVE_LINE, KEYPAD }
 
@@ -274,7 +277,7 @@ fun RecordingScreen(
     }
 
     val scanBarBg by animateColorAsState(
-        targetValue = if (scanErrorFlash) Color(0xFF7A1A1A) else PrimaPalette.Slate,
+        targetValue = if (scanErrorFlash) PrimaSignal.DangerDeep else PrimaPalette.Slate,
         animationSpec = tween(durationMillis = 300),
         label = "scanBarBg",
     )
@@ -374,7 +377,7 @@ fun RecordingScreen(
                 ) {
                     Text(
                         "${doc.sourceCode} · ${doc.destinationCode}",
-                        style = monoLabel.copy(color = Color(0xC5FFFFFF), fontSize = (11 + sizeOffset).sp),
+                        style = monoLabel.copy(color = PrimaOnDark.TextSecondary, fontSize = (11 + sizeOffset).sp),
                     )
                     val allDone = doc.linesExact == doc.linesTotal && doc.linesTotal > 0
                     Text(
@@ -514,7 +517,7 @@ fun RecordingScreen(
     barcodeNotFoundError?.let { barcode ->
         AlertDialog(
             onDismissRequest = { barcodeNotFoundError = null },
-            title = { Text(stringResource(R.string.recording_barcode_not_found_title), fontWeight = FontWeight.Bold, color = Color(0xFFCE3A3A)) },
+            title = { Text(stringResource(R.string.recording_barcode_not_found_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Danger) },
             text = { Text(stringResource(R.string.recording_barcode_not_found_text, barcode)) },
             confirmButton = {
                 Button(onClick = { barcodeNotFoundError = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
@@ -542,7 +545,7 @@ fun RecordingScreen(
     uomMismatchWarning?.let { info ->
         AlertDialog(
             onDismissRequest = { uomMismatchWarning = null },
-            title = { Text(stringResource(R.string.recording_uom_mismatch_title), fontWeight = FontWeight.Bold, color = Color(0xFFC7943A)) },
+            title = { Text(stringResource(R.string.recording_uom_mismatch_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Warning) },
             text = {
                 Text(
                     stringResource(
@@ -648,7 +651,7 @@ private fun OverviewContent(
                 highlight = if (line.lineNo == highlightedLineNo) highlightAlpha() else 0f,
                 onClick = { onLineTap(line) },
             )
-            HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+            HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
         }
     }
 }
@@ -851,7 +854,7 @@ private fun ItemQtyDetails(
                     modifier = Modifier
                         .weight(1f).height(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, Color(0x24000000), RoundedCornerShape(14.dp))
+                        .border(1.dp, PrimaLine.Outline, RoundedCornerShape(14.dp))
                         .background(Color.White)
                         .clickable(onClick = onDecrement),
                     contentAlignment = Alignment.Center,
@@ -973,7 +976,7 @@ private fun ItemQtyExtraDetails(
                             modifier = Modifier
                                 .weight(1f).fillMaxHeight()
                                 .clip(RoundedCornerShape(14.dp))
-                                .border(1.dp, Color(0x14000000), RoundedCornerShape(14.dp))
+                                .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                                 .background(if (isMuted) PrimaPalette.CreamAlt else Color.White)
                                 .clickable { onKey(key) },
                             contentAlignment = Alignment.Center,

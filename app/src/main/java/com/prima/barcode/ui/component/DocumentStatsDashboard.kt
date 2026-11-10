@@ -20,6 +20,9 @@ import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaOnDark
+import com.prima.barcode.ui.theme.PrimaStatus
 
 @Composable
 fun DocumentStatsDashboard(
@@ -36,7 +39,7 @@ fun DocumentStatsDashboard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(PrimaPalette.Slate)
-            .border(1.dp, Color(0x18FFFFFF), RoundedCornerShape(14.dp))
+            .border(1.dp, PrimaOnDark.Border, RoundedCornerShape(14.dp))
             .clickable(onClick = onDocumentOverview),
     ) {
         Row(
@@ -46,7 +49,7 @@ fun DocumentStatsDashboard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.dashboard_today), style = monoLabel.copy(color = Color(0x88FFFFFF)))
+                Text(stringResource(R.string.dashboard_today), style = monoLabel.copy(color = PrimaOnDark.TextMuted))
                 Spacer(Modifier.height(4.dp))
                 Text(
                     totalScans.toString(),
@@ -61,10 +64,10 @@ fun DocumentStatsDashboard(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                DocStatLine(count = readyForUpload, label = stringResource(R.string.dashboard_pill_ready),   color = Color(0xFF2E8C5E))
-                DocStatLine(count = partial,        label = stringResource(R.string.dashboard_pill_partial), color = Color(0xFFC7943A))
-                DocStatLine(count = over,           label = stringResource(R.string.dashboard_pill_over),    color = Color(0xFF2D6CE0))
-                DocStatLine(count = errors,         label = stringResource(R.string.dashboard_pill_error),   color = Color(0xFFCE3A3A))
+                DocStatLine(count = readyForUpload, label = stringResource(R.string.dashboard_pill_ready),   color = PrimaStatus.Exact)
+                DocStatLine(count = partial,        label = stringResource(R.string.dashboard_pill_partial), color = PrimaStatus.Partial)
+                DocStatLine(count = over,           label = stringResource(R.string.dashboard_pill_over),    color = PrimaStatus.Over)
+                DocStatLine(count = errors,         label = stringResource(R.string.dashboard_pill_error),   color = PrimaSignal.Danger)
             }
         }
     }
@@ -80,7 +83,7 @@ private fun DocStatLine(count: Int, label: String, color: Color) {
         Text(
             count.toString(),
             style = monoLabel.copy(
-                color = if (active) color else Color(0x40FFFFFF),
+                color = if (active) color else PrimaOnDark.Track,
                 fontWeight = FontWeight.Medium,
             ),
         )
@@ -88,11 +91,11 @@ private fun DocStatLine(count: Int, label: String, color: Color) {
             modifier = Modifier
                 .size(5.dp)
                 .clip(CircleShape)
-                .background(if (active) color else Color(0x33FFFFFF)),
+                .background(if (active) color else PrimaOnDark.Subtle),
         )
         Text(
             label,
-            style = monoLabel.copy(color = if (active) Color(0xB3FFFFFF) else Color(0x33FFFFFF)),
+            style = monoLabel.copy(color = if (active) PrimaOnDark.TextSecondary else PrimaOnDark.Subtle),
         )
     }
 }

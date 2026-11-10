@@ -33,6 +33,8 @@ import com.prima.barcode.R
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.addTextChangedListener
 import com.prima.barcode.ui.theme.PrimaPalette
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 /**
  * Manual barcode entry, plus the camera fallback, without ever auto-opening the on-screen
@@ -68,7 +70,7 @@ fun ScanField(
     val manualTyping = remember { mutableStateOf(false) }
 
     val textColor = (if (dark) Color.White else PrimaPalette.Ink).toArgb()
-    val hintColor = (if (dark) Color(0x66FFFFFF) else PrimaPalette.Ink4).toArgb()
+    val hintColor = (if (dark) PrimaOnDark.TextFaint else PrimaPalette.Ink4).toArgb()
 
     val editText = remember {
         EditText(context).apply {
@@ -137,8 +139,8 @@ fun ScanField(
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    val bg = if (dark) Color(0x14FFFFFF) else PrimaPalette.Cream
-    val borderColor = if (dark) Color(0x1AFFFFFF) else Color(0x18000000)
+    val bg = if (dark) PrimaOnDark.Fill else PrimaPalette.Cream
+    val borderColor = if (dark) PrimaOnDark.Border else PrimaLine.CardBorder
 
     Row(
         modifier = modifier
@@ -163,7 +165,7 @@ fun ScanField(
             modifier = Modifier
                 .size(32.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (dark) Color(0x22FFFFFF) else PrimaPalette.CreamAlt)
+                .background(if (dark) PrimaOnDark.Button else PrimaPalette.CreamAlt)
                 .clickable { showKeyboard() },
             contentAlignment = Alignment.Center,
         ) {

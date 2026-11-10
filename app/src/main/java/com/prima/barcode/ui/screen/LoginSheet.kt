@@ -41,6 +41,7 @@ import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
 
 /**
  * Puts the window in resize-on-keyboard mode.
@@ -248,7 +249,7 @@ fun LoginSheet(
 
                     errorMessage?.let {
                         Spacer(Modifier.height(8.dp))
-                        Text(it, style = monoLabel, color = Color(0xFFCE3A3A))
+                        Text(it, style = monoLabel, color = PrimaSignal.Danger)
                     }
 
                     Spacer(Modifier.height(20.dp))

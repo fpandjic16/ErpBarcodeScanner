@@ -34,6 +34,8 @@ import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
 
 private val TTL_OPTIONS = listOf(8, 24, 48, 168)
 
@@ -715,7 +717,7 @@ fun ExtSystemConfigScreen(
                 Text(
                     if (ok) stringResource(R.string.ext_config_connection_ok) else stringResource(R.string.ext_config_connection_failed),
                     fontWeight = FontWeight.Bold,
-                    color = if (ok) PrimaPalette.Teal else Color(0xFFCE3A3A),
+                    color = if (ok) PrimaPalette.Teal else PrimaSignal.Danger,
                 )
             },
             text = { Text(message) },
@@ -776,10 +778,10 @@ private fun ConfigField(
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
             shape = RoundedCornerShape(8.dp),
             colors = if (readOnly) OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = Color(0x28000000),
-                unfocusedBorderColor = Color(0x28000000),
-                focusedContainerColor   = Color(0x08000000),
-                unfocusedContainerColor = Color(0x08000000),
+                focusedBorderColor   = PrimaLine.InputBorder,
+                unfocusedBorderColor = PrimaLine.InputBorder,
+                focusedContainerColor   = PrimaLine.ReadOnlyFill,
+                unfocusedContainerColor = PrimaLine.ReadOnlyFill,
             ) else OutlinedTextFieldDefaults.colors(),
         )
     }
@@ -787,5 +789,5 @@ private fun ConfigField(
 
 @Composable
 private fun ConfigDivider() {
-    HorizontalDivider(modifier = Modifier.padding(start = 16.dp), color = Color(0x0A000000))
+    HorizontalDivider(modifier = Modifier.padding(start = 16.dp), color = PrimaLine.Divider)
 }

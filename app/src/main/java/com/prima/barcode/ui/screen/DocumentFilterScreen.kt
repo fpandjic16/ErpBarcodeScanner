@@ -38,6 +38,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaLine
 
 private val filterDateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -153,11 +154,11 @@ fun DocumentFilterScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.White)
-                            .border(1.dp, Color(0x18000000), RoundedCornerShape(8.dp)),
+                            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(8.dp)),
                     ) {
                         DocumentType.entries.forEachIndexed { idx, type ->
                             val selected = type in selectedTypes
-                            if (idx > 0) HorizontalDivider(color = Color(0x0A000000), thickness = 1.dp)
+                            if (idx > 0) HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -220,7 +221,7 @@ fun DocumentFilterScreen(
                 modifier = Modifier
                     .weight(1f).height(64.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, Color(0x24000000), RoundedCornerShape(14.dp))
+                    .border(1.dp, PrimaLine.Outline, RoundedCornerShape(14.dp))
                     .background(Color.White)
                     .clickable {
                         dateFrom = null; dateTo = null
@@ -302,7 +303,7 @@ private fun FilterDateChip(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x28000000), RoundedCornerShape(8.dp))
+            .border(1.dp, PrimaLine.InputBorder, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             // 48 dp tall, and no right padding: the clear button below brings its own 48 dp.
             // Until 3.6.29 this was 10 dp all round, about 36 dp tall, with a 14 dp clear icon.

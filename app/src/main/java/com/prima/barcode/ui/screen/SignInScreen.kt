@@ -43,6 +43,7 @@ import com.prima.barcode.ui.component.CameraPreview
 import com.prima.barcode.ui.component.PrimaTopBar
 import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
+import com.prima.barcode.ui.theme.PrimaSignal
 
 /**
  * The way into the app. Nothing else is reachable until somebody is signed in.
@@ -191,7 +192,7 @@ fun SignInScreen(
                 if (tooLong) {
                     Text(
                         stringResource(R.string.signin_name_too_long, UserProfileStore.MAX_NAME_LENGTH),
-                        style = monoLabel.copy(color = Color(0xFFCE3A3A)),
+                        style = monoLabel.copy(color = PrimaSignal.Danger),
                     )
                 }
 
@@ -246,7 +247,7 @@ fun SignInScreen(
                     }
                 }
 
-                qrError?.let { Text(it, style = monoLabel, color = Color(0xFFCE3A3A)) }
+                qrError?.let { Text(it, style = monoLabel, color = PrimaSignal.Danger) }
 
                 Text(
                     stringResource(R.string.signin_first_time_note),

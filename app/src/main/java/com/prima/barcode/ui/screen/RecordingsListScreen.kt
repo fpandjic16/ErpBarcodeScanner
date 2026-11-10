@@ -30,6 +30,7 @@ import com.prima.barcode.ui.theme.GeistMono
 import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.PrimaStatus
 import com.prima.barcode.ui.theme.monoLabel
+import com.prima.barcode.ui.theme.PrimaLine
 
 /**
  * Every document on this device that carries a scan, newest first.
@@ -88,7 +89,7 @@ private fun RecordedDocumentRow(doc: Document, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

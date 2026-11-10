@@ -37,8 +37,10 @@ import com.prima.barcode.ui.component.PrimaTopBar
 import com.prima.barcode.ui.component.verticalScrollbar
 import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
 
-private val SignOutRed = Color(0xFFCE3A3A)
+private val SignOutRed = PrimaSignal.Danger
 
 /** What deleting a profile would destroy. Null while it is still being counted. */
 private data class Footprint(val documents: Int, val scans: Int, val unsentScans: Int)
@@ -172,7 +174,7 @@ private fun ProfileManageRow(profile: UserProfile, isSignedIn: Boolean, onDelete
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

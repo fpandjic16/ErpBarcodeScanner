@@ -20,6 +20,7 @@ import com.prima.barcode.R
 import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import com.prima.barcode.ui.theme.uppercased
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 /**
  * Height of a button in the top bar (back, and the recording screen's upload): 48 dp, the
@@ -56,7 +57,7 @@ fun PrimaTopBar(
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
                         .size(width = 60.dp, height = TOP_BAR_BUTTON_HEIGHT)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0x20FFFFFF))
+                        .background(PrimaOnDark.Button)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -76,7 +77,7 @@ fun PrimaTopBar(
             subtitle?.let {
                 Text(
                     text = it.uppercased,
-                    style = monoLabel.copy(color = Color(0xB3FFFFFF)),
+                    style = monoLabel.copy(color = PrimaOnDark.TextSecondary),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

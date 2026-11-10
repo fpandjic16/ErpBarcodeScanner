@@ -53,6 +53,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 private val dateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
     .withZone(ZoneId.systemDefault())
@@ -237,7 +240,7 @@ fun DocumentListScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0x22FFFFFF))
+                                    .background(PrimaOnDark.Button)
                                     .padding(horizontal = 5.dp, vertical = 1.dp),
                             ) {
                                 Text(count.toString(), style = monoLabel.copy(color = Color.White))
@@ -270,7 +273,7 @@ fun DocumentListScreen(
                             else onDocTap(doc)
                         },
                     )
-                    HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 }
             }
         }
@@ -287,7 +290,7 @@ fun DocumentListScreen(
                         modifier = Modifier
                             .weight(1f).height(64.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0x24000000), RoundedCornerShape(14.dp))
+                            .border(1.dp, PrimaLine.Outline, RoundedCornerShape(14.dp))
                             .background(Color.White)
                             .clickable { showClearErrorsDialog = true },
                         contentAlignment = Alignment.Center,
@@ -313,7 +316,7 @@ fun DocumentListScreen(
                         modifier = Modifier
                             .weight(1f).height(64.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0x24000000), RoundedCornerShape(14.dp))
+                            .border(1.dp, PrimaLine.Outline, RoundedCornerShape(14.dp))
                             .background(Color.White)
                             .clickable(onClick = onDownload),
                         contentAlignment = Alignment.Center,
@@ -378,7 +381,7 @@ fun DocumentListScreen(
             confirmButton = {
                 Button(
                     onClick = { showClearErrorsDialog = false; onClearErrors() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -460,7 +463,7 @@ private fun DocRow(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         doc.state.reason,
-                        style = monoLabel.copy(color = Color(0xFFCE3A3A), fontSize = (12 + sizeOffset).sp),
+                        style = monoLabel.copy(color = PrimaSignal.Danger, fontSize = (12 + sizeOffset).sp),
                         maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
@@ -475,7 +478,7 @@ private fun DocStateErrorChip() {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFFCE3A3A))
+            .background(PrimaSignal.Danger)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(stringResource(R.string.doc_chip_error).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))

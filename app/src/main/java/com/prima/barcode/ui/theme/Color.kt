@@ -52,6 +52,70 @@ object PrimaStatus {
     val OverBg    = Color(0x1A2D6CE0)
 }
 
+/*
+ * Every colour a screen or component uses comes from one of the objects in this file; a literal
+ * `Color(0x…)` outside it is a bug (CLAUDE.md). Until 3.6.30 the screens carried 90 such literals.
+ * Moving them here kept every value except these near-duplicates, which were made one:
+ *   black 0x0A (list dividers)          -> PrimaLine.Divider    0x0F
+ *   black 0x14, 0x1A (card borders)     -> PrimaLine.CardBorder 0x18
+ *   black 0x18 (search field outline)   -> PrimaLine.InputBorder 0x28
+ *   white 0x22 (buttons on Slate)       -> PrimaOnDark.Button   0x20
+ *   white 0x1A (scan field border dark) -> PrimaOnDark.Border   0x18
+ *   white 0xC5 (recording subtitle)     -> PrimaOnDark.TextSecondary 0xB3
+ * The state before is tagged pre-design-tokens in git.
+ */
+
+/** Signals that are not a line's status: errors, warnings, the test-environment badge. */
+object PrimaSignal {
+    /** The same red as [PrimaStatus.Empty], in its other role: something went wrong. */
+    val Danger        = Color(0xFFCE3A3A)
+    /** The recording bar's flash behind a scan that matched nothing. */
+    val DangerDeep    = Color(0xFF7A1A1A)
+    /** Opaque light red behind a destructive row (Settings). */
+    val DangerBg      = Color(0xFFFFEAEA)
+    val DangerTint    = Color(0x12CE3A3A)
+    val DangerBorder  = Color(0x28CE3A3A)
+    /** Secondary text on [DangerTint]. */
+    val DangerMuted   = Color(0x99CE3A3A)
+    /** The same orange as [PrimaStatus.Partial], in its other role: look before going on. */
+    val Warning       = Color(0xFFC7943A)
+    val WarningBorder = Color(0x28C7943A)
+}
+
+/** Hairlines, borders and fills on the light surfaces (Cream, White). */
+object PrimaLine {
+    val Divider      = Color(0x0F000000)
+    val CardBorder   = Color(0x18000000)
+    val Outline      = Color(0x24000000)
+    val InputBorder  = Color(0x28000000)
+    val ReadOnlyFill = Color(0x08000000)
+    /** Darkens a card while something happens on it. */
+    val Overlay      = Color(0x28000000)
+    val Scrollbar    = Color(0x55000000)
+    /** An avatar with nobody behind it. */
+    val Vacant       = Color(0xFFBBBBBB)
+}
+
+/** The same on the dark chrome (Slate). */
+object PrimaOnDark {
+    val Fill          = Color(0x14FFFFFF)
+    val Border        = Color(0x18FFFFFF)
+    val Button        = Color(0x20FFFFFF)
+    val Subtle        = Color(0x33FFFFFF)
+    val Track         = Color(0x40FFFFFF)
+    val TextFaint     = Color(0x66FFFFFF)
+    val TextMuted     = Color(0x88FFFFFF)
+    val TextSecondary = Color(0xB3FFFFFF)
+}
+
+/** The camera scanner's viewfinder. */
+object PrimaCamera {
+    val Scrim     = Color(0x66000000)
+    val Mask      = Color(0x99000000)
+    val Laser     = Color(0xFFFF2D2D)
+    val LaserGlow = Color(0x55FF2D2D)
+}
+
 val PrimaLightColors = lightColorScheme(
     primary        = PrimaPalette.Coral,
     onPrimary      = Color.White,

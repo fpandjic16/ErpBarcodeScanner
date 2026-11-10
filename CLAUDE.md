@@ -104,6 +104,10 @@ Helpers shared between screens live in their own file as `internal`, not as a pr
 
 **Shape radii** — 4 / 8 / 12 / 14 / 22 dp tokens defined in `Shape.kt`.
 
+**Colours come only from `ui/theme/Color.kt`** — `PrimaPalette` (brand), `PrimaStatus` (the four states), `PrimaSignal` (danger/warning, which share the red and orange with Empty and Partial but mean something else), `PrimaLine` (hairlines and borders on light surfaces), `PrimaOnDark` (the same on Slate) and `PrimaCamera`. A `Color(0x…)` literal in a screen or component is a review failure; add a token instead. `Color.White`/`Color.Transparent` are fine. The look before the token, 48 dp and status-colour changes is tagged `pre-design-tokens` in git, and each of those three changes is its own commit so it can be reverted alone.
+
+**Touch targets are at least 48 dp** — top bar buttons are 60 × `TOP_BAR_BUTTON_HEIGHT` (48) in a 52 dp bar; a small icon that acts on its own (a chip's clear ×) sits in `minimumInteractiveComponentSize()`.
+
 ### Data Model
 
 Domain models live in `data/model/Models.kt`; Room entities in `data/db/Entities.kt`; `data/db/Mappers.kt` converts between them.

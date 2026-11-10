@@ -27,8 +27,10 @@ import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
 
-private val SignOutRed = Color(0xFFCE3A3A)
+private val SignOutRed = PrimaSignal.Danger
 
 @Composable
 fun UserInfoScreen(
@@ -55,16 +57,16 @@ fun UserInfoScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, Color(0x14000000), RoundedCornerShape(14.dp))
+                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 UserInfoRow(stringResource(R.string.user_info_id), user?.id ?: "—")
-                HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.user_info_name), user?.displayName ?: "—")
-                HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.lrc_section_rc), rc?.let { "${it.code} · ${it.name}" } ?: "—")
-                HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.lrc_section_location), location?.let { "${it.code} · ${it.name}" } ?: "—")
             }
         }

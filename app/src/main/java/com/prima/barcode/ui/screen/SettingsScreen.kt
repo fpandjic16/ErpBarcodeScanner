@@ -44,6 +44,8 @@ import com.prima.barcode.ui.theme.monoLabel
 import com.prima.barcode.ui.theme.uppercased
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
 
 // The enum can't hold a resource lookup, so the label is resolved here instead — same
 // pattern as DocumentType.localizedDisplay() on the other screens.
@@ -510,7 +512,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFFFEAEA)),
+                                .background(PrimaSignal.DangerBg),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = SignOutRed, modifier = Modifier.size(20.dp))
@@ -542,7 +544,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFFFEAEA)),
+                                .background(PrimaSignal.DangerBg),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = SignOutRed, modifier = Modifier.size(20.dp))
@@ -587,7 +589,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(if (user != null) PrimaPalette.SlateAlt else Color(0xFFBBBBBB)),
+                                .background(if (user != null) PrimaPalette.SlateAlt else PrimaLine.Vacant),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -858,7 +860,7 @@ fun SettingsScreen(
     }
 }
 
-private val SignOutRed = Color(0xFFCE3A3A)
+private val SignOutRed = PrimaSignal.Danger
 
 @Composable
 private fun SectionHeader(title: String) {
@@ -888,7 +890,7 @@ internal fun SettingsIcon(icon: ImageVector) {
 internal fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 74.dp),
-        color = Color(0x0A000000),
+        color = PrimaLine.Divider,
     )
 }
 

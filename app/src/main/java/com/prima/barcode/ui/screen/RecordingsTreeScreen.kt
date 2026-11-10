@@ -54,6 +54,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
+import com.prima.barcode.ui.theme.PrimaOnDark
 
 private val scanTimeFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM. HH:mm").withZone(ZoneId.systemDefault())
@@ -143,7 +146,7 @@ fun RecordingsTreeScreen(
                         }
                     }
                     item(key = "div-${branch.line.lineNo}") {
-                        HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                        HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                     }
                 }
 
@@ -191,7 +194,7 @@ fun RecordingsTreeScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDelete = null; onDeleteScan(scan) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -229,7 +232,7 @@ fun RecordingsTreeScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDeleteAll = false; onDeleteAllQueued() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -258,7 +261,7 @@ private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color.White)
-                .border(1.dp, Color(0x18000000), RoundedCornerShape(14.dp))
+                .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                 .pointerInput(onLongHold) {
                     detectTapGestures(
                         onPress = {
@@ -302,13 +305,13 @@ private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
         }
         if (holdProgress > 0f) {
             Box(
-                modifier = Modifier.matchParentSize().background(Color(0x28000000), RoundedCornerShape(14.dp)),
+                modifier = Modifier.matchParentSize().background(PrimaLine.Overlay, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
                     progress = { holdProgress },
                     color = PrimaPalette.Coral,
-                    trackColor = Color(0x40FFFFFF),
+                    trackColor = PrimaOnDark.Track,
                     modifier = Modifier.size(40.dp),
                 )
             }
@@ -455,7 +458,7 @@ private fun ScanLeafRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The connector that makes this read as a child of the line above it.
-        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color(0x1A000000)))
+        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(PrimaLine.CardBorder))
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -500,7 +503,7 @@ private fun ScanLeafRow(
             Icon(
                 if (scan.sent) Icons.Outlined.Lock else Icons.Outlined.Delete,
                 contentDescription = null,
-                tint = if (scan.sent) PrimaPalette.Ink4 else Color(0xFFCE3A3A),
+                tint = if (scan.sent) PrimaPalette.Ink4 else PrimaSignal.Danger,
                 modifier = Modifier.size(20.dp),
             )
         }

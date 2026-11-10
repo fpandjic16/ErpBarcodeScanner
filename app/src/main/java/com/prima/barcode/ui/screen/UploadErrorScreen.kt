@@ -38,6 +38,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.prima.barcode.R
+import com.prima.barcode.ui.theme.PrimaSignal
+import com.prima.barcode.ui.theme.PrimaLine
 
 private val errDateFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
@@ -75,8 +77,8 @@ fun UploadErrorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0x12CE3A3A))
-                    .border(1.dp, Color(0x28CE3A3A), RoundedCornerShape(14.dp))
+                    .background(PrimaSignal.DangerTint)
+                    .border(1.dp, PrimaSignal.DangerBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -84,14 +86,14 @@ fun UploadErrorScreen(
                 Icon(
                     Icons.Outlined.CloudOff,
                     contentDescription = null,
-                    tint = Color(0xFFCE3A3A),
+                    tint = PrimaSignal.Danger,
                     modifier = Modifier.size(32.dp),
                 )
                 Column {
                     Text(
                         stringResource(R.string.upload_error_header),
                         style = monoLabel.copy(
-                            color = Color(0xFFCE3A3A),
+                            color = PrimaSignal.Danger,
                             fontWeight = FontWeight.Bold,
                             fontSize = (14 + sizeOffset).sp,
                         ),
@@ -100,7 +102,7 @@ fun UploadErrorScreen(
                     Text(
                         document.documentNo,
                         style = monoLabel.copy(
-                            color = Color(0x99CE3A3A),
+                            color = PrimaSignal.DangerMuted,
                             fontSize = (12 + sizeOffset).sp,
                         ),
                     )
@@ -113,7 +115,7 @@ fun UploadErrorScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, Color(0x14000000), RoundedCornerShape(14.dp))
+                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -121,7 +123,7 @@ fun UploadErrorScreen(
                     stringResource(R.string.upload_error_doc_section),
                     style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                 )
-                HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 ErrorInfoRow(stringResource(R.string.upload_error_row_type),   document.type.localizedDisplay(), sizeOffset)
                 ErrorInfoRow(stringResource(R.string.upload_error_row_source), document.sourceCode,   sizeOffset)
                 if (document.destinationCode.isNotBlank())
@@ -140,7 +142,7 @@ fun UploadErrorScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, Color(0x14000000), RoundedCornerShape(14.dp))
+                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -148,7 +150,7 @@ fun UploadErrorScreen(
                     stringResource(R.string.upload_error_details),
                     style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                 )
-                HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                 Text(
                     errorReason,
                     style = monoLabel.copy(
@@ -179,7 +181,7 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, Color(0x14000000), RoundedCornerShape(14.dp))
+                        .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -199,7 +201,7 @@ fun UploadErrorScreen(
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                     document.sentOrphanedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -219,14 +221,14 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, Color(0x28CE3A3A), RoundedCornerShape(14.dp))
+                        .border(1.dp, PrimaSignal.DangerBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.failed_title),
                         style = monoLabel.copy(
-                            color = Color(0xFFCE3A3A),
+                            color = PrimaSignal.Danger,
                             fontWeight = FontWeight.Bold,
                             fontSize = (12 + sizeOffset).sp,
                         ),
@@ -239,7 +241,7 @@ fun UploadErrorScreen(
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                     document.failedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -260,14 +262,14 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, Color(0x28C7943A), RoundedCornerShape(14.dp))
+                        .border(1.dp, PrimaSignal.WarningBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.review_title),
                         style = monoLabel.copy(
-                            color = Color(0xFFC7943A),
+                            color = PrimaSignal.Warning,
                             fontWeight = FontWeight.Bold,
                             fontSize = (12 + sizeOffset).sp,
                         ),
@@ -280,7 +282,7 @@ fun UploadErrorScreen(
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = Color(0x0F000000), thickness = 1.dp)
+                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
                     document.orphanedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -309,7 +311,7 @@ fun UploadErrorScreen(
                 Button(
                     onClick = { confirmDiscard = true },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC7943A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Warning),
                 ) {
                     Text(stringResource(R.string.review_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
                 }
@@ -331,7 +333,7 @@ fun UploadErrorScreen(
                     Button(
                         onClick = { confirmDiscardFailed = true },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                     ) {
                         Text(stringResource(R.string.failed_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
                     }
@@ -348,7 +350,7 @@ fun UploadErrorScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDiscardFailed = false; onDiscardFailed() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.failed_discard), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -365,7 +367,7 @@ fun UploadErrorScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDiscard = false; onDiscardOrphans() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
                 ) { Text(stringResource(R.string.review_discard), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
