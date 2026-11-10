@@ -239,7 +239,7 @@ From the **Orders** tab, tap **DOWNLOAD**.
    - **Document Date** — From/To date range.
    - **Destination Code** — free text.
    - **Source Code** or **Responsibility Center** — depending on how this document type is configured, you'll see *one* of these two as a picker (the other is locked to your current selection and hidden).
-   - For **Inventory** the date range is replaced by an **Inventory journal batch** field, which works like the location field: tap it to open the list of batches ready for scanning at your location, each with its number, date and number of lines, and search it if it is long. Tap a batch to select it; **OK** stays unavailable until you do. Only that batch is downloaded, and batches already on the device stay as they are.
+   - For **Inventory** the date range is replaced by an **Inventory journal batch** field, which works like the location field: tap it to open the list of batches ready for scanning at your location, each with its number, date and number of lines, and search it if it is long. Tap a batch to select it; **OK** stays unavailable until you do. Only that batch is downloaded, and batches already on the device stay as they are. The list follows the location you pick, and the **refresh** button beside the search asks the central system again, for a batch the office has only just sent.
 3. Tap **RESET** to clear the filter fields, or **OK** to start the download.
 4. A progress indicator shows while documents are pulled in. If anything fails, you'll see an error message listing what went wrong.
 
@@ -273,6 +273,7 @@ You can scan in three ways:
 
 **What happens when you scan:**
 - **Matches a line** → that line's scanned quantity goes up (usually by 1, or by whatever the document specifies per scan), and the line/document status updates live. **The list also jumps to that line and marks it** — its colour deepens for about five seconds and then fades back, so on a long document you can see at a glance what you just scanned instead of hunting for it. If the line was already on screen the list stays put; only the colour marks it.
+- **Several lines carry the same barcode** → they fill in order: the scan goes to the first of them that is still short, and once all are full, the last one takes the extra.
 - **Doesn't match any line** → nothing is recorded. You'll see a "Barcode not found" message and the scan bar briefly flashes red so you know it didn't match a real line (see [§2.3](#23-unmatched-scans)). On an **Inventory** document you are asked instead whether to count it.
 ### 9.3 Editing a line manually
 
@@ -339,6 +340,7 @@ Tap **UPLOAD** from any document list (or the in-screen upload button while scan
 - Depending on how your app is configured, upload either runs in the **background** (you can keep working immediately while it sends) or shows a **blocking progress screen** until it finishes.
 - On success, the document is completely removed from your device — you're done with it.
 - If something goes wrong (server error, network issue, missing configuration), the document moves to the **Errors** tab instead, with the specific reason recorded — nothing is lost, and only the parts that failed need to be resent (anything that did succeed before the failure is not resent).
+- **If your device sends per document** (set by IT), a document goes in whole or not at all: either the central system takes every scan of it, or none, and the document waits in **Errors** with the reason. A document is never half sent.
 
 ---
 
@@ -407,7 +409,7 @@ Open Settings via the gear icon on the Main Menu. **Settings are buffered** — 
 | **Enable background sync** | Uploads run in the background so you can keep working instead of waiting on a progress screen. |
 
 ### External System Configuration
-A single row, **"Server & endpoints"**, that opens the connection settings for the central system — this is normally only touched by IT/consultants during setup. See the Technical Guide for details.
+A single row, **"Server & endpoints"**, that opens the connection settings for the central system — this is normally only touched by IT/consultants during setup. See the Technical Guide for details. Saving them with a server address but without saying whether it is the test or the production system asks first: **Choose** one, or **Save anyway**.
 
 ### Debug
 | Item | What it does |
@@ -430,6 +432,7 @@ Shows who's currently signed in, and a **Sign out** option (immediate, no confir
 ## 17. Signing In and Out
 
 - You sign in every time the app opens — see [§3](#3-first-time-setup).
+- **After the update to 3.6.28 everyone signs in once more**, and **Settings → Operators on this device** fills up again as people do. The way the device keeps passwords changed, and nothing old was carried over. Nobody's documents or unsent scans are lost: they are there again at that person's next sign-in.
 - Your access to the central system is stored encrypted on the device and expires after a set period. After that, the app asks for your password again the next time it needs the central system (download, upload, refreshing locations) — nothing is lost.
 - To sign out, go to **Settings → Account → Sign out of External System**. This takes you back to the sign-in screen, ready for the next operator. It is refused while a transfer is still running — see [§18.2d](#182d-it-says-a-transfer-is-in-progress-and-wont-let-me-sign-out).
 

@@ -78,7 +78,10 @@ All of this lives under **Settings → External System Configuration** (`ExtSyst
 | Per-document-type: Document Type Code | The exact `Document_Type` filter value the ERP expects for that type (read-only in this screen; comes from imported/loaded config, not typed here). Retail and warehouse deliberately share codes — see the `Retail_Location` note in §A.5.3 | `SHIPMENT` (warehouse *and* retail shipment), `RECEIPT` (warehouse *and* retail receipt), `TRANSPORT` |
 | Per-document-type: Filter by | Whether that type's "download" and "My Location" filtering scope by **Location** (source code) or by **Responsibility Center** | `LOCATION` (default) |
 | Locations URL | Reference-data endpoint for Locations (RCs are derived client-side from distinct location RC codes, not fetched from a separate RC endpoint) | `.../LocationList` |
-| Recording sync URL | The **"Barcode App Recordings"** OData endpoint — one POST per recorded scan | `.../BarcodeAppRecordings` |
+| Inventory batches URL | **`BarcodeInventoryBatches`** (NAV page 50208): the inventory journal batches sent for scanning, one row each. Required for a stock count; there is no fallback (3.6.27) | `.../BarcodeInventoryBatches` |
+| Upload | **Per scan** (one OData POST per recording to the recording sync URL) or **Per document** (one SOAP call per document to the document upload URL, all or nothing) — §B.6.5. The bundled files say Per scan until codeunit 50117 is in NAV | `PER_SCAN` |
+| Recording sync URL | The **"Barcode App Recordings"** OData endpoint — one POST per recorded scan, used in Per scan mode | `.../BarcodeAppRecordings` |
+| Document upload URL | SOAP address of codeunit 50117, published as **`BarcodeAppUpload`**, used in Per document mode. The bundled files guess the SOAP port as the OData port minus one (NAV's default pairing, 7047/7048); check it per server | `http://host:7047/NAVBARCODE/WS/Prima%20Mebel/Codeunit/BarcodeAppUpload` |
 
 ### A.5.2 Loading configuration
 
@@ -89,6 +92,8 @@ Three interchangeable ways to populate the above (available both in `ExtSystemCo
 3. **Import from file** — reads an arbitrary JSON file the user picks (same shape) and fills the form from it.
 
 None of these three actions saves anything by themselves — the screen's own **Save** (or Settings' exit-save flow) is still required afterward.
+
+**Saving without an environment asks first** (3.6.27). If the form has a server URL but `environment` is null, `requestSave()` opens "No environment chosen": **Choose** (Test / Production, then save) or **Save anyway**. A null environment stays legitimate; it just can no longer happen unnoticed.
 
 ### A.5.3 The "Barcode App Entry" table (download)
 
@@ -123,13 +128,15 @@ One flat OData row **per individual scanned recording** — not one row per docu
 | `Document_Line_No` | Which line this recording applies to |
 | `Recording_Line_No` | Sequence number within that line's recordings |
 | `Recording_Guid` | The recording's stable identity, generated once when the scan is stored and **the same on every upload attempt** (2026-09; a fresh GUID per attempt before that). **It is the table's primary key** (table 50180, `Recording Guid`, clustered — see §B.18), so a repeat is refused *only while the first copy is still in 50180*. NAV moves rows out of 50180 into Scanned Document Lines (50111) and deletes them when the document's scans are processed (`CreateScanningEntriesOnDocument` → `FindScannedEntries`). After that, the same GUID is accepted into 50180 again, but it does **not** count twice: `InsertScannedEntries` skips any row whose GUID is already in 50111 (its `uuid` field) and deletes it from 50180. The exception is a document whose scans have already been archived (moved to 50112) or deleted by hand. The one visible consequence is this: a row NAV committed whose response was lost, resent before processing, comes back as an error ("already exists") although NAV has it, so the device shows that row as refused. It is resolved by hand, either by sending again once NAV has processed the document or by discarding the row on the device. Support can trace one scan by its GUID either way |
-| `Barcode` | The scanned barcode string — **at most 30 characters** in NAV (`Text30`). A longer value, e.g. a long `BARCODE\|UOM\|QTY` label, is refused for that row |
+| `Barcode` | The scanned barcode string. `Text100` in NAV since 2026-11 (it was `Text30`, and a longer `BARCODE\|UOM\|QTY` label was refused) |
 | `Scanned_Quantity` | Quantity for this recording |
 | `Unit_Of_Measure_Code` | UoM for this recording |
 | `Source_Creation_DateTime` | When the scan happened (ISO-8601) |
 | `Source_User_ID` | Who scanned it (blank if nobody was signed in at scan time) |
 | `Source_Code` | Source location code |
 | `Destination_Code` | Destination code |
+
+**Two upload modes** (3.6.27, `ExtSystemConfig.uploadMode`). What follows describes **Per scan**. In **Per document** the same rows go in one SOAP call to codeunit 50117 instead (§B.6.5): NAV inserts them in one transaction, so a document is in 50180 whole or not at all, and a row whose GUID 50180 already holds is skipped rather than refused, which closes the "already exists" window described for `Recording_Guid` above.
 
 **Upload semantics to know for support** (reworked 2026-09): rows are sent **sequentially, one POST per row**. A row the ERP accepts is **marked sent** (`recordings.sentAt`), not deleted — it stays on the device, still counting towards the document's scanned quantities, until the whole document is removed. A document is removed once nothing is left queued.
 
@@ -277,6 +284,7 @@ PK: `(documentNo, type, lineNo)`. FK `(documentNo, type) → documentHeader`, `O
 | expected | REAL NOT NULL | |
 | destinationCode, sourceCode, unitOfMeasureCode | TEXT NOT NULL | |
 | scanningQty | REAL NOT NULL DEFAULT 1.0 | added v10→v11 |
+| addedOnDevice | INTEGER NOT NULL DEFAULT 0 | added v20→v21: a stock count's line created on the device (`Line.isAddedOnDevice`). Such lines still get a negative `lineNo`, but are recognised by this field, not by the sign |
 
 ### `recordings` (`RecordingEntity`)
 PK: `(documentNo, type, documentLine, recordingLineNo)`. FK `(documentNo, type) → documentHeader`, `ON DELETE CASCADE`. Indices: `(documentNo, type)`, `(documentLine)`. `documentLine` always references a real `DocumentLineEntity.lineNo` — every recording is tied to a line.
@@ -312,6 +320,7 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 | `MIGRATION_13_14` | `ALTER TABLE documentHeader ADD COLUMN isSourceRetail INTEGER NOT NULL DEFAULT 0` | Additive — no rebuild |
 | `MIGRATION_14_15` | `ALTER TABLE recordings ADD COLUMN rcCode TEXT NOT NULL DEFAULT ''`, then `UPDATE recordings SET rcCode = (correlated subquery against documentHeader.rcCode)` | Additive column + backfill — no rebuild |
 | `MIGRATION_15_16` | Rebuilds `recordings`, dropping the now-unused `format` column | Column drop — recreate pattern again |
+| `MIGRATION_20_21` | `ALTER TABLE documentLine ADD COLUMN addedOnDevice INTEGER NOT NULL DEFAULT 0`, then `UPDATE documentLine SET addedOnDevice = 1 WHERE lineNo < 0` | Additive column + backfill; every negative line number was a device-added line. `21.json` is generated by the build |
 
 **General rule**: SQLite's native `ALTER TABLE` only supports `ADD COLUMN`, `RENAME COLUMN`, `RENAME TABLE`. Any migration that needs to change a column's type or drop a column must: `CREATE TABLE x_new (...)` with the desired final shape → `INSERT INTO x_new SELECT ... FROM x` (explicit column list, applying any needed transform) → `DROP TABLE x` → `ALTER TABLE x_new RENAME TO x` → manually recreate indices (they don't survive `DROP TABLE`).
 
@@ -559,6 +568,10 @@ Locations: `realDownloadLocations()` — single `GET config.locationsUrl` → `N
 
 Entry points: `uploadToExtSystem` (blocking) and `uploadInBackground` (marks every doc `PendingUpload` immediately, then runs async) — both funnel into private `runUpload(docs: List<Document>): Int`.
 
+**Per document mode** (3.6.27). `runUpload` takes the document's queued rows as usual and hands them all to `ExtSystemODataClient.uploadDocument`, which posts one SOAP envelope built by `DocumentUploadSoap` (unit-tested): body `UploadDocument` in `urn:microsoft-dynamics-schemas/codeunit/BarcodeAppUpload`, parameter `recordings`, one `Recording` element per row in `urn:microsoft-dynamics-nav/xmlports/x50008`, with `SOAPAction: "…BarcodeAppUpload:UploadDocument"`. The GUID goes in braces, the quantity as a plain decimal, the scan time cut to milliseconds (.NET reads at most seven fractional digits), `RetailLocation` only when the type has it. HTTP 200 marks every row sent and deletes the document; anything else records the same reason (the fault's `faultstring`, which is NAV's own error text) against every row and sets `UploadFailed`. On the NAV side see §B.18, *Upload in one call*.
+
+The sketch below is **Per scan**:
+
 ```
 for each doc in docs:
     rows = repository.getRecordings(doc.documentNo, doc.type.key)
@@ -621,8 +634,11 @@ Two screens apply a loaded configuration, and they differ only in *when* it pers
 
 ## B.7 Auth & Config Storage
 
+### `SecureStore` (3.6.28)
+Replaces androidx.security's `EncryptedSharedPreferences`, which Google deprecated. Values are encrypted with one AES-256-GCM key in the Android Keystore (alias `prima_secure_store_v1`, created on first use, never exportable) and stored as `base64(iv ‖ ciphertext ‖ tag)` in a plain `SharedPreferences` file; names are stored as their SHA-256 digest, so the file does not list who has used the device. A value that no longer decrypts (a Keystore that lost its key after a restore or an OS update) reads as absent and is removed, where the old library crashed at startup. **Nothing was migrated, by decision:** each store deletes its old file unread on first use (`legacyFileName`), so every operator signs in once after the update, and the profile list refills as they do. A profile's database is named after its id (`databaseName`), so no documents or unsent scans are lost. The `security-crypto` dependency is gone.
+
 ### `UserProfileStore`
-`EncryptedSharedPreferences("user_profiles")`. Holds the operators this device knows — id and display name, and nothing else. **No expiry**, deliberately: it is what reaches an operator's own data, and that data does not expire either. The PBKDF2 salt, iteration count and digest it used to store are gone with the offline unlock; their key names survive only so `delete` still sweeps up what an upgraded device left behind, since a password-derived secret should not outlive the profile it belonged to.
+`SecureStore("user_profiles_v2")` (was `EncryptedSharedPreferences("user_profiles")`). Holds the operators this device knows — id and display name, and nothing else; the id list is stored as a JSON array. **No expiry**, deliberately: it is what reaches an operator's own data, and that data does not expire either. The PBKDF2 digests an older version kept went with the old file.
 
 The current profile is held **in memory only**, not in the prefs. Persisting it would restore the session on the next launch, which is exactly what must not happen — a device left on a shelf would come back up inside the last operator's data with no password asked. A process restart means signing in again, against the ERP.
 
@@ -661,6 +677,11 @@ data class ExtSystemConfig(
     val recordingSyncUrl: String = "",
     val locationsUrl: String = "",
     val domain: String = "",   // added 2026-08 — see B.6.2's domain-parsing note
+    val loginQrKey: String = "",
+    val environment: ExtSystemEnvironment? = null,
+    val inventoryBatchesUrl: String = "",                         // 3.6.27, page 50208
+    val uploadMode: RecordingUploadMode = RecordingUploadMode.PER_SCAN, // 3.6.27, PER_SCAN | PER_DOCUMENT
+    val documentUploadUrl: String = "",                           // 3.6.27, codeunit 50117 over SOAP
 ) {
     fun docTypeCodeFor(type): String
     val isConfigured get() = serverBaseUrl.isNotBlank()
@@ -669,11 +690,11 @@ data class ExtSystemCredentials(val username: String, val password: String)
 ```
 
 ### `ExtSystemCredentialStore`
-`EncryptedSharedPreferences` (file `ext_system_credentials`), `MasterKey` with `AES256_GCM` (Android Keystore, hardware-backed on API 28+), pref key scheme `AES256_SIV`, value scheme `AES256_GCM`. `save`/`get` (TTL-checked)/`isValid`/`clear` all take a profile id, as described in §B.6.2. There is deliberately no device-wide wipe: "Clear cache" used to call one, which meant one operator pressing a button in their own session revoked everybody else's server access. The per-profile `clear(id)` is also what `AppViewModel.deleteProfile` calls when an operator is removed from the device.
+`SecureStore("ext_system_credentials_v2")` since 3.6.28 (was `EncryptedSharedPreferences("ext_system_credentials")`, deleted unread on first use). `save`/`get` (TTL-checked)/`isValid`/`clear` all take a profile id, as described in §B.6.2. There is deliberately no device-wide wipe: "Clear cache" used to call one, which meant one operator pressing a button in their own session revoked everybody else's server access. The per-profile `clear(id)` is also what `AppViewModel.deleteProfile` calls when an operator is removed from the device.
 
 Holds the NAV password in the clear, because NTLM computes its response from the password itself and cannot work without it. It is also the only credential on the device now that `UserProfileStore` keeps no digest.
 
-**Android auto-backup is off** (`android:allowBackup="false"`, no `dataExtractionRules`/`fullBackupContent` — those were the project template's empty samples and were removed). Left on, it copied this file and every operator's `prima_<hash>.db` — unsent scans included — into whatever Google account happens to be signed in on a shared warehouse scanner. The restore side could not work regardless: the Keystore master key is device-bound and is not backed up, so the restored `EncryptedSharedPreferences` throws on first open.
+**Android auto-backup is off** (`android:allowBackup="false"`, no `dataExtractionRules`/`fullBackupContent` — those were the project template's empty samples and were removed). Left on, it copied this file and every operator's `prima_<hash>.db` — unsent scans included — into whatever Google account happens to be signed in on a shared warehouse scanner. The restore side could not work regardless: the Keystore key is device-bound and is not backed up, so restored values would not decrypt.
 
 ### The gate, and the doors through it
 
@@ -788,13 +809,13 @@ Generic filter editor shared by DocumentListScreen and DocumentOverviewScreen. S
 Pre-download filter form: date range, destination text field, and **exactly one** of Source/RC picker rows shown (the other hidden entirely, not just disabled) depending on which is fixed via `fixedSourceCode`/`fixedRcCode`. Auto-opens `LoginSheet` on entry if `!hasCredentials`.
 
 For a stock count (`docType.isStockCount`) the date range is replaced by a batch picker built like the location one: a selection row (`InventoryBatchSelector`, on `LrcSelectionRow`) that opens a bottom sheet (`InventoryBatchPickerSheet`, the same shape as `LocationPickerSheet`, with search):
-- It is loaded through `onLoadInventoryBatches` → `AppViewModel.loadInventoryBatches` (§B.6) on entry, or right after the sign-in sheet when the operator was signed out. In that case the sheet loads the list instead of downloading, and a local `signedIn` stops the screen from asking again.
+- It is loaded through `onLoadInventoryBatches` → `AppViewModel.loadInventoryBatches` from **`BarcodeInventoryBatches`** (NAV page 50208, one row per sent batch, `$filter` on `Barcode_Location_Code` and/or `Barcode_Resp_Center`; 3.6.27 — before that it read every 50179 row of the location with `$select` and grouped them here). It loads on entry, again whenever the location or centre changes, or right after the sign-in sheet when the operator was signed out. In that case the sheet loads the list instead of downloading, and a local `signedIn` stops the screen from asking again.
 - **The row** reads "Select batch" until something is picked, then shows template · batch above document no. · date · line count (a `<plurals>` resource). While the list loads it shows a spinner and does nothing when tapped. After an error, or before the list has come back at all, a tap asks for the list again; an error also shows its message and **Try again** under the row.
-- **The sheet** searches template, batch and document no., ticks the current pick, and says when no batch is ready here. Picking closes it.
+- **The sheet** searches template, batch, description and document no., ticks the current pick, and says when no batch is ready here. A **refresh** button beside the search loads the list again without leaving the sheet (a spinner while it does, an error under the search). Picking closes it.
 - **OK** is disabled until a batch is picked (unless signed out, where OK is how the sign-in is reached). The pick goes out as `DownloadFilter.documentNo`.
 
 ### `ExtSystemConfigScreen.kt`
-Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Recording sync URL. "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
+Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Inventory batches URL, Upload mode (Per scan / Per document), Recording sync URL, Document upload URL. Saving with a server URL and no environment goes through the "No environment chosen" dialog (§A.5.2). "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
 
 ### `LocationRcPickScreen.kt`
 Two picker rows (RC, then Location filtered to that RC) opening bottom sheets (`RcPickerSheet`/`LocationPickerSheet`, also reused by `DownloadFilterScreen`). Refresh icon triggers `onRefresh` directly if credentials exist, else opens `LoginSheet` first. Selecting a different RC clears the selected location; selecting a location auto-syncs its owning RC.
@@ -1037,6 +1058,8 @@ Both `SettingsScreen` and `ExtSystemConfigScreen` share the identical shape:
 ## B.12 Network Security Config
 `app/src/main/res/xml/network_security_config.xml` sets `<base-config cleartextTrafficPermitted="true" />` (referenced from the manifest) — required because the ERP is served over plain `http://` on the local LAN. **Do not remove this** unless the ERP endpoint is moved behind TLS.
 
+What it does and does not cover: from Android 9 (API 28) the platform refuses an app's own plain-HTTP connections unless this file allows them, so without it the TC21/TC22 (Android 13/14) could not reach NAV at all; the MC3300 (Android 8.1) allows HTTP regardless. It concerns only this app's traffic, not the device's. A `domain-config` limiting cleartext to the NAV host was considered and left out (2026-11): the address differs per company and environment and is configurable, while that list is fixed at build time, so every new server would need a new APK. HTTPS on the NAV service tier is not possible in the current network, so the protection belongs to the network: a separate Wi-Fi or VLAN for the scanners, with WPA2-Enterprise. NTLMv2 never sends the password, but a captured exchange can be attacked offline, so passwords should not be weak.
+
 ## B.13 Recent Codebase Audit Findings (2026-08) — Applied
 
 A full source audit was performed for dead code, missing wiring, and correctness gaps. The following were found and fixed:
@@ -1088,7 +1111,15 @@ A systematic sweep for orphaned files/functions/fields found and removed:
 | Oak | `#B49880` |
 | Ink / Ink2 / Ink3 / Ink4 | `#1A1C1F` / `#3D4046` / `#6F7378` / `#A4A6AC` (darkest → lightest text hierarchy) |
 
-`PrimaStatus` — the four-state semantic language (see §A.4): `Empty #CE3A3A`, `Partial #C7943A`, `Exact #2E8C5E`, `Over #2D6CE0`, each with a ~10–12%-alpha `*Bg` tint variant for chips/badges.
+`PrimaStatus` — the four-state semantic language (see §A.4), in two shades since 3.6.31:
+- **Fill** (bars, dots, progress, tints; ≥ 3:1 on Cream and White): `Empty #CE3A3A`, `Partial #AC8032` (was `#C7943A`, 2.3:1 on Cream), `Exact #2E8C5E`, `Over #2D6CE0`, each with a ~10–12%-alpha `*Bg` tint. Read via `LineStatus.color`.
+- **Ink** (counters, status text, solid badges with white text; ≥ 4.5:1 on the state's tint and with white): `EmptyInk #B33232`, `PartialInk #816026`, `ExactInk #25704B`, `OverInk #275DC2`. Read via `LineStatus.inkColor`. On the dark chrome keep the fill: the dashboard's Partial pill uses `PartialOnDark #C7943A`.
+
+**Every other colour is a token too** (3.6.30): `PrimaSignal` (Danger = the Empty red, Warning = the Partial ink, `WarningOnDark`, tints and borders), `PrimaLine` (dividers, card borders, outlines, input borders on light surfaces), `PrimaOnDark` (the same on Slate) and `PrimaCamera`. There is no `Color(0x…)` literal left in a screen or component; the six near-duplicates merged on the way are listed at the top of `Color.kt`.
+
+**Touch targets** (3.6.29): top bar buttons 60 × 48 dp (`TOP_BAR_BUTTON_HEIGHT`) in a 52 dp bar; the date chips' clear icon (14 dp) sits in a 48 dp `minimumInteractiveComponentSize()`.
+
+**Rolling the look back.** The state before these three changes is the git tag `pre-design-tokens`, and each change is one commit (`6db6b2d` sizes, `50cb6a2` colour tokens, `e210655` status shades), so any one of them can be undone with `git revert` alone.
 
 `PrimaLightColors` (Material3 `lightColorScheme`) is the **only** scheme actually applied: primary=Coral, secondary=Slate, tertiary=Teal, background=Cream, surface=White, error=`PrimaStatus.Empty`. **`PrimaDarkColors` is defined in `Color.kt` but never referenced anywhere else in the codebase — dead code.** The app always renders light, regardless of system dark-mode setting.
 
@@ -1179,6 +1210,7 @@ The later work lives beside this repository, in `../PRIMA NAV/`, also CP852 with
 | `REK-OTPR-ZAPR.txt` | Complaint shipment and receipt (`PRICO-2026-43`): 29 objects, among them tables 50111–50113, 50179 and 50180 and codeunit 50112 in their current form |
 | `INVENTURA-BARKOD.txt` | Inventory (`PRICO-2026-43`): tables 91, 233, 50111, 50179, codeunits 241, 50112 and the new 50116, page 392. Imported **after** `REK-OTPR-ZAPR.txt`, whose versions of 91, 50111, 50179 and 50112 it builds on |
 | `inventura.txt` | The unmodified export of 233, 241 and 392 that `INVENTURA-BARKOD.txt` was made from |
+| `BARKOD-UNAPREDJENJA.txt` | The follow-ups to the system analysis (2026-11): tables 83 and 233, codeunit 50112, page 392 — built from the user's fresh export `NAV/barkod_new.txt`, so it carries what was changed directly in NAV — plus the new XMLport 50008, codeunit 50117 and page 50208. Imported **after** `INVENTURA-BARKOD.txt`. See *Follow-ups (2026-11)* at the end of this section |
 | `complaint.txt`, `complaint_BCKP.txt` | The unmodified export `REK-OTPR-ZAPR.txt` was made from |
 
 For anything in 50112, 50179 or 50111, the newest of these files is the current version, not `NAV/barcode_scanning.txt`.
@@ -1321,6 +1353,27 @@ Batch names are reused for every count, while the document no. from the batch's 
 - Quantities are not converted between units of measure. A scan counts in the journal line's unit, as on every other type.
 - An item listed twice in one BOM, and a component that is also a journal line of its own, are not handled specially.
 - **Table 50111 has a new key, `Document Type,Document No.,uuid`.** Moving a scan from 50180 to 50111 (`InsertScannedEntries`) first checks whether its GUID is already there, once per scan and for every type. Through this key the check goes straight to the GUID instead of reading all of the document's scans, which on an inventory are many thousands. Importing the table builds the index on SQL, which takes a while on a large 50111.
+
+### Follow-ups (2026-11, `PRIMA NAV/BARKOD-UNAPREDJENJA.txt`)
+
+Scanner-app changes are tagged `PRICO-2025-67`, inventory changes `PRICO-2026-43`. Built from `NAV/barkod_new.txt`, which showed that NAV did not yet have the send confirmations from 3.6.24: they are in this file again.
+
+**After importing, publish two web services** (Web Services page): page **50208** as `BarcodeInventoryBatches` and codeunit **50117** as `BarcodeAppUpload`. Until the first is there, the app's batch list fails; the second is only called in Per document mode.
+
+**Upload in one call** (codeunit 50117 Barcode App Upload, XMLport 50008). `UploadDocument(VAR recordings : XMLport 50008) : Integer` imports the rows into a temporary 50180 (`GetRecordings`), refuses an upload that mixes documents, and inserts each row with `INSERT(TRUE)`, so the 50180 subscribers (status check, sync record) run exactly as for OData. The web service call is one transaction: the first refused row rolls back the rest. A GUID already in 50180 is skipped; one already processed into 50111 is skipped later by `InsertScannedEntries`, as before. `User ID` and `Creation DateTime` are set from the session. The XMLport was written by hand without an exported example to copy, so it is the object most likely to need a touch in C/SIDE on import.
+
+**List of batches for the devices** (page 50208 over table 233). New batch fields: **Barcode Location Code** (50006) and **Barcode Resp. Center** (50007), written by **Send for Scanning** and cleared with the count; FlowFields **Barcode Posting Date** (50008, Min over the count's lines) and **Barcode Line Count** (50009, the number shown in the app's picker). The page lists batches with a `Barcode Document No.` that are not Processed. A batch sent before this import has no location yet and appears in the app once it is sent again (sending again only refreshes the entries).
+
+**A quantity typed in by the office is kept** (table 83 fields 50121 **Barcode Counted Qty.**, 50122 **Barcode Qty. Applied**, 50123 **Manual Count Override**; page 392 columns and action **Reset to Scanned**).
+- Typing `Qty. (Phys. Inventory)` on page 392 on a line of a barcode count sets Manual Count Override (`PhysInventoryQtyEnteredByHand`); setting it back to Barcode Counted Qty. clears it.
+- Processing (`UpdatePhysInventoryQty`) leaves a flagged line's quantity alone and only refreshes Barcode Counted Qty. An edit made anywhere else is caught too: once processing has written a line, a quantity that differs from what it wrote counts as typed in.
+- **Reset to Scanned** puts the selected lines back on the scanned figure and clears the flag. **Finish Count** asks once more when lines still carry a typed-in quantity.
+
+**One sync record per document** (`CreateSyncRecord`). An unprocessed 50161 record for the document is moved forward (time, user) instead of a new one being inserted per scan; `LOCKTABLE` keeps two devices from colliding on it. The job queue marks processed only records up to its cutoff, so one moved forward during a run is taken by the next. Processed records older than 30 days are deleted at the end of `ProcessSyncedDocuments`.
+
+**Commit every 500 scans** in `FindScannedEntries` instead of after each one. A scan's insert into 50111 and delete from 50180 are still in the same block.
+
+**Job queue.** The entry runs codeunit 50112 (confirmed 2026-11), so every document is processed in its own `CODEUNIT.RUN` of 50116.
 
 ### Legacy
 

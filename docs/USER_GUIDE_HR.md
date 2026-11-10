@@ -241,7 +241,7 @@ Na kartici **Nalozi** dodirnite **PREUZMI**.
    - **Datum dokumenta** — raspon Od/Do.
    - **Šifra odredišta** — slobodan tekst.
    - **Šifra izvora** ili **Centar odgovornosti** — ovisno o tome kako je postavljena ova vrsta dokumenta, vidjet ćete *jedno* od to dvoje kao odabir (drugo je zaključano na vaš trenutni odabir i skriveno).
-   - Za **Inventuru** umjesto raspona datuma vidite polje **Serija temeljnice inventure**, koje radi kao polje lokacije: dodirnite ga i otvara se popis serija spremnih za skeniranje na vašoj lokaciji, svaka s brojem, datumom i brojem redaka, a dugi popis možete pretraživati. Dodirnite seriju da je odaberete; **U redu** nije dostupan dok to ne učinite. Preuzima se samo ta serija, a serije koje su već na uređaju ostaju kakve jesu.
+   - Za **Inventuru** umjesto raspona datuma vidite polje **Serija temeljnice inventure**, koje radi kao polje lokacije: dodirnite ga i otvara se popis serija spremnih za skeniranje na vašoj lokaciji, svaka s brojem, datumom i brojem redaka, a dugi popis možete pretraživati. Dodirnite seriju da je odaberete; **U redu** nije dostupan dok to ne učinite. Preuzima se samo ta serija, a serije koje su već na uređaju ostaju kakve jesu. Popis prati lokaciju koju odaberete, a gumb **Osvježi** pokraj pretraživanja ponovno pita vanjski sustav, za seriju koju je ured upravo poslao.
 3. Dodirnite **Poništi** za brisanje polja filtra ili **U redu** za početak preuzimanja.
 4. Dok se dokumenti preuzimaju, prikazuje se oznaka napretka („Preuzimanje…”). Ako nešto ne uspije, vidjet ćete poruku s popisom onoga što je pošlo krivo.
 
@@ -275,6 +275,7 @@ Skenirati možete na tri načina:
 
 **Što se događa kad skenirate:**
 - **Poklapa se sa stavkom** → skenirana količina te stavke raste (obično za 1 ili za onoliko koliko dokument određuje po skeniranju), a status stavke i dokumenta odmah se ažurira. **Popis također skoči na tu stavku i označi je** — boja joj se pojača oko pet sekundi, a zatim izblijedi natrag. Tako na dugom dokumentu na prvi pogled vidite što ste upravo skenirali, umjesto da to tražite. Ako je stavka već bila na ekranu, popis ostaje gdje jest i označava je samo boja.
+- **Više stavki ima isti barkod** → pune se redom: skeniranje ide na prvu od njih kojoj još nedostaje količina, a kad su sve pune, višak ide na zadnju.
 - **Ne poklapa se ni s jednom stavkom** → ništa se ne bilježi. Vidjet ćete poruku „Barkod nije pronađen”, a traka za skeniranje kratko zatreperi crveno, da znate da se nije poklopio ni s jednom stvarnom stavkom (vidi [§2.3](#23-neusklađena-skeniranja)). Na dokumentu **Inventure** aplikacija umjesto toga pita treba li ga brojati.
 ### 9.3 Ručna izmjena stavke
 
@@ -341,6 +342,7 @@ Dodirnite **POŠALJI** na bilo kojem popisu dokumenata (ili gumb za slanje na ek
 - Ovisno o postavkama aplikacije, slanje se odvija **u pozadini** (možete odmah nastaviti raditi dok se šalje) ili se do kraja prikazuje **ekran napretka** („Slanje…”).
 - Nakon uspješnog slanja dokument se potpuno uklanja s uređaja — s njim ste gotovi.
 - Ako nešto pođe krivo (greška poslužitelja, problem s mrežom, nedostaje konfiguracija), dokument umjesto toga prelazi na karticu **Greške**, uz zabilježen točan razlog. Ništa se ne gubi, a ponovno treba poslati samo ono što nije uspjelo (ono što je uspjelo prije greške ne šalje se ponovno).
+- **Ako uređaj šalje po dokumentu** (postavlja IT), dokument ulazi cijeli ili nikako: vanjski sustav prihvaća sva njegova skeniranja ili nijedno, a dokument čeka na kartici **Greške** s razlogom. Dokument nikad nije napola poslan.
 
 ---
 
@@ -409,7 +411,7 @@ Postavke otvarate ikonom zupčanika na glavnom izborniku. **Promjene se spremaju
 | **Omogući sinkronizaciju u pozadini** | Slanje se odvija u pozadini, pa možete nastaviti raditi umjesto da čekate na ekranu napretka. |
 
 ### Konfiguracija vanjskog sustava
-Jedan redak, **„Poslužitelj i krajnje točke”**, koji otvara postavke veze s vanjskim sustavom. Obično ga dira samo IT ili konzultant pri postavljanju. Pojedinosti su u tehničkom priručniku.
+Jedan redak, **„Poslužitelj i krajnje točke”**, koji otvara postavke veze s vanjskim sustavom. Obično ga dira samo IT ili konzultant pri postavljanju. Pojedinosti su u tehničkom priručniku. Ako se spremaju s adresom poslužitelja, a bez odabira radi li se o testnom ili produkcijskom sustavu, aplikacija najprije pita: **Odaberi** jedno ili **Spremi svejedno**.
 
 ### Otklanjanje pogrešaka
 | Stavka | Što radi |
@@ -432,6 +434,7 @@ Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde)
 ## 17. Prijava i odjava
 
 - Prijavljujete se svaki put kad otvorite aplikaciju — vidi [§3](#3-prvo-pokretanje).
+- **Nakon nadogradnje na 3.6.28 svi se prijavljuju još jednom**, a **Postavke → Operateri na ovom uređaju** ponovno se pune kako se ljudi prijavljuju. Promijenio se način na koji uređaj čuva lozinke i ništa staro nije preneseno. Ničiji dokumenti ni neposlana skeniranja ne gube se: vraćaju se pri sljedećoj prijavi te osobe.
 - Vaš pristup vanjskom sustavu čuva se šifriran na uređaju i istječe nakon zadanog razdoblja. Nakon toga aplikacija ponovno traži lozinku sljedeći put kad joj treba vanjski sustav (preuzimanje, slanje, osvježavanje lokacija) — ništa se ne gubi.
 - Za odjavu idite na **Postavke → Korisnički račun → Odjavi se iz vanjskog sustava**. Time se vraćate na ekran za prijavu, spremni za sljedećeg operatera. Odjava nije moguća dok je prijenos još u tijeku — vidi [§18.2d](#182d-piše-da-je-prijenos-u-tijeku-i-ne-mogu-se-odjaviti).
 
