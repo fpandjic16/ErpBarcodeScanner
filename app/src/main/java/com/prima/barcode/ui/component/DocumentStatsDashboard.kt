@@ -65,7 +65,7 @@ fun DocumentStatsDashboard(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 DocStatLine(count = readyForUpload, label = stringResource(R.string.dashboard_pill_ready),   color = PrimaStatus.Exact)
-                DocStatLine(count = partial,        label = stringResource(R.string.dashboard_pill_partial), color = PrimaStatus.Partial)
+                DocStatLine(count = partial,        label = stringResource(R.string.dashboard_pill_partial), color = PrimaStatus.PartialOnDark)
                 DocStatLine(count = over,           label = stringResource(R.string.dashboard_pill_over),    color = PrimaStatus.Over)
                 DocStatLine(count = errors,         label = stringResource(R.string.dashboard_pill_error),   color = PrimaSignal.Danger)
             }

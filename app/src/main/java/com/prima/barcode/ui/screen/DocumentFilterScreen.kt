@@ -27,6 +27,7 @@ import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.data.model.LineStatus
 import com.prima.barcode.data.model.bgColor
 import com.prima.barcode.data.model.color
+import com.prima.barcode.data.model.inkColor
 import com.prima.barcode.ui.component.PrimaTopBar
 import com.prima.barcode.ui.component.verticalScrollbar
 import com.prima.barcode.ui.theme.PrimaPalette
@@ -121,8 +122,8 @@ fun DocumentFilterScreen(
                         ) {
                             rowStatuses.forEach { ls ->
                                 val selected = ls in selectedStates
-                                val bg = if (selected) ls.color else ls.bgColor
-                                val fg = if (selected) Color.White else ls.color
+                                val bg = if (selected) ls.inkColor else ls.bgColor
+                                val fg = if (selected) Color.White else ls.inkColor
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)

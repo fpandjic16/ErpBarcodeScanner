@@ -39,6 +39,7 @@ import com.prima.barcode.data.model.Document
 import com.prima.barcode.data.model.Line
 import com.prima.barcode.data.model.LineStatus
 import com.prima.barcode.data.model.color
+import com.prima.barcode.data.model.inkColor
 import com.prima.barcode.data.model.formatQty
 import com.prima.barcode.data.model.scanStatus
 import com.prima.barcode.ui.component.PrimaTopBar
@@ -528,7 +529,7 @@ fun RecordingScreen(
     notOnDocumentScan?.let { scan ->
         AlertDialog(
             onDismissRequest = { notOnDocumentScan = null },
-            title = { Text(stringResource(R.string.recording_not_on_document_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.color) },
+            title = { Text(stringResource(R.string.recording_not_on_document_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.inkColor) },
             text = { Text(stringResource(R.string.recording_not_on_document_text, scan.barcode)) },
             confirmButton = {
                 Button(onClick = {
@@ -568,7 +569,7 @@ fun RecordingScreen(
     overScanWarning?.let { info ->
         AlertDialog(
             onDismissRequest = { overScanWarning = null },
-            title = { Text(stringResource(R.string.recording_overscan_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.color) },
+            title = { Text(stringResource(R.string.recording_overscan_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.inkColor) },
             text = {
                 Text(
                     stringResource(
@@ -668,6 +669,7 @@ private fun OverviewContent(
 private fun BigNumberLineRow(line: Line, highlight: Float = 0f, onClick: () -> Unit) {
     val sizeOffset = LocalTextSizeOffset.current
     val statusColor = line.status.color
+    val inkColor = line.status.inkColor
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -709,15 +711,15 @@ private fun BigNumberLineRow(line: Line, highlight: Float = 0f, onClick: () -> U
             ) {
                 Text(
                     line.scanned.formatQty(),
-                    style = monoCounter.copy(color = statusColor, fontSize = (25 + sizeOffset).sp, fontWeight = FontWeight.Medium),
+                    style = monoCounter.copy(color = inkColor, fontSize = (25 + sizeOffset).sp, fontWeight = FontWeight.Medium),
                 )
                 Text(
                     "/",
-                    style = monoCounter.copy(color = statusColor.copy(alpha = 0.4f), fontSize = (25 + sizeOffset).sp),
+                    style = monoCounter.copy(color = inkColor.copy(alpha = 0.4f), fontSize = (25 + sizeOffset).sp),
                 )
                 Text(
                     line.expected.formatQty(),
-                    style = monoCounter.copy(color = statusColor.copy(alpha = 0.7f), fontSize = (25 + sizeOffset).sp),
+                    style = monoCounter.copy(color = inkColor.copy(alpha = 0.7f), fontSize = (25 + sizeOffset).sp),
                 )
             }
         }
@@ -729,7 +731,7 @@ private fun StatusChip(status: LineStatus, sizeOffset: Int, label: String? = nul
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(status.color)
+            .background(status.inkColor)
             .padding(horizontal = 12.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -758,6 +760,7 @@ private fun ItemQtyDetails(
 ) {
     val sizeOffset = LocalTextSizeOffset.current
     val statusColor = line.status.color
+    val inkColor = line.status.inkColor
     val bgColor by animateColorAsState(
         targetValue = statusColor.copy(alpha = 0.08f),
         animationSpec = tween(durationMillis = 300),
@@ -784,7 +787,7 @@ private fun ItemQtyDetails(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     stringResource(R.string.recording_sent_floor_hint, line.sentQuantity.formatQty()),
-                    style = metaStyle.copy(color = PrimaStatus.Exact),
+                    style = metaStyle.copy(color = PrimaStatus.ExactInk),
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -808,15 +811,15 @@ private fun ItemQtyDetails(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         line.scanned.formatQty(),
-                        style = monoCounter.copy(color = statusColor, fontSize = (40 + sizeOffset).sp, fontWeight = FontWeight.Medium),
+                        style = monoCounter.copy(color = inkColor, fontSize = (40 + sizeOffset).sp, fontWeight = FontWeight.Medium),
                     )
                     Text(
                         "/",
-                        style = monoCounter.copy(color = statusColor.copy(alpha = 0.35f), fontSize = (18 + sizeOffset).sp),
+                        style = monoCounter.copy(color = inkColor.copy(alpha = 0.35f), fontSize = (18 + sizeOffset).sp),
                     )
                     Text(
                         line.expected.formatQty(),
-                        style = monoCounter.copy(color = statusColor.copy(alpha = 0.55f), fontSize = (40 + sizeOffset).sp),
+                        style = monoCounter.copy(color = inkColor.copy(alpha = 0.55f), fontSize = (40 + sizeOffset).sp),
                     )
 
                 }
@@ -827,7 +830,7 @@ private fun ItemQtyDetails(
                     .fillMaxWidth()
                     .alpha(if (hasChanged) 1f else 0f)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(statusColor)
+                    .background(inkColor)
                     .clickable(enabled = hasChanged, onClick = onApply)
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
@@ -895,7 +898,7 @@ private fun ItemQtyExtraDetails(
     val parsedQty = typed.toDoubleOrNull()
     val previewStatus = if (parsedQty != null && typed.isNotEmpty()) LineStatus.of(parsedQty, line.expected) else line.status
     val previewColor by animateColorAsState(
-        targetValue = previewStatus.color,
+        targetValue = previewStatus.inkColor,
         animationSpec = tween(durationMillis = 200),
         label = "keypadPreviewColor",
     )
@@ -1003,7 +1006,7 @@ private fun ItemQtyExtraDetails(
 
         val btnText = if (typed.isEmpty()) "Set to ${line.expected.formatQty()}" else "Set to $typed"
         val btnColor = when {
-            typed.isEmpty()  -> LineStatus.EXACT.color
+            typed.isEmpty()  -> LineStatus.EXACT.inkColor
             confirmEnabled   -> previewColor
             else             -> PrimaPalette.CreamAlt
         }

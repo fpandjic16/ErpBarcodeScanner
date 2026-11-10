@@ -124,7 +124,7 @@ private fun RecordedDocumentRow(doc: Document, onClick: () -> Unit) {
             if (doc.sentScans > 0) {
                 Text(
                     stringResource(R.string.recordings_sent_chip, doc.sentScans),
-                    style = monoLabel.copy(color = PrimaStatus.Exact),
+                    style = monoLabel.copy(color = PrimaStatus.ExactInk),
                 )
             }
         }

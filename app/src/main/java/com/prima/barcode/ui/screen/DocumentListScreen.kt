@@ -32,6 +32,7 @@ import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.data.model.LineStatus
 import com.prima.barcode.data.model.bgColor
 import com.prima.barcode.data.model.color
+import com.prima.barcode.data.model.inkColor
 import com.prima.barcode.data.model.scanStatus
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -503,7 +504,7 @@ private fun DocScanStatusChip(status: LineStatus) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(status.color)
+            .background(status.inkColor)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(status.localizedLabel().uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))

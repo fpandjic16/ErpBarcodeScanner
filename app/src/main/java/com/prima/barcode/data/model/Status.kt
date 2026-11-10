@@ -31,6 +31,19 @@ val LineStatus.color: Color
         LineStatus.OVER    -> PrimaStatus.Over
     }
 
+/**
+ * The state's colour as text: counters, labels, and solid badges carrying white text. Darker than
+ * [color], which is for bars, dots and tints, so that text reaches 4.5:1. On the dark chrome
+ * (Slate) keep [color]: the darker shade would be harder to read there, not easier.
+ */
+val LineStatus.inkColor: Color
+    get() = when (this) {
+        LineStatus.EMPTY   -> PrimaStatus.EmptyInk
+        LineStatus.PARTIAL -> PrimaStatus.PartialInk
+        LineStatus.EXACT   -> PrimaStatus.ExactInk
+        LineStatus.OVER    -> PrimaStatus.OverInk
+    }
+
 /** Soft tinted background — used on chips and badges. */
 val LineStatus.bgColor: Color
     get() = when (this) {

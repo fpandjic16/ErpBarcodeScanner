@@ -215,7 +215,7 @@ fun MainMenuScreen(
                                 stringResource(env.labelRes),
                                 style = monoLabel.copy(
                                     color = when (env) {
-                                        ExtSystemEnvironment.TEST -> PrimaSignal.Warning
+                                        ExtSystemEnvironment.TEST -> PrimaSignal.WarningOnDark
                                         ExtSystemEnvironment.PRODUCTION -> Color.White
                                     },
                                     fontWeight = FontWeight.Medium,

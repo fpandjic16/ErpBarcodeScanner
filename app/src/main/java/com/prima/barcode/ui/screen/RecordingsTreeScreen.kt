@@ -43,6 +43,7 @@ import com.prima.barcode.data.model.LineScans
 import com.prima.barcode.data.model.OrphanedScan
 import com.prima.barcode.data.model.ScanRecord
 import com.prima.barcode.data.model.color
+import com.prima.barcode.data.model.inkColor
 import com.prima.barcode.data.model.formatQty
 import com.prima.barcode.ui.component.PrimaTopBar
 import com.prima.barcode.ui.component.verticalScrollbar
@@ -161,7 +162,7 @@ fun RecordingsTreeScreen(
                             Text(
                                 stringResource(R.string.recordings_tree_orphans),
                                 style = monoLabel.copy(
-                                    color = PrimaStatus.Empty,
+                                    color = PrimaStatus.EmptyInk,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = (13 + sizeOffset).sp,
                                 ),
@@ -331,7 +332,7 @@ private fun SentChip(count: Int) {
         Text(
             stringResource(R.string.recordings_sent_chip, count),
             style = monoLabel.copy(
-                color = PrimaStatus.Exact,
+                color = PrimaStatus.ExactInk,
                 fontWeight = FontWeight.Medium,
                 fontSize = (11 + sizeOffset).sp,
             ),
@@ -345,6 +346,7 @@ private fun LineBranchRow(branch: LineScans) {
     val sizeOffset = LocalTextSizeOffset.current
     val line = branch.line
     val statusColor = line.status.color
+    val inkColor = line.status.inkColor
 
     Row(
         modifier = Modifier
@@ -379,7 +381,7 @@ private fun LineBranchRow(branch: LineScans) {
         Text(
             "${line.scanned.formatQty()}/${line.expected.formatQty()}",
             style = monoLabel.copy(
-                color = statusColor,
+                color = inkColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = (15 + sizeOffset).sp,
             ),
@@ -432,7 +434,7 @@ private fun OrphanLeafRow(orphan: OrphanedScan, sent: Boolean) {
                 if (sent) stringResource(R.string.recordings_tree_sent)
                 else stringResource(R.string.recordings_tree_queued),
                 style = monoLabel.copy(
-                    color = if (sent) PrimaStatus.Exact else PrimaPalette.Ink3,
+                    color = if (sent) PrimaStatus.ExactInk else PrimaPalette.Ink3,
                     fontSize = (11 + sizeOffset).sp,
                 ),
             )
@@ -481,7 +483,7 @@ private fun ScanLeafRow(
                     if (scan.sent) stringResource(R.string.recordings_tree_sent)
                     else stringResource(R.string.recordings_tree_queued),
                     style = monoLabel.copy(
-                        color = if (scan.sent) PrimaStatus.Exact else PrimaPalette.Ink3,
+                        color = if (scan.sent) PrimaStatus.ExactInk else PrimaPalette.Ink3,
                         fontSize = (11 + sizeOffset).sp,
                     ),
                 )

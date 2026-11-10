@@ -41,10 +41,23 @@ object PrimaPalette {
  * hard-code outside that mapping.
  */
 object PrimaStatus {
+    // Fill: bars, dots, progress segments, tints. Reaches 3:1 against Cream and White (WCAG
+    // non-text contrast). Only Partial had to change for that: it was #C7943A, 2.3:1 on Cream.
     val Empty   = Color(0xFFCE3A3A)
-    val Partial = Color(0xFFC7943A)
+    val Partial = Color(0xFFAC8032)
     val Exact   = Color(0xFF2E8C5E)
     val Over    = Color(0xFF2D6CE0)
+
+    // Ink: text and counters in a status colour, and solid badges with white text on them.
+    // Reaches 4.5:1 on the state's own 10% tint over Cream, and white on it 4.5:1. Read through
+    // LineStatus.inkColor. Before 3.6.31 text used the fill colours (Partial 2.1:1 on its tint).
+    val EmptyInk   = Color(0xFFB33232)
+    val PartialInk = Color(0xFF816026)
+    val ExactInk   = Color(0xFF25704B)
+    val OverInk    = Color(0xFF275DC2)
+
+    /** Partial on the dark chrome, where the darker fill would lose contrast (4.6:1 on Slate). */
+    val PartialOnDark = Color(0xFFC7943A)
 
     val EmptyBg   = Color(0x1ACE3A3A) // 10% alpha
     val PartialBg = Color(0x1FC7943A)
@@ -77,8 +90,13 @@ object PrimaSignal {
     val DangerBorder  = Color(0x28CE3A3A)
     /** Secondary text on [DangerTint]. */
     val DangerMuted   = Color(0x99CE3A3A)
-    /** The same orange as [PrimaStatus.Partial], in its other role: look before going on. */
-    val Warning       = Color(0xFFC7943A)
+    /**
+     * Partial's orange in its other role: look before going on. The ink shade, because it is
+     * used as text and as a button with white text (#C7943A until 3.6.31, 2.7:1 with white).
+     */
+    val Warning       = Color(0xFF816026)
+    /** The same on the dark chrome (the main menu's TEST badge). */
+    val WarningOnDark = Color(0xFFC7943A)
     val WarningBorder = Color(0x28C7943A)
 }
 
