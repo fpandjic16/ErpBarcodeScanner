@@ -26,6 +26,11 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
         // has said" rather than as a guess.
         environment      = prefs.getString("environment", null)
             ?.let { name -> ExtSystemEnvironment.entries.firstOrNull { it.name == name } },
+        inventoryBatchesUrl = prefs.getString("inventoryBatchesUrl", "") ?: "",
+        uploadMode       = prefs.getString("uploadMode", null)
+            ?.let { name -> RecordingUploadMode.entries.firstOrNull { it.name == name } }
+            ?: RecordingUploadMode.PER_SCAN,
+        documentUploadUrl = prefs.getString("documentUploadUrl", "") ?: "",
     )
 
 
@@ -39,6 +44,9 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
             .putString("domain",           config.domain)
             .putString("loginQrKey",       config.loginQrKey)
             .putString("environment",      config.environment?.name)
+            .putString("inventoryBatchesUrl", config.inventoryBatchesUrl)
+            .putString("uploadMode",       config.uploadMode.name)
+            .putString("documentUploadUrl", config.documentUploadUrl)
         config.documentTypeCodes.forEach { (type, code) ->
             ed.putString("doc_type_code_${type.key}", code)
         }

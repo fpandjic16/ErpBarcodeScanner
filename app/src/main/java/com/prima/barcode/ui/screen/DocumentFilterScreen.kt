@@ -45,14 +45,6 @@ private fun Instant.toLocalDate(): LocalDate = atZone(ZoneId.systemDefault()).to
 
 private enum class FilterDateTarget { FROM, TO }
 
-@androidx.compose.runtime.Composable
-private fun LineStatus.localizedLabel(): String = when (this) {
-    LineStatus.EMPTY   -> stringResource(R.string.doc_status_empty)
-    LineStatus.PARTIAL -> stringResource(R.string.doc_status_partial)
-    LineStatus.EXACT   -> stringResource(R.string.doc_status_ready)
-    LineStatus.OVER    -> stringResource(R.string.doc_status_over_qty)
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentFilterScreen(

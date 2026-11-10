@@ -18,6 +18,9 @@
   },
   "locationsUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Pohi%C5%A1tvo')/LocationList",
   "recordingSyncUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Pohi%C5%A1tvo')/BarcodeAppRecordings",
+  "inventoryBatchesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Pohi%C5%A1tvo')/BarcodeInventoryBatches",
+  "uploadMode": "PER_SCAN",
+  "documentUploadUrl": "http://192.168.100.87:8047/NAV_TEST_HR/WS/Prima%20Pohi%C5%A1tvo/Codeunit/BarcodeAppUpload",
   "docTypeFilters": {
     "WAREHOUSE_SHIPMENT": "LOCATION",
     "WAREHOUSE_RECEIPT": "LOCATION",

@@ -26,6 +26,7 @@ import com.prima.barcode.data.auth.ExtSystemConfig
 import com.prima.barcode.data.auth.ExtSystemCredentials
 import com.prima.barcode.data.auth.ExtSystemDefaultsCompany
 import com.prima.barcode.data.auth.ExtSystemEnvironment
+import com.prima.barcode.data.auth.RecordingUploadMode
 import com.prima.barcode.data.model.DocTypeFilterMode
 import com.prima.barcode.data.model.DocumentType
 import com.prima.barcode.ui.component.PrimaTopBar
@@ -91,6 +92,9 @@ fun ExtSystemConfigScreen(
     }
     var recordingSyncUrl by remember { mutableStateOf(initial.recordingSyncUrl) }
     var locationsUrl     by remember { mutableStateOf(initial.locationsUrl) }
+    var inventoryBatchesUrl by remember { mutableStateOf(initial.inventoryBatchesUrl) }
+    var uploadMode          by remember { mutableStateOf(initial.uploadMode) }
+    var documentUploadUrl   by remember { mutableStateOf(initial.documentUploadUrl) }
 
     var showLoginSheet by remember { mutableStateOf(false) }
     var testing        by remember { mutableStateOf(false) }
@@ -103,6 +107,9 @@ fun ExtSystemConfigScreen(
     var showEnvironmentPickDialog by remember { mutableStateOf(false) }
     var pickedEnvironment by remember { mutableStateOf<ExtSystemEnvironment?>(null) }
     var environment by remember { mutableStateOf(initial.environment) }
+    // Saving with a server address but no environment asks first; see [requestSave].
+    var showEnvironmentMissingDialog by remember { mutableStateOf(false) }
+    var showEnvironmentSetDialog     by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -118,7 +125,22 @@ fun ExtSystemConfigScreen(
         // rebuilding the config without them would wipe them every time it is saved.
         loginQrKey       = loginQrKey,
         environment      = environment,
+        inventoryBatchesUrl = inventoryBatchesUrl.trim(),
+        uploadMode       = uploadMode,
+        documentUploadUrl = documentUploadUrl.trim(),
     )
+
+    /**
+     * Saves, unless the device would be left pointing at a server without knowing which system it
+     * is. That is asked about rather than refused: the operator may genuinely not know yet, but
+     * should not end up there without noticing. The main menu shows the environment, and a blank
+     * there is easy to overlook; the moment of saving is not.
+     */
+    fun requestSave() {
+        val config = buildConfig()
+        if (config.serverBaseUrl.isNotBlank() && config.environment == null) showEnvironmentMissingDialog = true
+        else onSave(config)
+    }
 
     /**
      * Fills the form from a loaded configuration, and applies the device settings that come with
@@ -141,6 +163,9 @@ fun ExtSystemConfigScreen(
         domain = c.domain
         loginQrKey = c.loginQrKey
         environment = c.environment
+        inventoryBatchesUrl = c.inventoryBatchesUrl
+        uploadMode = c.uploadMode
+        documentUploadUrl = c.documentUploadUrl
 
         onDisabledDocTypesChange(cfg.disabledDocTypes)
         onDocTypeFiltersChange(cfg.docTypeFilters)
@@ -377,6 +402,13 @@ fun ExtSystemConfigScreen(
                         value = locationsUrl,
                         onValueChange = { locationsUrl = it },
                     )
+                    ConfigDivider()
+                    ConfigField(
+                        label = stringResource(R.string.ext_config_inventory_batches_url),
+                        hint  = stringResource(R.string.ext_config_hint_inventory_batches),
+                        value = inventoryBatchesUrl,
+                        onValueChange = { inventoryBatchesUrl = it },
+                    )
                 }
             }
 
@@ -384,11 +416,49 @@ fun ExtSystemConfigScreen(
             item { ConfigSectionHeader(stringResource(R.string.ext_config_sec_recording)) }
             item {
                 ConfigCard {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(
+                            stringResource(R.string.ext_config_upload_mode),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
+                            ),
+                        )
+                        Text(
+                            stringResource(R.string.ext_config_upload_mode_desc),
+                            style = monoLabel.copy(color = PrimaPalette.Ink3),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            RecordingUploadMode.entries.forEachIndexed { idx, mode ->
+                                SegmentedButton(
+                                    selected = uploadMode == mode,
+                                    onClick  = { uploadMode = mode },
+                                    shape    = SegmentedButtonDefaults.itemShape(idx, RecordingUploadMode.entries.size),
+                                ) {
+                                    Text(
+                                        when (mode) {
+                                            RecordingUploadMode.PER_SCAN     -> stringResource(R.string.ext_config_upload_mode_per_scan)
+                                            RecordingUploadMode.PER_DOCUMENT -> stringResource(R.string.ext_config_upload_mode_per_document)
+                                        },
+                                        style = monoLabel,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    ConfigDivider()
                     ConfigField(
                         label = stringResource(R.string.ext_config_recording_url),
                         hint  = stringResource(R.string.ext_config_hint_recording_sync),
                         value = recordingSyncUrl,
                         onValueChange = { recordingSyncUrl = it },
+                    )
+                    ConfigDivider()
+                    ConfigField(
+                        label = stringResource(R.string.ext_config_document_upload_url),
+                        hint  = stringResource(R.string.ext_config_hint_document_upload),
+                        value = documentUploadUrl,
+                        onValueChange = { documentUploadUrl = it },
                         imeAction = ImeAction.Done,
                     )
                 }
@@ -556,7 +626,7 @@ fun ExtSystemConfigScreen(
             title = { Text(stringResource(R.string.dialog_save_changes_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.ext_config_exit_dialog_text)) },
             confirmButton = {
-                Button(onClick = { showExitDialog = false; onSave(buildConfig()) }) {
+                Button(onClick = { showExitDialog = false; requestSave() }) {
                     Text(stringResource(R.string.btn_yes), fontWeight = FontWeight.SemiBold)
                 }
             },
@@ -566,6 +636,58 @@ fun ExtSystemConfigScreen(
                 }
             },
         )
+    }
+
+    if (showEnvironmentMissingDialog) {
+        AlertDialog(
+            onDismissRequest = { showEnvironmentMissingDialog = false },
+            title = { Text(stringResource(R.string.ext_config_env_missing_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.ext_config_env_missing_text)) },
+            confirmButton = {
+                Button(onClick = { showEnvironmentMissingDialog = false; showEnvironmentSetDialog = true }) {
+                    Text(stringResource(R.string.ext_config_env_missing_pick), fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showEnvironmentMissingDialog = false; onSave(buildConfig()) }) {
+                    Text(stringResource(R.string.ext_config_env_missing_save_anyway))
+                }
+            },
+        )
+    }
+
+    // Sets the environment of the form as it stands and saves it; the bundled-file picker above
+    // asks the same question, but to choose which file to load.
+    if (showEnvironmentSetDialog) {
+        Dialog(onDismissRequest = { showEnvironmentSetDialog = false }) {
+            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(stringResource(R.string.ext_config_pick_environment_title), fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    ExtSystemEnvironment.entries.forEach { env ->
+                        OutlinedButton(
+                            onClick = {
+                                showEnvironmentSetDialog = false
+                                environment = env
+                                onSave(buildConfig().copy(environment = env))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(env.labelRes), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    TextButton(
+                        onClick = { showEnvironmentSetDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(android.R.string.cancel))
+                    }
+                }
+            }
+        }
     }
 
     if (testing) {

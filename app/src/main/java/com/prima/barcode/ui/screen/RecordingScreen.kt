@@ -203,9 +203,15 @@ fun RecordingScreen(
 
         // A stock count's line carries the plain barcode, because a quantity label on the shelf
         // prints whatever quantity it holds. Such a label lands on the line for the part before
-        // the first "|", and its printed quantity is what counts.
-        val matchedLine = doc.lines.find { it.barcodeNo == barcode }
-            ?: if (doc.type.isStockCount && parsedQty != null) doc.lines.find { it.barcodeNo == pipeParts[0] } else null
+        // the first "|", and its printed quantity is what counts. Several lines with one barcode
+        // are filled in line order; see ScanMatcher.
+        val matchedLine = ScanMatcher.match(
+            lines        = doc.lines,
+            barcode      = barcode,
+            labelBarcode = if (parsedQty != null) pipeParts[0] else null,
+            isStockCount = doc.type.isStockCount,
+            scannedSoFar = { line -> maxOf(line.scanned, scannedRunningTotal[line.lineNo] ?: 0.0) },
+        )
         if (matchedLine == null) {
             scanErrorFlash = true
             if (hapticEnabled) hapticEngine.error()

@@ -15,6 +15,7 @@ import com.prima.barcode.data.auth.ExtSystemCredentials
 import com.prima.barcode.data.auth.DeviceConfiguration
 import com.prima.barcode.data.auth.ExtSystemDefaultsCompany
 import com.prima.barcode.data.auth.ExtSystemEnvironment
+import com.prima.barcode.data.auth.RecordingUploadMode
 import com.prima.barcode.data.auth.UserProfile
 import com.prima.barcode.data.auth.UserProfileStore
 import com.prima.barcode.data.db.DatabaseProvider
@@ -50,7 +51,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.prima.barcode.data.extsystem.NavBarcodeAppEntry
-import com.prima.barcode.data.extsystem.NavInventoryBatchRow
+import com.prima.barcode.data.extsystem.NavInventoryBatch
+import com.prima.barcode.data.extsystem.odataLiteral
 import com.prima.barcode.data.extsystem.NavLocation
 import com.prima.barcode.data.extsystem.NavODataList
 import kotlinx.coroutines.launch
@@ -190,28 +192,29 @@ class AppViewModel @Inject constructor(
 
     private fun buildODataFilterString(filter: DownloadFilter, typeCode: String, type: DocumentType): String? {
         val clauses = mutableListOf<String>()
-        if (typeCode.isNotBlank()) clauses.add("Document_Type eq '$typeCode'")
+        if (typeCode.isNotBlank()) clauses.add("Document_Type eq ${odataLiteral(typeCode)}")
         // Retail and warehouse share a Document_Type code, so this clause is what actually
         // separates them — mandatory for all four, never optional. Transport sheets have no
         // retailLocation and so get no clause at all.
         type.retailLocation?.let { clauses.add("Retail_Location eq $it") }
         filter.dateFrom?.let { clauses.add("Document_Date ge $it") }
         filter.dateTo?.let { clauses.add("Document_Date le $it") }
-        if (filter.destinationCode.isNotBlank()) clauses.add("Destination_No eq '${filter.destinationCode}'")
-        if (filter.sourceCode.isNotBlank()) clauses.add("Source_No eq '${filter.sourceCode}'")
-        if (filter.rcCode.isNotBlank()) clauses.add("Responsibility_Center eq '${filter.rcCode}'")
-        if (filter.documentNo.isNotBlank()) clauses.add("Document_No eq '${filter.documentNo}'")
+        if (filter.destinationCode.isNotBlank()) clauses.add("Destination_No eq ${odataLiteral(filter.destinationCode)}")
+        if (filter.sourceCode.isNotBlank()) clauses.add("Source_No eq ${odataLiteral(filter.sourceCode)}")
+        if (filter.rcCode.isNotBlank()) clauses.add("Responsibility_Center eq ${odataLiteral(filter.rcCode)}")
+        if (filter.documentNo.isNotBlank()) clauses.add("Document_No eq ${odataLiteral(filter.documentNo)}")
         return if (clauses.isEmpty()) null else clauses.joinToString(" and ")
     }
 
     /**
-     * The inventory journal batches the ERP has made available for scanning in [filter]'s
-     * location or responsibility centre, for the operator to pick one before downloading.
+     * The inventory journal batches the ERP has sent for scanning in [filter]'s location or
+     * responsibility centre, for the operator to pick one before downloading.
      *
-     * Read from the same Barcode App Entry endpoint as the documents, cut down by `$select` to five
-     * small fields per line. There is no endpoint that lists batches, and this way the ERP needs
-     * none. One batch can come back as more than one entry if its lines carry different document
-     * numbers. Each entry downloads separately, so that is shown as it is.
+     * Read from the ERP's own list of them (`BarcodeInventoryBatches`, page 50208): one row per
+     * batch that has a count on the devices and is not finished yet, with its location,
+     * responsibility centre, date and number of lines worked out on the ERP side. There is no
+     * other way: reading every Barcode App Entry of the location and grouping them here was
+     * replaced, because on a large location that meant thousands of rows to list a handful.
      */
     fun loadInventoryBatches(filter: DownloadFilter, onResult: (ExtSystemResult<List<InventoryBatch>>) -> Unit) {
         viewModelScope.launch {
@@ -224,31 +227,39 @@ class AppViewModel @Inject constructor(
                 ))
                 return@launch
             }
-            if (config.documentLinesUrl.isBlank()) {
-                onResult(ExtSystemResult.Failure(inAppText(R.string.ext_error_document_lines_url_missing)))
+            if (config.inventoryBatchesUrl.isBlank()) {
+                onResult(ExtSystemResult.Failure(inAppText(R.string.ext_error_inventory_batches_url_missing)))
                 return@launch
             }
             extSystemClient.configure(config, creds)
-            val type = DocumentType.INVENTORY
-            val filterStr = buildODataFilterString(filter.copy(documentNo = ""), config.docTypeCodeFor(type), type)
-            val filtered = if (filterStr != null) appendODataFilter(config.documentLinesUrl, filterStr) else config.documentLinesUrl
-            val url = "$filtered${if ('?' in filtered) '&' else '?'}\$select=Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name"
+            val clauses = buildList {
+                if (filter.sourceCode.isNotBlank()) add("Barcode_Location_Code eq ${odataLiteral(filter.sourceCode)}")
+                if (filter.rcCode.isNotBlank()) add("Barcode_Resp_Center eq ${odataLiteral(filter.rcCode)}")
+            }
+            val url = if (clauses.isEmpty()) config.inventoryBatchesUrl
+                else appendODataFilter(config.inventoryBatchesUrl, clauses.joinToString(" and "))
             val result = duringErpWork { extSystemClient.downloadRaw(url) }
             onResult(when (result) {
                 is ExtSystemResult.Success -> {
-                    val typeToken = object : TypeToken<NavODataList<NavInventoryBatchRow>>() {}.type
-                    val odata = gson.fromJson<NavODataList<NavInventoryBatchRow>>(result.data, typeToken)
+                    val typeToken = object : TypeToken<NavODataList<NavInventoryBatch>>() {}.type
+                    val odata = gson.fromJson<NavODataList<NavInventoryBatch>>(result.data, typeToken)
                     ExtSystemResult.Success(
-                        odata.value.groupBy { it.documentNo }.map { (docNo, rows) ->
-                            val first = rows.first()
-                            InventoryBatch(
-                                documentNo          = docNo,
-                                journalTemplateName = first.journalTemplateName,
-                                journalBatchName    = first.journalBatchName,
-                                documentDate        = first.documentDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-                                lineCount           = rows.count { it.lineNo > 0 },
-                            )
-                        }.sortedWith(compareBy({ it.journalTemplateName }, { it.journalBatchName }, { it.documentNo }))
+                        odata.value
+                            .filter { it.documentNo.isNotBlank() }
+                            .map { row ->
+                                InventoryBatch(
+                                    documentNo          = row.documentNo,
+                                    journalTemplateName = row.journalTemplateName,
+                                    journalBatchName    = row.journalBatchName,
+                                    description         = row.description,
+                                    // NAV writes an empty date as 0001-01-01.
+                                    documentDate        = row.postingDate
+                                        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                                        ?.takeIf { it.year > 1 },
+                                    lineCount           = row.lineCount,
+                                )
+                            }
+                            .sortedWith(compareBy({ it.journalTemplateName }, { it.journalBatchName }, { it.documentNo }))
                     )
                 }
                 is ExtSystemResult.Failure -> result
@@ -275,7 +286,10 @@ class AppViewModel @Inject constructor(
     }
 
     fun getLocationsUrl(): String = extSystemConfig.value.locationsUrl
-    fun getRecordingSyncUrl(): String = extSystemConfig.value.recordingSyncUrl
+    /** The address an upload goes to under the configured upload mode; the debugger shows it. */
+    fun getRecordingSyncUrl(): String = extSystemConfig.value.let {
+        if (it.uploadMode == RecordingUploadMode.PER_DOCUMENT) it.documentUploadUrl else it.recordingSyncUrl
+    }
 
     fun realDownloadDocuments(
         filter: DownloadFilter = DownloadFilter(),
@@ -593,6 +607,13 @@ class AppViewModel @Inject constructor(
                 environment      = dto.environment
                     ?.let { name -> ExtSystemEnvironment.entries.firstOrNull { it.name == name } }
                     ?: extSystemConfig.value.environment,
+                // Added later than the rest, so absent means "leave as it is": a file written
+                // before these existed must not blank them on a device that already has them.
+                inventoryBatchesUrl = dto.inventoryBatchesUrl ?: extSystemConfig.value.inventoryBatchesUrl,
+                uploadMode       = dto.uploadMode
+                    ?.let { name -> RecordingUploadMode.entries.firstOrNull { it.name == name } }
+                    ?: extSystemConfig.value.uploadMode,
+                documentUploadUrl = dto.documentUploadUrl ?: extSystemConfig.value.documentUploadUrl,
             ),
             // Same rule as the QR key, and for the same reason: an absent section means "leave
             // this alone". A configuration file written before these fields existed must not
@@ -669,6 +690,9 @@ class AppViewModel @Inject constructor(
             recordingSyncUrl   = config.recordingSyncUrl,
             domain             = config.domain,
             environment        = config.environment?.name,
+            inventoryBatchesUrl = config.inventoryBatchesUrl,
+            uploadMode         = config.uploadMode.name,
+            documentUploadUrl  = config.documentUploadUrl,
             // Never exported. Gson omits nulls, so the field is absent rather than empty, which
             // is what parseExtSystemConfigJson reads as "leave the key alone".
             loginQrKey         = null,
@@ -742,6 +766,9 @@ class AppViewModel @Inject constructor(
         val locationsUrl: String? = null,
         val recordingSyncUrl: String? = null,
         val domain: String? = null,
+        val inventoryBatchesUrl: String? = null,
+        val uploadMode: String? = null,
+        val documentUploadUrl: String? = null,
         val loginQrKey: String? = null,
         // The device half of AppSettings. Keyed by DocumentType.name, like documentTypeCodes.
         val enabledDocTypes: List<String>? = null,
@@ -762,14 +789,17 @@ class AppViewModel @Inject constructor(
             }
             return docs.size
         }
-        if (config.recordingSyncUrl.isBlank()) {
+        val perDocument = config.uploadMode == RecordingUploadMode.PER_DOCUMENT
+        val url = if (perDocument) config.documentUploadUrl else config.recordingSyncUrl
+        if (url.isBlank()) {
+            val reason = inAppText(
+                if (perDocument) R.string.upload_error_document_url_missing else R.string.upload_error_sync_url_missing
+            )
             docs.forEach {
-                repository.updateDocState(it.documentNo, it.type.key,
-                    DocState.UploadFailed(inAppText(R.string.upload_error_sync_url_missing)))
+                repository.updateDocState(it.documentNo, it.type.key, DocState.UploadFailed(reason))
             }
             return docs.size
         }
-        val url = config.recordingSyncUrl
         extSystemClient.configure(config, creds)
         var failures = 0
         for (doc in docs) {
@@ -812,6 +842,33 @@ class AppViewModel @Inject constructor(
                 // and this is where it is finally removed, taking its sent rows with it.
                 if (repository.hasAnyRecordings(doc.documentNo, doc.type.key)) {
                     repository.deleteDocument(doc.documentNo, doc.type.key)
+                }
+                continue
+            }
+
+            if (perDocument) {
+                // One call, one transaction on the ERP side: all of these rows are in NAV, or none
+                // of them are. Every row carries the same outcome, so the error screen shows the
+                // one reason against each of them.
+                val result = extSystemClient.uploadDocument(
+                    url, rows.map { it.toNavRecording(docTypeCode, retailLocation) },
+                )
+                when (result) {
+                    is ExtSystemResult.Success -> {
+                        rows.forEach {
+                            repository.markRecordingSent(doc.documentNo, doc.type.key, it.documentLine, it.recordingLineNo)
+                        }
+                        repository.deleteDocument(doc.documentNo, doc.type.key)
+                    }
+                    is ExtSystemResult.Failure -> {
+                        rows.forEach {
+                            repository.recordRecordingFailure(
+                                doc.documentNo, doc.type.key, it.documentLine, it.recordingLineNo, result.message,
+                            )
+                        }
+                        repository.updateDocState(doc.documentNo, doc.type.key, DocState.UploadFailed(result.message))
+                        failures++
+                    }
                 }
                 continue
             }

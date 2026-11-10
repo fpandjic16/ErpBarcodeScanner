@@ -372,4 +372,18 @@
     <string name="recording_not_on_document_text">Črtne kode %s ni v tej seriji inventure. Jo štejem kot artikel, najden na polici?</string>
     <string name="recording_not_on_document_add">Štej</string>
     <string name="recording_not_on_document_label">Ni v seriji</string>
+    <string name="ext_error_inventory_batches_url_missing">URL serij inventure ni konfiguriran.</string>
+    <string name="ext_config_inventory_batches_url">URL serij inventure</string>
+    <string name="ext_config_hint_inventory_batches">npr. …/ODataV4/Company(\'Podjetje\')/BarcodeInventoryBatches</string>
+    <string name="ext_config_upload_mode">Pošiljanje</string>
+    <string name="ext_config_upload_mode_desc">Po skeniranju pošlje vsako skeniranje posebej. Po dokumentu pošlje celoten dokument v enem klicu: sprejme se vse ali nič.</string>
+    <string name="ext_config_upload_mode_per_scan">Po skeniranju</string>
+    <string name="ext_config_upload_mode_per_document">Po dokumentu</string>
+    <string name="ext_config_document_upload_url">URL pošiljanja dokumenta (SOAP)</string>
+    <string name="ext_config_hint_document_upload">npr. …/WS/Podjetje/Codeunit/BarcodeAppUpload</string>
+    <string name="ext_config_env_missing_title">Okolje ni izbrano</string>
+    <string name="ext_config_env_missing_text">Naprava ne bo vedela, ali dela v testu ali v produkciji.</string>
+    <string name="ext_config_env_missing_pick">Izberi</string>
+    <string name="ext_config_env_missing_save_anyway">Vseeno shrani</string>
+    <string name="upload_error_document_url_missing">URL pošiljanja dokumenta ni konfiguriran</string>
 </resources>

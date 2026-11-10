@@ -18,6 +18,9 @@
   },
   "locationsUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Mebel')/LocationList",
   "recordingSyncUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Mebel')/BarcodeAppRecordings",
+  "inventoryBatchesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Mebel')/BarcodeInventoryBatches",
+  "uploadMode": "PER_SCAN",
+  "documentUploadUrl": "http://192.168.100.87:8047/NAV_TEST_HR/WS/Prima%20Mebel/Codeunit/BarcodeAppUpload",
   "docTypeFilters": {
     "WAREHOUSE_SHIPMENT": "LOCATION",
     "WAREHOUSE_RECEIPT": "LOCATION",

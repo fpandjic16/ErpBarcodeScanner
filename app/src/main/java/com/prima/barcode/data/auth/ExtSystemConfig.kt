@@ -14,6 +14,19 @@ import java.net.URLDecoder
  */
 enum class ExtSystemEnvironment { TEST, PRODUCTION }
 
+/**
+ * How a document's recordings travel to the ERP.
+ *
+ * [PER_SCAN] is one OData POST per recording to [ExtSystemConfig.recordingSyncUrl]: each row is
+ * accepted or refused on its own, so a document can end up partly sent.
+ *
+ * [PER_DOCUMENT] is one SOAP call per document to [ExtSystemConfig.documentUploadUrl] (NAV
+ * codeunit 50117, Barcode App Upload): every recording of the document in one transaction, all of
+ * them accepted or none. A document is never half in the ERP, and a few hundred scans go in one
+ * round trip instead of a few hundred.
+ */
+enum class RecordingUploadMode { PER_SCAN, PER_DOCUMENT }
+
 data class ExtSystemConfig(
     val serverBaseUrl: String = "",
     val credentialTtlHours: Int = 24,
@@ -35,6 +48,13 @@ data class ExtSystemConfig(
     // does not know. It becomes known as soon as a configuration declaring an environment is
     // loaded, which every bundled file now does.
     val environment: ExtSystemEnvironment? = null,
+    // The inventory journal batches sent for scanning (NAV page 50208, BarcodeInventoryBatches).
+    // Required for a stock count: there is no other way to list them.
+    val inventoryBatchesUrl: String = "",
+    val uploadMode: RecordingUploadMode = RecordingUploadMode.PER_SCAN,
+    // SOAP address of codeunit 50117 (…/WS/<Company>/Codeunit/BarcodeAppUpload); used only when
+    // uploadMode is PER_DOCUMENT.
+    val documentUploadUrl: String = "",
 ) {
     fun docTypeCodeFor(type: DocumentType): String = documentTypeCodes[type] ?: ""
     val isConfigured: Boolean get() = serverBaseUrl.isNotBlank()

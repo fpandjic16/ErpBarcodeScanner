@@ -368,4 +368,18 @@
     <string name="recording_not_on_document_text">Баркодот %s не е во оваа серија за инвентура. Да се брои како артикл пронајден на полица?</string>
     <string name="recording_not_on_document_add">Брои</string>
     <string name="recording_not_on_document_label">Не е во серијата</string>
+    <string name="ext_error_inventory_batches_url_missing">URL-то за серии на попис не е конфигурирано.</string>
+    <string name="ext_config_inventory_batches_url">URL за серии на попис</string>
+    <string name="ext_config_hint_inventory_batches">на пр. …/ODataV4/Company(\'Компанија\')/BarcodeInventoryBatches</string>
+    <string name="ext_config_upload_mode">Испраќање</string>
+    <string name="ext_config_upload_mode_desc">По скенирање го испраќа секое скенирање посебно. По документ го испраќа целиот документ во еден повик: се прифаќа сè или ништо.</string>
+    <string name="ext_config_upload_mode_per_scan">По скенирање</string>
+    <string name="ext_config_upload_mode_per_document">По документ</string>
+    <string name="ext_config_document_upload_url">URL за испраќање документ (SOAP)</string>
+    <string name="ext_config_hint_document_upload">на пр. …/WS/Компанија/Codeunit/BarcodeAppUpload</string>
+    <string name="ext_config_env_missing_title">Не е избрана околина</string>
+    <string name="ext_config_env_missing_text">Уредот нема да знае дали работи во тест или во продукција.</string>
+    <string name="ext_config_env_missing_pick">Избери</string>
+    <string name="ext_config_env_missing_save_anyway">Сепак зачувај</string>
+    <string name="upload_error_document_url_missing">URL-то за испраќање документ не е конфигурирано</string>
 </resources>

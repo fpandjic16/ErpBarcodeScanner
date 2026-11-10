@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Inventory
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -131,8 +132,9 @@ fun DownloadFilterScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (stockCount && hasCredentials) loadBatches(null, null)
+    // Asked again whenever the scope changes: the list is the batches of this location or centre.
+    LaunchedEffect(sourceCode, rcCode) {
+        if (stockCount && signedIn) loadBatches(null, null)
     }
 
     fun onOkClick() {
@@ -329,6 +331,9 @@ fun DownloadFilterScreen(
         InventoryBatchPickerSheet(
             batches            = batches.orEmpty(),
             selectedDocumentNo = selectedBatchNo,
+            loading            = batchesLoading,
+            error              = batchesError,
+            onRefresh          = { loadBatches(null, null) },
             onSelect           = { batch -> selectedBatchNo = batch.documentNo; showBatchSheet = false },
             onDismiss          = { showBatchSheet = false },
         )
@@ -378,9 +383,10 @@ private val InventoryBatch.title: String
         .joinToString(" · ")
         .ifEmpty { documentNo }
 
-/** Document no. · date · number of lines. */
+/** Description · document no. · date · number of lines. */
 @Composable
 private fun InventoryBatch.details(): String = listOfNotNull(
+    description.takeIf { it.isNotBlank() },
     documentNo,
     documentDate?.format(dlDateFmt),
     LocalContext.current.resources.getQuantityString(R.plurals.download_inventory_batch_lines, lineCount, lineCount),
@@ -460,12 +466,20 @@ private fun InventoryBatchSelector(
     }
 }
 
-/** The same sheet as [LocationPickerSheet]: search on top, the batches below, the pick ticked. */
+/**
+ * The same sheet as [LocationPickerSheet]: search on top, the batches below, the pick ticked.
+ *
+ * A refresh button beside the search asks the ERP again without leaving the sheet, for a batch
+ * the office has just sent while the operator was already looking at the list.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InventoryBatchPickerSheet(
     batches: List<InventoryBatch>,
     selectedDocumentNo: String?,
+    loading: Boolean,
+    error: String?,
+    onRefresh: () -> Unit,
     onSelect: (InventoryBatch) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -473,7 +487,9 @@ private fun InventoryBatchPickerSheet(
     val filtered = remember(query, batches) {
         if (query.isBlank()) batches
         else batches.filter {
-            it.title.contains(query, ignoreCase = true) || it.documentNo.contains(query, ignoreCase = true)
+            it.title.contains(query, ignoreCase = true) ||
+                it.documentNo.contains(query, ignoreCase = true) ||
+                it.description.contains(query, ignoreCase = true)
         }
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -487,11 +503,36 @@ private fun InventoryBatchPickerSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.9f),
         ) {
-            LrcSearchField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = stringResource(R.string.lrc_search_placeholder),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.weight(1f)) {
+                    LrcSearchField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = stringResource(R.string.lrc_search_placeholder),
+                    )
+                }
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    if (loading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        IconButton(onClick = onRefresh) {
+                            Icon(
+                                Icons.Outlined.Refresh,
+                                contentDescription = stringResource(R.string.lrc_refresh_list),
+                                tint = PrimaPalette.Ink2,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            if (error != null) {
+                Text(
+                    error,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Coral),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             if (filtered.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(32.dp),

@@ -18,6 +18,9 @@
   },
   "locationsUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/LocationList",
   "recordingSyncUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeAppRecordings",
+  "inventoryBatchesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeInventoryBatches",
+  "uploadMode": "PER_SCAN",
+  "documentUploadUrl": "http://192.168.100.87:8047/NAV_TEST_HR/WS/Prima%20Commerce%20d.o.o./Codeunit/BarcodeAppUpload",
   "docTypeFilters": {
     "WAREHOUSE_SHIPMENT": "LOCATION",
     "WAREHOUSE_RECEIPT": "LOCATION",

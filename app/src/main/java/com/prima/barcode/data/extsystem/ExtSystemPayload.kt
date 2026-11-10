@@ -90,12 +90,21 @@ data class NavBarcodeAppEntry(
 // inventory row carries its journal template and batch, which no other type fills.
 // Every field has a default, so Gson builds this through the no-argument constructor and a field
 // the ERP leaves out keeps its default instead of becoming null.
-data class NavInventoryBatchRow(
-    @SerializedName("Document_No")           val documentNo:          String  = "",
-    @SerializedName("Line_No")               val lineNo:              Int     = 0,
-    @SerializedName("Document_Date")         val documentDate:        String? = null,
+/**
+ * One row of `BarcodeInventoryBatches` (NAV page 50208 over Item Journal Batch, table 233): a
+ * batch whose count has been sent to the devices and is not finished. The location, the
+ * responsibility centre and the document no. are written to the batch when it is sent; the date
+ * and the number of lines are FlowFields over the batch's journal lines.
+ */
+data class NavInventoryBatch(
     @SerializedName("Journal_Template_Name") val journalTemplateName: String  = "",
-    @SerializedName("Journal_Batch_Name")    val journalBatchName:    String  = "",
+    @SerializedName("Name")                  val journalBatchName:    String  = "",
+    @SerializedName("Description")           val description:         String  = "",
+    @SerializedName("Barcode_Document_No")   val documentNo:          String  = "",
+    @SerializedName("Barcode_Location_Code") val locationCode:        String  = "",
+    @SerializedName("Barcode_Resp_Center")   val rcCode:              String  = "",
+    @SerializedName("Barcode_Posting_Date")  val postingDate:         String? = null,
+    @SerializedName("Barcode_Line_Count")    val lineCount:           Int     = 0,
 )
 
 data class NavLocation(

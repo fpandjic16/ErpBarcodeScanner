@@ -241,13 +241,6 @@ fun DocumentOverviewScreen(
     }
 }
 
-@androidx.compose.runtime.Composable
-private fun com.prima.barcode.data.model.LineStatus.localizedLabel(): String = when (this) {
-    com.prima.barcode.data.model.LineStatus.EMPTY   -> stringResource(R.string.doc_status_empty)
-    com.prima.barcode.data.model.LineStatus.PARTIAL -> stringResource(R.string.doc_status_partial)
-    com.prima.barcode.data.model.LineStatus.EXACT   -> stringResource(R.string.doc_status_ready)
-    com.prima.barcode.data.model.LineStatus.OVER    -> stringResource(R.string.doc_status_over_qty)
-}
 
 @Composable
 private fun DashboardDocRow(doc: Document, showErrorDetails: Boolean = false, onClick: () -> Unit) {

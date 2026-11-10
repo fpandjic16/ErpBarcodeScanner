@@ -368,4 +368,18 @@
     <string name="recording_not_on_document_text">Barcode %s is not on this inventory batch. Count it as an item found on the shelf?</string>
     <string name="recording_not_on_document_add">Count it</string>
     <string name="recording_not_on_document_label">Not on the batch</string>
+    <string name="ext_error_inventory_batches_url_missing">The inventory batches URL is not configured.</string>
+    <string name="ext_config_inventory_batches_url">Inventory batches URL</string>
+    <string name="ext_config_hint_inventory_batches">e.g. …/ODataV4/Company(\'Name\')/BarcodeInventoryBatches</string>
+    <string name="ext_config_upload_mode">Upload</string>
+    <string name="ext_config_upload_mode_desc">Per scan sends each scan on its own. Per document sends the whole document in one call: all of it is accepted, or none of it.</string>
+    <string name="ext_config_upload_mode_per_scan">Per scan</string>
+    <string name="ext_config_upload_mode_per_document">Per document</string>
+    <string name="ext_config_document_upload_url">Document upload URL (SOAP)</string>
+    <string name="ext_config_hint_document_upload">e.g. …/WS/Name/Codeunit/BarcodeAppUpload</string>
+    <string name="ext_config_env_missing_title">No environment chosen</string>
+    <string name="ext_config_env_missing_text">The device will not know whether it is working in test or in production.</string>
+    <string name="ext_config_env_missing_pick">Choose</string>
+    <string name="ext_config_env_missing_save_anyway">Save anyway</string>
+    <string name="upload_error_document_url_missing">Document upload URL not configured</string>
 </resources>

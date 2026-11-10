@@ -12,6 +12,7 @@ import io.ktor.client.engine.okhttp.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.content.TextContent
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.net.ConnectException
@@ -172,6 +173,39 @@ class ExtSystemODataClient @Inject constructor(
             }
         }.getOrElse {
             Timber.e(it, "OData upload error")
+            ExtSystemResult.Failure(describe(it))
+        }
+    }
+
+    /**
+     * Sends every recording of one document in a single SOAP call (see [DocumentUploadSoap]).
+     * Success means NAV holds all of [rows]; a failure means it holds none of them from this call.
+     *
+     * A fault's `faultstring` is NAV's own error text (a closed document, a refused field), which
+     * is the most precise thing there is to show, so it is shown. The read timeout is the client's
+     * usual minute; a document of a few hundred scans is one insert pass on the server.
+     */
+    suspend fun uploadDocument(url: String, rows: List<NavBarcodeAppRecording>): ExtSystemResult<Unit> {
+        val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
+        return runCatching {
+            val response = client.post(url) {
+                header("SOAPAction", DocumentUploadSoap.SOAP_ACTION)
+                setBody(TextContent(DocumentUploadSoap.envelope(rows), ContentType.Text.Xml.withCharset(Charsets.UTF_8)))
+            }
+            if (response.status.isSuccess()) {
+                ExtSystemResult.Success(Unit)
+            } else {
+                val errorBody = runCatching { response.bodyAsText() }.getOrDefault("")
+                Timber.w("SOAP document upload failed [${response.status.value}]: ${errorBody.take(2000)}")
+                val message = when {
+                    response.status.value == 401 -> text(R.string.ext_error_http_401)
+                    else -> DocumentUploadSoap.faultMessage(errorBody)
+                        ?: "HTTP ${response.status.value}: $errorBody".take(300)
+                }
+                ExtSystemResult.Failure(message, response.status.value)
+            }
+        }.getOrElse {
+            Timber.e(it, "SOAP document upload error")
             ExtSystemResult.Failure(describe(it))
         }
     }

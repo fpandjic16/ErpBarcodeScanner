@@ -82,6 +82,7 @@ data class InventoryBatch(
     val documentNo: String,
     val journalTemplateName: String,
     val journalBatchName: String,
+    val description: String = "",
     val documentDate: java.time.LocalDate?,
     val lineCount: Int,
 )
