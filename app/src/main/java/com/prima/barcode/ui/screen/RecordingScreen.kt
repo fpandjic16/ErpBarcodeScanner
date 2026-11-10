@@ -42,6 +42,7 @@ import com.prima.barcode.data.model.color
 import com.prima.barcode.data.model.formatQty
 import com.prima.barcode.data.model.scanStatus
 import com.prima.barcode.ui.component.PrimaTopBar
+import com.prima.barcode.ui.component.TOP_BAR_BUTTON_HEIGHT
 import com.prima.barcode.ui.component.ScanBar
 import com.prima.barcode.ui.component.StatusProgressBar
 import com.prima.barcode.ui.theme.LocalTextSizeOffset
@@ -317,13 +318,13 @@ fun RecordingScreen(
             onBack = { handleBack() },
             actions = {
                 if (showUpload && view == RecordingView.OVERVIEW) {
-                    // Same footprint as PrimaTopBar's back button (60x44, 8dp radius, 24dp
-                    // icon), just mirrored padding and the Coral fill — so the two top-bar
-                    // controls read as a matching pair across the bar.
+                    // Same footprint as PrimaTopBar's back button (60 x TOP_BAR_BUTTON_HEIGHT, 8dp
+                    // radius, 24dp icon), just mirrored padding and the Coral fill — so the two
+                    // top-bar controls read as a matching pair across the bar.
                     Box(
                         modifier = Modifier
                             .padding(start = 4.dp, top = 2.dp, bottom = 2.dp, end = 8.dp)
-                            .size(width = 60.dp, height = 44.dp)
+                            .size(width = 60.dp, height = TOP_BAR_BUTTON_HEIGHT)
                             .clip(RoundedCornerShape(8.dp))
                             .background(PrimaPalette.Coral)
                             .clickable(onClick = onUpload),

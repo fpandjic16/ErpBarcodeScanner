@@ -21,6 +21,12 @@ import com.prima.barcode.ui.theme.PrimaPalette
 import com.prima.barcode.ui.theme.monoLabel
 import com.prima.barcode.ui.theme.uppercased
 
+/**
+ * Height of a button in the top bar (back, and the recording screen's upload): 48 dp, the
+ * smallest target that is hit reliably in gloves. 44 dp until 3.6.29.
+ */
+val TOP_BAR_BUTTON_HEIGHT = 48.dp
+
 @Composable
 fun PrimaTopBar(
     title: String,
@@ -36,7 +42,9 @@ fun PrimaTopBar(
             .padding(bottom = 2.dp)
             .background(PrimaPalette.Slate)
             .statusBarsPadding()
-            .height(48.dp)
+            // 52, so the 48 dp buttons below keep their 2 dp of air. Was 48 with 44 dp buttons until
+            // 3.6.29; 48 dp is the smallest target a gloved thumb reliably hits.
+            .height(52.dp)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -46,7 +54,7 @@ fun PrimaTopBar(
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
-                        .size(width = 60.dp, height = 44.dp)
+                        .size(width = 60.dp, height = TOP_BAR_BUTTON_HEIGHT)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color(0x20FFFFFF))
                         .clickable(onClick = onBack),

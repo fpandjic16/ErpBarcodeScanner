@@ -620,7 +620,10 @@ private fun DlDateChip(
             .background(Color.White)
             .border(1.dp, Color(0x28000000), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            // 48 dp tall, and no right padding: the clear button below brings its own 48 dp.
+            // Until 3.6.29 this was 10 dp all round, about 36 dp tall, with a 14 dp clear icon.
+            .heightIn(min = 48.dp)
+            .padding(start = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -631,12 +634,23 @@ private fun DlDateChip(
             modifier = Modifier.weight(1f),
         )
         if (value != null) {
-            Icon(
-                Icons.Outlined.Clear,
-                contentDescription = stringResource(R.string.cd_clear),
-                tint = PrimaPalette.Ink3,
-                modifier = Modifier.size(14.dp).clickable(onClick = onClear),
-            )
+            // The icon stays small; the target around it is 48 dp, which is what a gloved thumb
+            // needs to hit it rather than the chip behind it.
+            Box(
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clickable(onClick = onClear),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Clear,
+                    contentDescription = stringResource(R.string.cd_clear),
+                    tint = PrimaPalette.Ink3,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        } else {
+            Spacer(Modifier.width(4.dp))
         }
     }
 }
