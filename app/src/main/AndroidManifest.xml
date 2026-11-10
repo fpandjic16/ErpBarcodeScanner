@@ -17,8 +17,8 @@
     <!-- allowBackup is off: these devices hold every operator’s unsent scans and their
          encrypted NAV credentials, and auto-backup would copy both into whatever Google
          account happens to be on a shared warehouse scanner. The restore could not work
-         anyway — the Keystore key behind EncryptedSharedPreferences is device-bound and
-         never travels, so the restored preference files throw on first open. No rule files
+         anyway — the Keystore key behind SecureStore is device-bound and never travels,
+         so the restored values would not decrypt. No rule files
          either, so nothing implies otherwise. -->
     <application
         android:name=".PrimaBarcodeApplication"

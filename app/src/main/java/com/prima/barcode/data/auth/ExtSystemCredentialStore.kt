@@ -1,17 +1,15 @@
 package com.prima.barcode.data.auth
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Credential storage backed by EncryptedSharedPreferences / Android Keystore.
+ * Credential storage, encrypted with a key held in the Android Keystore (see [SecureStore]).
  *
  * Security properties:
- *  - AES-256-GCM encryption; keys live in the hardware-backed Keystore on API 28+
+ *  - AES-256-GCM encryption; the key never leaves the Keystore (hardware-backed where the device has it)
  *  - App-private storage: inaccessible to other apps without root
  *  - TTL enforced on every read; stale data wiped automatically
  *  - Credentials are never logged
@@ -26,40 +24,31 @@ import javax.inject.Singleton
  * What lives here expires, and is the *only* thing that lets anybody in: the ERP checks the
  * password on every sign-in. [UserProfileStore] records who has been accepted here and keeps
  * no secret of its own — the two must not be merged back together.
+ *
+ * Moved off EncryptedSharedPreferences in 3.6.28 without carrying anything over: everyone signs in
+ * once more after that update.
  */
 @Singleton
 class ExtSystemCredentialStore @Inject constructor(@param:ApplicationContext private val context: Context) {
 
-    private val masterKey by lazy {
-        MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
-
-    private val prefs by lazy {
-        EncryptedSharedPreferences.create(
-            context,
-            "ext_system_credentials",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+    private val store by lazy {
+        SecureStore(context, fileName = "ext_system_credentials_v2", legacyFileName = "ext_system_credentials")
     }
 
     fun save(profileId: String, username: String, password: String, ttlHours: Int) {
-        prefs.edit()
-            .putString("$profileId.username", username)
-            .putString("$profileId.password", password)
-            .putLong("$profileId.expiry", System.currentTimeMillis() + ttlHours * 3_600_000L)
-            .apply()
+        store.edit {
+            putString("$profileId.username", username)
+            putString("$profileId.password", password)
+            putLong("$profileId.expiry", System.currentTimeMillis() + ttlHours * 3_600_000L)
+        }
     }
 
     fun get(profileId: String?): ExtSystemCredentials? {
         if (profileId == null) return null
-        val expiry = prefs.getLong("$profileId.expiry", 0L)
+        val expiry = store.getLong("$profileId.expiry", 0L)
         if (System.currentTimeMillis() > expiry) { clear(profileId); return null }
-        val username = prefs.getString("$profileId.username", null) ?: return null
-        val password = prefs.getString("$profileId.password", null) ?: return null
+        val username = store.getString("$profileId.username") ?: return null
+        val password = store.getString("$profileId.password") ?: return null
         return ExtSystemCredentials(username = username, password = password)
     }
 
@@ -67,11 +56,11 @@ class ExtSystemCredentialStore @Inject constructor(@param:ApplicationContext pri
 
     /** Drops one operator's server access. Their local data and their profile are untouched. */
     fun clear(profileId: String) {
-        prefs.edit()
-            .remove("$profileId.username")
-            .remove("$profileId.password")
-            .remove("$profileId.expiry")
-            .apply()
+        store.edit {
+            remove("$profileId.username")
+            remove("$profileId.password")
+            remove("$profileId.expiry")
+        }
     }
 
 }

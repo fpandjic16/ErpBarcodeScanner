@@ -1,8 +1,7 @@
 package com.prima.barcode.data.auth
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import com.google.gson.Gson
 import com.prima.barcode.data.extsystem.ExtSystemODataClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
@@ -32,26 +31,25 @@ data class UserProfile(
 @Singleton
 class UserProfileStore @Inject constructor(@param:ApplicationContext private val context: Context) {
 
-    private val masterKey by lazy {
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    // Moved off EncryptedSharedPreferences in 3.6.28 without carrying the list over, by decision.
+    // An operator reappears here at their next sign-in, and because a profile's database file is
+    // named after its id, they find their own documents and unsent scans exactly where they were.
+    private val store by lazy {
+        SecureStore(context, fileName = "user_profiles_v2", legacyFileName = "user_profiles")
     }
 
-    private val prefs by lazy {
-        EncryptedSharedPreferences.create(
-            context,
-            "user_profiles",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }
+    private val gson = Gson()
+
+    private fun ids(): Set<String> = store.getString(KEY_IDS)
+        ?.let { runCatching { gson.fromJson(it, Array<String>::class.java).toSet() }.getOrNull() }
+        .orEmpty()
+
+    private fun displayName(id: String): String = store.getString("$id.$KEY_NAME") ?: id
 
     // ── Profiles ──────────────────────────────────────────────────────────────
 
     fun profiles(): List<UserProfile> =
-        prefs.getStringSet(KEY_IDS, emptySet()).orEmpty().sorted().map { id ->
-            UserProfile(id = id, displayName = prefs.getString("$id.$KEY_NAME", id) ?: id)
-        }
+        ids().sorted().map { id -> UserProfile(id = id, displayName = displayName(id)) }
 
     /**
      * Who is signed in — held in memory only, and deliberately so.
@@ -67,7 +65,7 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
     fun currentId(): String? = currentProfileId
 
     fun current(): UserProfile? = currentProfileId?.let { id ->
-        UserProfile(id = id, displayName = prefs.getString("$id.$KEY_NAME", id) ?: id)
+        UserProfile(id = id, displayName = displayName(id))
     }
 
     fun setCurrent(id: String) { currentProfileId = id }
@@ -86,14 +84,14 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
      * current.
      */
     fun enroll(profile: UserProfile) {
-        prefs.edit()
-            .putStringSet(KEY_IDS, profiles().mapTo(HashSet()) { it.id }.apply { add(profile.id) })
-            .putString("${profile.id}.$KEY_NAME", profile.displayName)
-            .apply()
+        store.edit {
+            putString(KEY_IDS, gson.toJson((ids() + profile.id).sorted()))
+            putString("${profile.id}.$KEY_NAME", profile.displayName)
+        }
     }
 
     /**
-     * Forgets an operator entirely: their name, and any secret an older version left behind.
+     * Forgets an operator entirely: their name and their enrolment.
      *
      * Only the enrolment. Their database, credentials and settings live elsewhere and have to be
      * removed by their own owners — see `AppViewModel.deleteProfile`, which calls this **last**,
@@ -105,14 +103,10 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
      */
     fun delete(id: String) {
         if (id == currentProfileId) return
-        val remaining = profiles().mapTo(HashSet()) { it.id }.apply { remove(id) }
-        prefs.edit()
-            .putStringSet(KEY_IDS, remaining)
-            .remove("$id.$KEY_NAME")
-            .remove("$id.$KEY_SALT")
-            .remove("$id.$KEY_ITERATIONS")
-            .remove("$id.$KEY_DIGEST")
-            .apply()
+        store.edit {
+            putString(KEY_IDS, gson.toJson((ids() - id).sorted()))
+            remove("$id.$KEY_NAME")
+        }
     }
 
     companion object {
@@ -121,14 +115,8 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
 
         private const val KEY_IDS = "ids"
         private const val KEY_NAME = "name"
-
-        // Nothing writes these any more. They are kept so [delete] still sweeps up the digest an
-        // older version left behind, which is a password-derived secret and should not outlive the
-        // profile it belonged to. Removable once no device in the fleet has been upgraded from
-        // before the offline unlock was dropped.
-        private const val KEY_SALT = "salt"
-        private const val KEY_ITERATIONS = "iterations"
-        private const val KEY_DIGEST = "digest"
+        // The password digests an older version kept went with the old file, which is deleted
+        // unread (see SecureStore's legacyFileName).
 
         /**
          * The identity a profile is keyed by, and the value written into every recording's

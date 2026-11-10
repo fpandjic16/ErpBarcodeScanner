@@ -113,19 +113,21 @@ data class Line(
      * than quietly clamped.
      */
     val sentQuantity: Double = 0.0,
+    /**
+     * Created on the device for an item the stock count did not list ([DocumentType.isStockCount]).
+     *
+     * Such a line also has a negative [lineNo]. The ERP numbers its own lines from 1 up, so the
+     * two can never collide. It has no expected quantity, and its item number is the barcode,
+     * because the device does not know which item the barcode belongs to. The ERP resolves that
+     * from the barcode when it processes the upload.
+     *
+     * Stored as a field of its own since schema 21; before that it was read off the sign.
+     */
+    val isAddedOnDevice: Boolean = false,
 ) {
     val status: LineStatus get() = LineStatus.of(scanned, expected)
     /** True once part of this line is in the ERP, which makes [sentQuantity] a hard lower bound. */
     val hasSentQuantity: Boolean get() = sentQuantity > 0.0
-    /**
-     * Created on the device for an item the stock count did not list ([DocumentType.isStockCount]).
-     *
-     * Such a line has a negative [lineNo]. The ERP numbers its own lines from 1 up, so the two can
-     * never collide. It has no expected quantity, and its item number is the barcode, because the
-     * device does not know which item the barcode belongs to. The ERP resolves that from the
-     * barcode when it processes the upload.
-     */
-    val isAddedOnDevice: Boolean get() = lineNo < 0
 }
 
 /**

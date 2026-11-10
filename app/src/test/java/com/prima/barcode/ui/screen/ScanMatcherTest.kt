@@ -18,6 +18,7 @@ class ScanMatcherTest {
         destinationCode = "",
         sourceCode = "",
         unitOfMeasureCode = "KOM",
+        isAddedOnDevice = no < 0,
     )
 
     private fun match(lines: List<Line>, barcode: String, label: String? = null, stockCount: Boolean = false) =

@@ -43,7 +43,7 @@ internal object ScanMatcher {
             if (isStockCount && labelBarcode != null) lines.filter { it.barcodeNo == labelBarcode } else emptyList()
         }
         if (candidates.size <= 1) return candidates.firstOrNull()
-        val ordered = candidates.sortedWith(compareBy<Line>({ it.lineNo < 0 }, { abs(it.lineNo) }))
+        val ordered = candidates.sortedWith(compareBy<Line>({ it.isAddedOnDevice }, { abs(it.lineNo) }))
         return ordered.firstOrNull { scannedSoFar(it) < it.expected } ?: ordered.last()
     }
 }

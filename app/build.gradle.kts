@@ -17,8 +17,8 @@ android {
         applicationId = "com.prima.barcode"
         minSdk = 26
         targetSdk = 36
-        versionCode = 102
-        versionName = "3.6.27"
+        versionCode = 103
+        versionName = "3.6.28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -79,8 +79,8 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
 
-    // Encrypted credential cache
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // The encrypted credential cache is SecureStore (Android Keystore, no library); security-crypto
+    // was removed in 3.6.28 after Google deprecated it.
 
     // DI
     implementation(libs.hilt.android)

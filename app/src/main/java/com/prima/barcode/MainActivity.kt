@@ -600,7 +600,7 @@ private fun PrimaBarcodeApp(
         }
         composable("profiles") {
             // Re-read after a deletion rather than observed: profiles change only here, and a
-            // Flow over EncryptedSharedPreferences would be machinery for one screen.
+            // Flow over the encrypted profile store would be machinery for one screen.
             var profilesRefresh by remember { mutableStateOf(0) }
             ProfilesScreen(
                 profiles = remember(profilesRefresh) { appVm.profileStore.profiles() },

@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * The schema version of [PrimaDatabase], written once. The app info shows this value; it used to
  * show a constant of its own, "7.0.0", that nobody updated while the schema went on to 19.
  */
-const val PRIMA_DB_VERSION = 20
+const val PRIMA_DB_VERSION = 21
 
 /**
  * One operator's work: their documents, lines and recordings.
@@ -332,6 +332,18 @@ abstract class PrimaDatabase : RoomDatabase() {
                 db.execSQL("DELETE FROM recordings WHERE type = 'COMPLAINT'")
                 db.execSQL("DELETE FROM documentLine WHERE type = 'COMPLAINT'")
                 db.execSQL("DELETE FROM documentHeader WHERE type = 'COMPLAINT'")
+            }
+        }
+
+        /**
+         * Gives a line added on the device a field of its own (`addedOnDevice`) instead of
+         * leaving it to be recognised by its negative number. Every line that has one now is such
+         * a line: nothing else ever got a negative number.
+         */
+        val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE documentLine ADD COLUMN addedOnDevice INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE documentLine SET addedOnDevice = 1 WHERE lineNo < 0")
             }
         }
     }

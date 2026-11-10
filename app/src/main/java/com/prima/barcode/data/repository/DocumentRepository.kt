@@ -188,7 +188,7 @@ class DocumentRepositoryImpl @Inject constructor(
             .groupBy { it.barcodeNo }
             .mapValues { (_, sameBarcode) -> sameBarcode.first().lineNo }
         val (replacedByNav, addedOnDevice) = db.documentLineDao().getByDoc(doc.documentNo, type)
-            .filter { it.lineNo < 0 }
+            .filter { it.addedOnDevice }
             .partition { it.barcodeNo in navLineNoByBarcode }
         db.documentLineDao().deleteAllForDoc(doc.documentNo, type)
         db.documentLineDao().upsertAll(doc.lines.map { it.toEntity(type) } + addedOnDevice)
@@ -326,6 +326,7 @@ class DocumentRepositoryImpl @Inject constructor(
                         destinationCode = header.destinationCode,
                         sourceCode = header.sourceCode,
                         unitOfMeasureCode = unitOfMeasureCode,
+                        addedOnDevice = true,
                     )
                 ))
                 newLineNo
@@ -550,7 +551,7 @@ class DocumentRepositoryImpl @Inject constructor(
     private suspend fun dropEmptyLinesAddedOnDevice(db: PrimaDatabase, documentNo: String, type: String) {
         val linesWithScans = db.recordingDao().getByDoc(documentNo, type).mapTo(HashSet()) { it.documentLine }
         db.documentLineDao().getByDoc(documentNo, type)
-            .filter { it.lineNo < 0 && it.lineNo !in linesWithScans }
+            .filter { it.addedOnDevice && it.lineNo !in linesWithScans }
             .forEach { db.documentLineDao().deleteByKey(documentNo, type, it.lineNo) }
     }
 

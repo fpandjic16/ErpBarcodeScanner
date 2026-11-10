@@ -39,6 +39,15 @@ data class DocumentLineEntity(
     val sourceCode: String,
     val unitOfMeasureCode: String,
     val scanningQty: Double = 1.0,
+    /**
+     * Created on the device for an item a stock count did not list; see `Line.isAddedOnDevice`.
+     * Such a line still gets a negative [lineNo] so it can never collide with the ERP's own
+     * numbers, but what it *is* is said here rather than read off the sign.
+     *
+     * Declared last on purpose: the 20→21 migration adds it with ALTER TABLE ADD COLUMN, which
+     * appends, and the entity's field order has to match the table's column order.
+     */
+    val addedOnDevice: Boolean = false,
 )
 
 @Entity(
