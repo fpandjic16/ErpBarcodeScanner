@@ -7,64 +7,101 @@ import org.junit.Test
 
 class ServerIdentityTest {
 
-    private fun config(server: String, company: String? = "Acme Ltd", service: String = "BarcodeAppEntries") =
-        ExtSystemConfig(
-            serverBaseUrl = server,
-            documentLinesUrl = if (company == null) "" else
-                "http://erp:7048/Live/ODataV4/Company('${company.replace(" ", "%20")}')/$service",
-        )
+    private fun odata(server: String, company: String, service: String) =
+        "${server.trimEnd('/')}/Company('${company.replace(" ", "%20")}')/$service"
+
+    /** A consistent configuration: every endpoint on [server], addressing [company]. */
+    private fun config(
+        server: String,
+        company: String = "Acme Ltd",
+        linesService: String = "BarcodeAppEntries",
+        upload: String? = null,
+        soap: String = "",
+    ) = ExtSystemConfig(
+        serverBaseUrl = server,
+        documentLinesUrl = odata(server, company, linesService),
+        recordingSyncUrl = upload ?: odata(server, company, "BarcodeAppRecordings"),
+        locationsUrl = odata(server, company, "LocationList"),
+        inventoryBatchesUrl = odata(server, company, "BarcodeInventoryBatches"),
+        documentUploadUrl = soap,
+    )
+
+    private val live = "http://erp:7048/Live/ODataV4/"
 
     @Test
     fun `no server, no identity`() {
-        assertEquals("", config("").serverIdentity)
-        assertEquals("", config("   ").serverIdentity)
+        assertEquals("", ExtSystemConfig().serverIdentity)
+        assertEquals("", ExtSystemConfig(serverBaseUrl = "   ").serverIdentity)
     }
 
     @Test
     fun `slashes and letter case do not make another installation`() {
-        val a = config("http://erp:7048/Live/ODataV4/")
-        val b = config("HTTP://ERP:7048/live/odatav4")
-        assertEquals(a.serverIdentity, b.serverIdentity)
+        assertEquals(config(live).serverIdentity, config("HTTP://ERP:7048/live/odatav4").serverIdentity)
     }
 
     @Test
     fun `another company is another installation`() {
-        val server = "http://erp:7048/Live/ODataV4/"
-        assertNotEquals(config(server, "Acme Ltd").serverIdentity, config(server, "Acme Retail").serverIdentity)
+        assertNotEquals(config(live, "Acme Ltd").serverIdentity, config(live, "Acme Retail").serverIdentity)
     }
 
     @Test
     fun `another server is another installation, test and production included`() {
-        assertNotEquals(
-            config("http://erp:7048/Live/ODataV4/").serverIdentity,
-            config("http://erp:8048/Test/ODataV4/").serverIdentity,
-        )
+        assertNotEquals(config(live).serverIdentity, config("http://erp:8048/Test/ODataV4/").serverIdentity)
     }
 
     @Test
     fun `renaming a service does not change the installation`() {
-        val server = "http://erp:7048/Live/ODataV4/"
-        assertEquals(
-            config(server, service = "BarcodeAppEntries").serverIdentity,
-            config(server, service = "DocumentLines").serverIdentity,
-        )
+        assertEquals(config(live).serverIdentity, config(live, linesService = "DocumentLines").serverIdentity)
+    }
+
+    @Test
+    fun `an upload address for another company is another installation`() {
+        val stray = config(live, upload = odata(live, "Acme Retail", "BarcodeAppRecordings"))
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
+    fun `an upload address on another host is another installation`() {
+        val stray = config(live, upload = odata("http://elsewhere:7048/Live/ODataV4/", "Acme Ltd", "BarcodeAppRecordings"))
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
+    fun `the SOAP service of the same instance and company is the same installation`() {
+        val withSoap = config(live, soap = "http://erp:7047/Live/WS/Acme%20Ltd/Codeunit/BarcodeAppUpload")
+        assertEquals(config(live).serverIdentity, withSoap.serverIdentity)
+        val otherCompany = config(live, soap = "http://erp:7047/Live/WS/Acme%20Retail/Codeunit/BarcodeAppUpload")
+        assertNotEquals(config(live).serverIdentity, otherCompany.serverIdentity)
+    }
+
+    @Test
+    fun `dot segments cannot hide another instance`() {
+        val stray = config(live, upload = "http://erp:7048/Live/ODataV4/../../Other/ODataV4/Company('Acme%20Ltd')/BarcodeAppRecordings")
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
+    fun `an address naming two companies matches no installation but its own`() {
+        val stray = config(live, upload = "http://erp:7048/Live/ODataV4/Company('Acme%20Ltd')/Company('Acme%20Retail')/X")
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
     }
 
     @Test
     fun `the label is the company, or the address when the URL names none`() {
-        assertEquals("Acme Ltd", config("http://erp:7048/Live/ODataV4/").serverLabel)
-        assertEquals("erp:7048/Live/ODataV4", config("http://erp:7048/Live/ODataV4/", company = null).serverLabel)
+        assertEquals("Acme Ltd", config(live).serverLabel)
+        assertEquals("erp:7048/Live/ODataV4", ExtSystemConfig(serverBaseUrl = live).serverLabel)
     }
 
     @Test
     fun `one operator on two installations has two keys and two database files`() {
-        val live = config("http://erp:7048/Live/ODataV4/").serverIdentity
-        val test = config("http://erp:8048/Test/ODataV4/").serverIdentity
-        val onLive = UserProfile("ANA", "ANA", serverKey = live)
-        val onTest = UserProfile("ANA", "ANA", serverKey = test)
+        val onLive = UserProfile("ANA", "ANA", serverKey = config(live).serverIdentity)
+        val onTest = UserProfile("ANA", "ANA", serverKey = config("http://erp:8048/Test/ODataV4/").serverIdentity)
         assertNotEquals(onLive.key, onTest.key)
         assertNotEquals(UserProfileStore.databaseName(onLive.key), UserProfileStore.databaseName(onTest.key))
-        assertEquals(UserProfileStore.databaseName(onLive.key), UserProfileStore.databaseName(UserProfile("ANA", "Ana", serverKey = live).key))
+        assertEquals(
+            UserProfileStore.databaseName(onLive.key),
+            UserProfileStore.databaseName(UserProfile("ANA", "Ana", serverKey = config(live).serverIdentity).key),
+        )
     }
 
     @Test
@@ -78,9 +115,9 @@ class ServerIdentityTest {
 
     @Test
     fun `reference data is one file per installation`() {
-        val live = config("http://erp:7048/Live/ODataV4/").serverIdentity
-        val test = config("http://erp:8048/Test/ODataV4/").serverIdentity
-        assertNotEquals(SharedDatabaseProvider.fileName(live), SharedDatabaseProvider.fileName(test))
-        assertEquals(SharedDatabaseProvider.fileName(live), SharedDatabaseProvider.fileName(live))
+        val a = config(live).serverIdentity
+        val b = config("http://erp:8048/Test/ODataV4/").serverIdentity
+        assertNotEquals(SharedDatabaseProvider.fileName(a), SharedDatabaseProvider.fileName(b))
+        assertEquals(SharedDatabaseProvider.fileName(a), SharedDatabaseProvider.fileName(a))
     }
 }

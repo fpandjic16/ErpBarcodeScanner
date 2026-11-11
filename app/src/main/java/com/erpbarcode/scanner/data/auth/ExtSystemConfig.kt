@@ -2,6 +2,7 @@ package com.erpbarcode.scanner.data.auth
 
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
+import java.net.URI
 import java.net.URLDecoder
 
 /**
@@ -76,7 +77,8 @@ data class ExtSystemConfig(
 
     /**
      * Which ERP installation this configuration talks to: the server that decides whether a
-     * password is good, and the company on it. Blank while no server is configured.
+     * password is good, and where every endpoint sends and fetches data. Blank while no server is
+     * configured.
      *
      * Everything an operator owns on the device is filed under their id **and** this (see
      * `UserProfile.key`): documents, scans, the saved sign-in, and the device's list of locations.
@@ -88,12 +90,25 @@ data class ExtSystemConfig(
      * Trailing slashes and letter case do not make a different installation; a different host,
      * port, instance or company does, and so does a test and a production system. Renaming a
      * service in one of the endpoint addresses does not.
+     *
+     * **Every endpoint counts, not only the server address.** The identity is the server base URL
+     * plus, for each endpoint that is filled in, the host, the server instance and the company it
+     * addresses ([endpointInstallation]). In a consistent configuration they all name the same
+     * one, and the identity is that. A configuration whose upload address, say, names another
+     * company or another host is a different installation from the consistent one, with data of
+     * its own, so scans made under the proper configuration can never be sent through it; and
+     * changing where any endpoint points ends the session like any other change of installation.
      */
     val serverIdentity: String
         get() {
             val server = serverBaseUrl.trim().trimEnd('/').lowercase()
             if (server.isEmpty()) return ""
-            return server + "|" + companyName.orEmpty().trim().lowercase()
+            val endpoints = listOf(documentLinesUrl, recordingSyncUrl, locationsUrl, inventoryBatchesUrl, documentUploadUrl)
+                .filter { it.isNotBlank() }
+                .map { endpointInstallation(it) }
+                .distinct()
+                .sorted()
+            return server + "|" + endpoints.joinToString(";")
         }
 
     /** What to call that installation on screen: the company, or the server's address when the URL names none. */
@@ -102,6 +117,44 @@ data class ExtSystemConfig(
 
     private companion object {
         val COMPANY_IN_URL = Regex("""Company\('((?:[^']|'')*)'\)""")
+
+        /**
+         * Where one endpoint address leads: `host/instance|company`, lower case.
+         *
+         * The port is left out: the SOAP services of an instance listen on another port than its
+         * OData services, and the instance name already tells two service tiers on one host apart.
+         * The company is `Company('…')` in an OData address and the segment after `/WS/` in a SOAP
+         * one. Dot segments are resolved first, so `/Live/../Other/` reads as `Other`.
+         *
+         * Anything that cannot be read that way — an address that does not parse, or one naming
+         * two companies — is returned whole. It then matches nothing but itself, which keeps an
+         * odd address on the careful side: a different installation rather than a trusted one.
+         */
+        fun endpointInstallation(url: String): String {
+            val raw = url.trim()
+            val whole = raw.lowercase()
+            val uri = runCatching { URI(raw.replace(" ", "%20")).normalize() }.getOrNull() ?: return whole
+            val authority = uri.rawAuthority ?: return whole
+            // URI.getHost() is null for names it does not consider host names (an underscore is
+            // enough), so fall back to the authority without user info and port.
+            val host = uri.host ?: authority.substringAfterLast('@').substringBeforeLast(':')
+            val path = uri.rawPath.orEmpty()
+            val segments = path.split('/').filter { it.isNotEmpty() }
+            val instance = segments.firstOrNull().orEmpty()
+            val odataCompanies = COMPANY_IN_URL.findAll(path).map { it.groupValues[1] }.toList()
+            val company = when {
+                odataCompanies.size > 1 -> return whole
+                odataCompanies.size == 1 -> decode(odataCompanies[0]).replace("''", "'")
+                else -> {
+                    val ws = segments.indexOfFirst { it.equals("WS", ignoreCase = true) }
+                    if (ws >= 0) decode(segments.getOrNull(ws + 1).orEmpty()) else ""
+                }
+            }
+            return (host + "/" + instance + "|" + company.trim()).lowercase()
+        }
+
+        private fun decode(raw: String): String =
+            runCatching { URLDecoder.decode(raw.replace("+", "%2B"), "UTF-8") }.getOrDefault(raw)
     }
 }
 
