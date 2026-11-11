@@ -85,6 +85,11 @@ import com.prima.barcode.ui.theme.TextSize
 import com.prima.barcode.ui.viewmodel.AppViewModel
 import com.prima.barcode.ui.viewmodel.RecordingViewModel
 import com.prima.barcode.ui.viewmodel.RecordingsTreeViewModel
+import com.prima.barcode.navigation.DebugUrlsDialog
+import com.prima.barcode.navigation.DownloadErrorDialog
+import com.prima.barcode.navigation.ProcessingDialog
+import com.prima.barcode.navigation.SwitchBlockedDialog
+import com.prima.barcode.navigation.SyncErrorDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
@@ -551,14 +556,7 @@ private fun PrimaBarcodeApp(
     }
 
     if (showSwitchBlocked) {
-        AlertDialog(
-            onDismissRequest = { showSwitchBlocked = false },
-            title = { Text(stringResource(R.string.signin_switch_blocked_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.signin_switch_blocked_body)) },
-            confirmButton = {
-                Button(onClick = { showSwitchBlocked = false }) { Text(stringResource(R.string.btn_ok)) }
-            },
-        )
+        SwitchBlockedDialog(onDismiss = { showSwitchBlocked = false })
     }
 
     // The nav controller is remembered above the sign-in gate, so its back stack outlives a change
@@ -1020,57 +1018,18 @@ private fun PrimaBarcodeApp(
     }
 
     processingMessage?.let { message ->
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        ) {
-            Card(shape = RoundedCornerShape(16.dp)) {
-                Column(
-                    modifier = Modifier.padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    CircularProgressIndicator()
-                    Text(stringResource(message), fontWeight = FontWeight.Medium)
-                }
-            }
-        }
+        ProcessingDialog(message)
     }
 
     if (showDownloadErrorDialog) {
-        AlertDialog(
-            onDismissRequest = { showDownloadErrorDialog = false },
-            title = { Text(stringResource(R.string.download_error_title), fontWeight = FontWeight.Bold) },
-            text  = { Text(downloadErrorMessage) },
-            confirmButton = {
-                Button(
-                    onClick = { showDownloadErrorDialog = false },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                ) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.Bold) }
-            },
-        )
+        DownloadErrorDialog(downloadErrorMessage, onDismiss = { showDownloadErrorDialog = false })
     }
 
     if (showDebugDialog) {
-        AlertDialog(
-            onDismissRequest = { showDebugDialog = false; pendingCancel?.invoke() },
-            title = { Text(stringResource(R.string.debug_request_urls_title), fontWeight = FontWeight.Bold) },
-            text = { Text(debugUrls.joinToString("\n\n")) },
-            confirmButton = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(
-                        onClick = { showDebugDialog = false; pendingAction?.invoke() },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                    ) { Text(stringResource(R.string.btn_proceed), fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { showDebugDialog = false; pendingCancel?.invoke() },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                    ) { Text(stringResource(R.string.btn_cancel)) }
-                }
-            },
+        DebugUrlsDialog(
+            urls = debugUrls,
+            onProceed = { showDebugDialog = false; pendingAction?.invoke() },
+            onCancel = { showDebugDialog = false; pendingCancel?.invoke() },
         )
     }
 
@@ -1107,26 +1066,9 @@ private fun PrimaBarcodeApp(
     }
 
     if (showSyncErrorDialog) {
-        AlertDialog(
-            onDismissRequest = { showSyncErrorDialog = false },
-            title = { Text(stringResource(R.string.sync_errors_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.sync_errors_text)) },
-            confirmButton = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Button(
-                        onClick = { showSyncErrorDialog = false; nav.navigate("dashboard") },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCE3A3A)),
-                    ) { Text(stringResource(R.string.btn_see_errors), fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { showSyncErrorDialog = false },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text(stringResource(R.string.btn_dismiss)) }
-                }
-            },
+        SyncErrorDialog(
+            onSeeErrors = { showSyncErrorDialog = false; nav.navigate("dashboard") },
+            onDismiss = { showSyncErrorDialog = false },
         )
     }
 }
