@@ -56,7 +56,7 @@ class UploadCoordinator @Inject constructor(
         extSystemClient.configure(config, creds)
         var failures = 0
         for (doc in docs) {
-            // Checked before a single row goes out. A document holding scans whose line NAV has
+            // Checked before a single row goes out. A document holding scans whose line the ERP has
             // since removed would otherwise send a Document_Line_No that no longer exists there,
             // and because the send loop breaks on the first failure, that one row would block
             // every legitimate recording behind it on every retry.
@@ -79,7 +79,7 @@ class UploadCoordinator @Inject constructor(
 
             val docTypeCode = config.docTypeCodeFor(doc.type)
             // Retail and warehouse share a Document_Type code, so the recording has to carry the
-            // same discriminator for NAV to attribute it. The value is the Retail_Location NAV
+            // same discriminator for the ERP to attribute it. The value is the Retail_Location the ERP
             // itself reported for this document on download. Transport sheets take part in
             // neither bucket (retailLocation == null) and keep sending no field at all rather
             // than a false that would claim they're warehouse documents.
@@ -100,7 +100,7 @@ class UploadCoordinator @Inject constructor(
             }
 
             if (perDocument) {
-                // One call, one transaction on the ERP side: all of these rows are in NAV, or none
+                // One call, one transaction on the ERP side: all of these rows are in the ERP, or none
                 // of them are. Every row carries the same outcome, so the error screen shows the
                 // one reason against each of them.
                 val result = extSystemClient.uploadDocument(

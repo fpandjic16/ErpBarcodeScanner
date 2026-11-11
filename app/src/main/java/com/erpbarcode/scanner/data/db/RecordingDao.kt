@@ -23,7 +23,7 @@ interface RecordingDao {
     /**
      * Recordings whose `documentLine` no longer matches any line of the document.
      *
-     * They appear when NAV drops a line the operator had already scanned: `mergeDocument`
+     * They appear when the ERP drops a line the operator had already scanned: `mergeDocument`
      * replaces the line rows, and the CASCADE only reaches recordings through the header, so
      * these survive with nothing to attach to. Every other query here selects by document alone
      * and cannot tell them apart, which is how they ended up invisible to the UI and still

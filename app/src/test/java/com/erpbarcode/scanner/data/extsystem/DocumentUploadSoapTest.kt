@@ -8,7 +8,7 @@ import org.junit.Test
 
 class DocumentUploadSoapTest {
 
-    private fun row(barcode: String = "3850000000017", qty: Double = 1.0, retail: Boolean? = null) = NavBarcodeAppRecording(
+    private fun row(barcode: String = "3850000000017", qty: Double = 1.0, retail: Boolean? = null) = ErpRecordingRow(
         documentType = "INVENTORY",
         retailLocation = retail,
         documentNo = "INV-001",
@@ -27,8 +27,8 @@ class DocumentUploadSoapTest {
     @Test
     fun `envelope carries every row in the XMLport namespace`() {
         val xml = DocumentUploadSoap.envelope(listOf(row(), row(barcode = "A")))
-        assertEquals(2, Regex("<Recording xmlns=\"${DocumentUploadSoap.XMLPORT_NAMESPACE}\">").findAll(xml).count())
-        assertTrue(xml.contains("<UploadDocument xmlns=\"${DocumentUploadSoap.CODEUNIT_NAMESPACE}\"><recordings>"))
+        assertEquals(2, Regex("<Recording xmlns=\"${DocumentUploadSoap.PAYLOAD_NAMESPACE}\">").findAll(xml).count())
+        assertTrue(xml.contains("<UploadDocument xmlns=\"${DocumentUploadSoap.SERVICE_NAMESPACE}\"><recordings>"))
         assertTrue(xml.contains("<RecordingGuid>{6f1c2a8e-1111-2222-3333-444455556666}</RecordingGuid>"))
     }
 
@@ -55,7 +55,7 @@ class DocumentUploadSoapTest {
     @Test
     fun `fault string is read and unescaped`() {
         val body = """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><s:Fault>
-            <faultcode>a:Microsoft.Dynamics.Nav.Types.Exceptions.NavNCLDialogException</faultcode>
+            <faultcode>a:Server</faultcode>
             <faultstring xml:lang="hr-HR">Serija temeljnice &apos;INV&apos; ne postoji &amp; ne može se skenirati.</faultstring>
             </s:Fault></s:Body></s:Envelope>"""
         assertEquals("Serija temeljnice 'INV' ne postoji & ne može se skenirati.", DocumentUploadSoap.faultMessage(body))

@@ -23,7 +23,7 @@ data class UserProfile(
  * to answer and is gone. What remains is a list of names and the enrolment that says the ERP has
  * accepted each of them here at least once.
  *
- * Deliberately separate from [ExtSystemCredentialStore], which holds the NAV password in the clear
+ * Deliberately separate from [ExtSystemCredentialStore], which holds the ERP password in the clear
  * because NTLM cannot work without it, and **expires**. Enrolment here does not expire: the data a
  * profile owns does not expire either, and an operator must still be able to find their own unsent
  * work after their credential has lapsed.

@@ -18,7 +18,7 @@ internal object ScanMatcher {
      * package of a set). They are filled in line order: the first line still short of its expected
      * quantity takes the scan, and once every one of them is full, the last one takes the surplus,
      * so an over-scan shows where it belongs rather than on a line the operator has already
-     * finished. NAV groups the scans by barcode and item anyway, so which of the lines holds a
+     * finished. The ERP groups the scans by barcode and item anyway, so which of the lines holds a
      * scan changes nothing there; it is about what the operator sees.
      *
      * Line order is the ERP's line no.; lines added on the device (negative numbers) come after

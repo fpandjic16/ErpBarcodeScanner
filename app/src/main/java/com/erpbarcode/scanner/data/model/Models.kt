@@ -25,7 +25,7 @@ data class Location(
 enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
 
 /**
- * [retailLocation] is what separates the retail types from the warehouse ones on the NAV side.
+ * [retailLocation] is what separates the retail types from the warehouse ones on the ERP side.
  * They deliberately share a `Document_Type` code — retail shipment and warehouse shipment are
  * both `SHIPMENT`, retail receipt and warehouse receipt are both `RECEIPT` — so `Document_Type`
  * alone no longer identifies a bucket. Every download filter and every uploaded recording for
@@ -66,7 +66,7 @@ enum class DocumentType(
     COMPLAINT_SHIPMENT("CPL_SHIP",  "Complaint Shipment",    defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     COMPLAINT_RECEIPT( "CPL_RCPT",  "Complaint Receipt",     defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     // One inventory journal batch (Phys. Inventory Journal) per document. Counted against the
-    // calculated quantity NAV supplies, the same as the types above. An item NAV didn't send is
+    // calculated quantity the ERP supplies, the same as the types above. An item the ERP didn't send is
     // added on the device instead of being rejected (see isStockCount).
     INVENTORY(         "INVENTORY", "Inventory",            isStockCount = true),
 }
@@ -131,7 +131,7 @@ data class Line(
 }
 
 /**
- * A recording left without a line, because NAV dropped that line from the document after the
+ * A recording left without a line, because the ERP dropped that line from the document after the
  * operator had already scanned it.
  *
  * There is no [Item] here on purpose: the line that carried the item number and description is
@@ -174,7 +174,7 @@ data class Document(
     val documentDate: Instant? = null,
     val lines: List<Line>,
     val state: DocState,
-    /** Scans whose line NAV removed. Blocks upload until the operator resolves them. */
+    /** Scans whose line the ERP removed. Blocks upload until the operator resolves them. */
     val orphanedScans: List<OrphanedScan> = emptyList(),
     /** Queued scans the ERP rejected; they will not go through on their own. */
     val failedScans: List<FailedScan> = emptyList(),

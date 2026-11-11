@@ -72,7 +72,7 @@ data class RecordingEntity(
     /**
      * Identity of this recording for the ERP, generated once when the scan is recorded and never
      * regenerated. Every upload attempt for this row sends the same value, so a retry after a
-     * lost success response arrives as the row NAV already holds rather than as a new one.
+     * lost success response arrives as the row the ERP already holds rather than as a new one.
      *
      * Declared last on purpose: the 16→17 migration adds it with ALTER TABLE ADD COLUMN, which
      * appends, and the entity's field order has to match the table's column order.

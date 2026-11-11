@@ -50,11 +50,11 @@ import kotlinx.coroutines.flow.update
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import com.erpbarcode.scanner.data.extsystem.NavBarcodeAppEntry
-import com.erpbarcode.scanner.data.extsystem.NavInventoryBatch
+import com.erpbarcode.scanner.data.extsystem.ErpDocumentLineRow
+import com.erpbarcode.scanner.data.extsystem.ErpInventoryBatchRow
 import com.erpbarcode.scanner.data.extsystem.odataLiteral
-import com.erpbarcode.scanner.data.extsystem.NavLocation
-import com.erpbarcode.scanner.data.extsystem.NavODataList
+import com.erpbarcode.scanner.data.extsystem.ErpLocationRow
+import com.erpbarcode.scanner.data.extsystem.ODataList
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate

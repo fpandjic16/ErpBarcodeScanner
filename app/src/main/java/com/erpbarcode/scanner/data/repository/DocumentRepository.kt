@@ -179,11 +179,11 @@ class DocumentRepositoryImpl @Inject constructor(
         // Header first: documentLine has a foreign key to it, so a new document needs its parent
         // row before any line can be inserted. docState is corrected at the end.
         db.documentHeaderDao().upsert(doc.toEntity())
-        // Lines added on the device are not NAV's to replace: NAV never sent them. One survives
-        // until NAV sends a line with its barcode, which is what processing the upload does. From
-        // then on its scans belong on NAV's line, sent ones included. The re-attachment below
+        // Lines added on the device are not the ERP's to replace: the ERP never sent them. One survives
+        // until the ERP sends a line with its barcode, which is what processing the upload does. From
+        // then on its scans belong on the ERP's line, sent ones included. The re-attachment below
         // only moves queued scans, so a sent one left behind would show as an orphan and leave
-        // NAV's line looking unscanned.
+        // the ERP's line looking unscanned.
         val navLineNoByBarcode = doc.lines.sortedBy { it.lineNo }
             .groupBy { it.barcodeNo }
             .mapValues { (_, sameBarcode) -> sameBarcode.first().lineNo }
@@ -202,7 +202,7 @@ class DocumentRepositoryImpl @Inject constructor(
             }
         }
 
-        // Only once the new lines are in place, so matching runs against what NAV just sent.
+        // Only once the new lines are in place, so matching runs against what the ERP just sent.
         reattachOrphansByBarcode(db, doc.documentNo, type)
 
         // State last, from recordings as they stand after re-attachment — computing it earlier
@@ -213,7 +213,7 @@ class DocumentRepositoryImpl @Inject constructor(
     /**
      * Moves recordings whose line has gone onto whichever line now carries the same barcode.
      *
-     * This is for NAV renumbering a line rather than removing the item: without it, every
+     * This is for the ERP renumbering a line rather than removing the item: without it, every
      * recording on a renumbered line would be treated as surplus at once. What genuinely has no
      * home stays orphaned and is surfaced for review instead.
      *
@@ -246,7 +246,7 @@ class DocumentRepositoryImpl @Inject constructor(
     private fun computeStateAfterMerge(lines: List<Line>, recordings: List<RecordingEntity>): DocState {
         if (recordings.isEmpty()) return DocState.Downloaded
         // A document with no lines is not complete. `lines.all { }` is vacuously true over an
-        // empty list, so a document whose lines NAV had all removed used to be written as
+        // empty list, so a document whose lines the ERP had all removed used to be written as
         // Completed — showing an empty status chip, with upload greyed out because no line has
         // progress, and nothing able to move it again.
         if (lines.isEmpty()) return DocState.InProgress
@@ -480,7 +480,7 @@ class DocumentRepositoryImpl @Inject constructor(
     /**
      * Drops the scans the operator has reviewed and decided are surplus.
      *
-     * The one place recordings are deleted without having reached NAV, and it takes a deliberate
+     * The one place recordings are deleted without having reached the ERP, and it takes a deliberate
      * action to get here — a scan is evidence that goods were physically in someone's hands, so
      * discarding it is the operator's call to make after taking them off the pallet, never the
      * app's to make quietly during a sync.

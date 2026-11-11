@@ -27,7 +27,7 @@ import javax.crypto.spec.SecretKeySpec
  * as if typed — see `ExtSystemODataClient.buildClient`.
  *
  * GCM authenticates as well as encrypts, so a code made with a different key fails to decrypt
- * rather than yielding garbage credentials that would then fail confusingly against NAV.
+ * rather than yielding garbage credentials that would then fail confusingly against the ERP.
  *
  * **What this does and doesn't protect.** The key travels in `ExtSystemConfig.loginQrKey`, which
  * means it sits both in the bundled defaults inside the APK and in the device's settings. So this

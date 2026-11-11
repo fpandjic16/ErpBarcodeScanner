@@ -20,8 +20,8 @@ enum class ExtSystemEnvironment { TEST, PRODUCTION }
  * [PER_SCAN] is one OData POST per recording to [ExtSystemConfig.recordingSyncUrl]: each row is
  * accepted or refused on its own, so a document can end up partly sent.
  *
- * [PER_DOCUMENT] is one SOAP call per document to [ExtSystemConfig.documentUploadUrl] (NAV
- * codeunit 50117, Barcode App Upload): every recording of the document in one transaction, all of
+ * [PER_DOCUMENT] is one SOAP call per document to [ExtSystemConfig.documentUploadUrl] (the ERP's
+ * BarcodeAppUpload service): every recording of the document in one transaction, all of
  * them accepted or none. A document is never half in the ERP, and a few hundred scans go in one
  * round trip instead of a few hundred.
  */
@@ -34,7 +34,7 @@ data class ExtSystemConfig(
     val documentTypeCodes: Map<DocumentType, String> = emptyMap(),
     val recordingSyncUrl: String = "",
     val locationsUrl: String = "",
-    // Windows domain for NAV's NTLM auth. When set, it's combined with whatever the user
+    // Windows domain for the ERP's NTLM auth. When set, it's combined with whatever the user
     // types on the login screen so they only ever need to enter a bare username. Left blank,
     // a domain embedded in the username itself (DOMAIN\user or user@domain) still works —
     // see ExtSystemODataClient.buildClient.
@@ -48,11 +48,11 @@ data class ExtSystemConfig(
     // does not know. It becomes known as soon as a configuration declaring an environment is
     // loaded, which every bundled file now does.
     val environment: ExtSystemEnvironment? = null,
-    // The inventory journal batches sent for scanning (NAV page 50208, BarcodeInventoryBatches).
+    // The inventory journal batches sent for scanning (the ERP's BarcodeInventoryBatches list).
     // Required for a stock count: there is no other way to list them.
     val inventoryBatchesUrl: String = "",
     val uploadMode: RecordingUploadMode = RecordingUploadMode.PER_SCAN,
-    // SOAP address of codeunit 50117 (…/WS/<Company>/Codeunit/BarcodeAppUpload); used only when
+    // SOAP address of the ERP's BarcodeAppUpload service (…/WS/<Company>/Codeunit/BarcodeAppUpload); used only when
     // uploadMode is PER_DOCUMENT.
     val documentUploadUrl: String = "",
 ) {
@@ -60,7 +60,7 @@ data class ExtSystemConfig(
     val isConfigured: Boolean get() = serverBaseUrl.isNotBlank()
 
     /**
-     * The NAV company the endpoints address, read from `Company('…')` in the document lines URL;
+     * The ERP company the endpoints address, read from `Company('…')` in the document lines URL;
      * null when there is none.
      *
      * Read from the address rather than stored beside it: this is the company the device actually
@@ -85,7 +85,7 @@ data class ExtSystemCredentials(
 )
 
 /**
- * One bundled per-company NAV connection defaults file, selectable from "Load built-in
+ * One bundled per-company ERP connection defaults file, selectable from "Load built-in
  * defaults". Discovered at runtime from `ext_system_defaults_*.json` assets — see
  * [com.erpbarcode.scanner.ui.viewmodel.AppViewModel.listExtSystemDefaultsCompanies] — rather than
  * a fixed list, so adding a new company is just adding a new asset file.

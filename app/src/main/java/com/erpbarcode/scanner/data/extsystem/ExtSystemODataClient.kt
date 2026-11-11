@@ -101,7 +101,7 @@ class ExtSystemODataClient @Inject constructor(
         val auth = NtlmAuthenticator(domain, username, password)
         ntlmAuth = auth
         val okHttp = OkHttpClient.Builder()
-            .proxy(Proxy.NO_PROXY)  // bypass system proxy; NAV is always on local LAN
+            .proxy(Proxy.NO_PROXY)  // bypass system proxy; the ERP is always on local LAN
             .authenticator(auth)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -151,7 +151,7 @@ class ExtSystemODataClient @Inject constructor(
         }
     }
 
-    suspend fun uploadRecording(url: String, row: NavBarcodeAppRecording): ExtSystemResult<Unit> {
+    suspend fun uploadRecording(url: String, row: ErpRecordingRow): ExtSystemResult<Unit> {
         val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
         return runCatching {
             val body = gson.toJson(row)
@@ -166,7 +166,7 @@ class ExtSystemODataClient @Inject constructor(
                 val errorBody = runCatching { response.bodyAsText() }.getOrDefault("")
                 Timber.w("OData upload failed [${response.status.value}]: $errorBody")
                 // A 401 carries no body worth showing; the server's own text for anything else
-                // (NAV's validation messages) is the most precise thing available, so it stays.
+                // (the ERP's validation messages) is the most precise thing available, so it stays.
                 val message = if (response.status.value == 401) text(R.string.ext_error_http_401)
                     else "HTTP ${response.status.value}: $errorBody".take(300)
                 ExtSystemResult.Failure(message, response.status.value)
@@ -179,13 +179,13 @@ class ExtSystemODataClient @Inject constructor(
 
     /**
      * Sends every recording of one document in a single SOAP call (see [DocumentUploadSoap]).
-     * Success means NAV holds all of [rows]; a failure means it holds none of them from this call.
+     * Success means the ERP holds all of [rows]; a failure means it holds none of them from this call.
      *
-     * A fault's `faultstring` is NAV's own error text (a closed document, a refused field), which
+     * A fault's `faultstring` is the ERP's own error text (a closed document, a refused field), which
      * is the most precise thing there is to show, so it is shown. The read timeout is the client's
      * usual minute; a document of a few hundred scans is one insert pass on the server.
      */
-    suspend fun uploadDocument(url: String, rows: List<NavBarcodeAppRecording>): ExtSystemResult<Unit> {
+    suspend fun uploadDocument(url: String, rows: List<ErpRecordingRow>): ExtSystemResult<Unit> {
         val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
         return runCatching {
             val response = client.post(url) {
@@ -222,7 +222,7 @@ class ExtSystemODataClient @Inject constructor(
                 }
                 if (!response.status.isSuccess()) {
                     val body = runCatching { response.bodyAsText() }.getOrDefault("")
-                    Timber.w("NAV download failed [${response.status.value}]: $body")
+                    Timber.w("ERP download failed [${response.status.value}]: $body")
                     val message = if (response.status.value == 401) text(R.string.ext_error_http_401)
                         else "HTTP ${response.status.value}: ${response.status.description}"
                     return ExtSystemResult.Failure(message, response.status.value)
@@ -235,7 +235,7 @@ class ExtSystemODataClient @Inject constructor(
             val merged = com.google.gson.JsonObject().apply { add("value", allValues) }
             ExtSystemResult.Success(gson.toJson(merged))
         }.getOrElse {
-            Timber.e(it, "NAV download error: $url")
+            Timber.e(it, "ERP download error: $url")
             ExtSystemResult.Failure(describe(it))
         }
     }
@@ -252,7 +252,7 @@ class ExtSystemODataClient @Inject constructor(
         private const val LOCAL_MACHINE = "."
 
         /**
-         * Splits a NAV login into (domain, bareUsername). Accepts `DOMAIN\user` and
+         * Splits an ERP login into (domain, bareUsername). Accepts `DOMAIN\user` and
          * `user@domain`. The domain comes back empty when none was given, and also for
          * `.\user` — Windows' "this machine, not a domain" form is a statement of *no*
          * domain, not a domain literally named ".".

@@ -280,7 +280,7 @@ internal fun BarcodeApp(
 
     // Shared by every LoginSheet that gates access behind a real sign-in (as opposed to
     // ExtSystemConfigScreen's own LoginSheet usage, which *is* the explicit "Test connection"
-    // action and already handles testing itself) — verifies the NAV server actually accepts
+    // action and already handles testing itself) — verifies the ERP server actually accepts
     // the credentials before the sheet treats sign-in as successful.
     fun testSignIn(username: String, password: String, onResult: (success: Boolean, error: String?) -> Unit) {
         appVm.testExtSystemConnection(extSystemConfig.serverBaseUrl, username, password) { result ->

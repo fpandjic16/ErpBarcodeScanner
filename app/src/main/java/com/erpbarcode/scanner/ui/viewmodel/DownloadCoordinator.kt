@@ -11,10 +11,10 @@ import com.erpbarcode.scanner.data.db.LocationEntity
 import com.erpbarcode.scanner.data.db.ResponsibilityCenterEntity
 import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
 import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
-import com.erpbarcode.scanner.data.extsystem.NavBarcodeAppEntry
-import com.erpbarcode.scanner.data.extsystem.NavInventoryBatch
-import com.erpbarcode.scanner.data.extsystem.NavLocation
-import com.erpbarcode.scanner.data.extsystem.NavODataList
+import com.erpbarcode.scanner.data.extsystem.ErpDocumentLineRow
+import com.erpbarcode.scanner.data.extsystem.ErpInventoryBatchRow
+import com.erpbarcode.scanner.data.extsystem.ErpLocationRow
+import com.erpbarcode.scanner.data.extsystem.ODataList
 import com.erpbarcode.scanner.data.extsystem.odataLiteral
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
@@ -60,8 +60,8 @@ class DownloadCoordinator @Inject constructor(
         extSystemClient.configure(config, creds)
         return when (val result = extSystemClient.downloadRaw(config.locationsUrl)) {
             is ExtSystemResult.Success -> {
-                val typeToken = object : TypeToken<NavODataList<NavLocation>>() {}.type
-                val odata = gson.fromJson<NavODataList<NavLocation>>(result.data, typeToken)
+                val typeToken = object : TypeToken<ODataList<ErpLocationRow>>() {}.type
+                val odata = gson.fromJson<ODataList<ErpLocationRow>>(result.data, typeToken)
                 val rcCodes = odata.value.map { it.rcCode }.filter { it.isNotBlank() }.distinct()
                 locationDao.clearRcs()
                 locationDao.upsertRcs(rcCodes.map { ResponsibilityCenterEntity(it, it, null) })
@@ -99,7 +99,7 @@ class DownloadCoordinator @Inject constructor(
      * The inventory journal batches the ERP has sent for scanning in [filter]'s location or
      * responsibility centre, for the operator to pick one before downloading.
      *
-     * Read from the ERP's own list of them (`BarcodeInventoryBatches`, page 50208): one row per
+     * Read from the ERP's own list of them (`BarcodeInventoryBatches`): one row per
      * batch that has a count on the devices and is not finished yet, with its location,
      * responsibility centre, date and number of lines worked out on the ERP side. There is no
      * other way: reading every Barcode App Entry of the location and grouping them here was
@@ -128,8 +128,8 @@ class DownloadCoordinator @Inject constructor(
             else appendODataFilter(config.inventoryBatchesUrl, clauses.joinToString(" and "))
         return when (val result = extSystemClient.downloadRaw(url)) {
             is ExtSystemResult.Success -> {
-                val typeToken = object : TypeToken<NavODataList<NavInventoryBatch>>() {}.type
-                val odata = gson.fromJson<NavODataList<NavInventoryBatch>>(result.data, typeToken)
+                val typeToken = object : TypeToken<ODataList<ErpInventoryBatchRow>>() {}.type
+                val odata = gson.fromJson<ODataList<ErpInventoryBatchRow>>(result.data, typeToken)
                 ExtSystemResult.Success(
                     odata.value
                         .filter { it.documentNo.isNotBlank() }
@@ -139,7 +139,7 @@ class DownloadCoordinator @Inject constructor(
                                 journalTemplateName = row.journalTemplateName,
                                 journalBatchName    = row.journalBatchName,
                                 description         = row.description,
-                                // NAV writes an empty date as 0001-01-01.
+                                // The ERP writes an empty date as 0001-01-01.
                                 documentDate        = row.postingDate
                                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                                     ?.takeIf { it.year > 1 },
@@ -195,8 +195,8 @@ class DownloadCoordinator @Inject constructor(
             when (result) {
                 is ExtSystemResult.Success -> {
                     val now = Instant.now()
-                    val typeToken = object : TypeToken<NavODataList<NavBarcodeAppEntry>>() {}.type
-                    val odata = gson.fromJson<NavODataList<NavBarcodeAppEntry>>(result.data, typeToken)
+                    val typeToken = object : TypeToken<ODataList<ErpDocumentLineRow>>() {}.type
+                    val odata = gson.fromJson<ODataList<ErpDocumentLineRow>>(result.data, typeToken)
                     val documents = odata.value.groupBy { it.documentNo }.map { (docNo, rows) ->
                         val first = rows.first()
                         val lines = rows.filter { it.lineNo > 0 }.map { row ->

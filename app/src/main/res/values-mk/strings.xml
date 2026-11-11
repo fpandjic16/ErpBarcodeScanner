@@ -333,8 +333,8 @@
     <string name="ext_error_locations_url_missing">URL-то за локации не е конфигурирано.</string>
     <string name="ext_error_document_lines_url_missing">URL-то за ставки на документот не е конфигурирано.</string>
     <string name="ext_error_client_not_ready">Врската со надворешниот систем сè уште не е поставена.</string>
-    <string name="ext_error_no_challenge_ok">Серверот одговори без да побара Windows најава, па лозинката не беше проверена. Вклучете Windows Authentication на оваа NAV OData крајна точка.</string>
-    <string name="ext_error_no_challenge">Серверот не побара Windows најава (нема NTLM предизвик). Проверете дали Windows Authentication е вклучена на оваа NAV OData крајна точка.</string>
+    <string name="ext_error_no_challenge_ok">Серверот одговори без да побара Windows најава, па лозинката не беше проверена. Вклучете Windows Authentication на оваа OData крајна точка.</string>
+    <string name="ext_error_no_challenge">Серверот не побара Windows најава (нема NTLM предизвик). Проверете дали Windows Authentication е вклучена на оваа OData крајна точка.</string>
     <string name="ext_error_credentials_rejected">Надворешниот систем го одби корисничкото име или лозинката. Проверете го корисничкото име (со домен, на пр. ДОМЕН\\име) и лозинката.</string>
     <string name="ext_error_http_401">Надворешниот систем ја одби најавата (HTTP 401). Лозинката можеби е променета — одјавете се и најавете се повторно.</string>
     <string name="ext_error_unreachable">Надворешниот систем не е достапен. Проверете ја мрежната врска и адресата на серверот.</string>

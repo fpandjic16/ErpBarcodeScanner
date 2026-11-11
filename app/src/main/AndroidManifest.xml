@@ -15,7 +15,7 @@
     </queries>
 
     <!-- allowBackup is off: these devices hold every operator’s unsent scans and their
-         encrypted NAV credentials, and auto-backup would copy both into whatever Google
+         encrypted ERP credentials, and auto-backup would copy both into whatever Google
          account happens to be on a shared warehouse scanner. The restore could not work
          anyway — the Keystore key behind SecureStore is device-bound and never travels,
          so the restored values would not decrypt. No rule files

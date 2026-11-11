@@ -73,7 +73,7 @@ fun LoginSheet(
     loginQrKey: String = "",
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
-    // When set, the entered credentials are verified against the NAV server (the same
+    // When set, the entered credentials are verified against the ERP server (the same
     // check as ExtSystemConfigScreen's "Test connection") before onSubmit is called, so
     // signing in actually confirms the server accepted them rather than just capturing
     // whatever was typed. Left null for flows that already do their own testing (e.g.

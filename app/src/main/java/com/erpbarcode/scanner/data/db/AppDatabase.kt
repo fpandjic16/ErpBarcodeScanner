@@ -16,7 +16,7 @@ const val DB_VERSION = 21
  *
  * There is one of these files per profile, opened by [com.erpbarcode.scanner.data.db.DatabaseProvider].
  * That is what keeps operators apart — not a predicate on every query, but the fact that a query
- * cannot reach outside the file it runs in. It also lets two operators hold the same NAV document
+ * cannot reach outside the file it runs in. It also lets two operators hold the same ERP document
  * independently, since `(documentNo, type)` only has to be unique within one person's file.
  *
  * Locations and responsibility centres deliberately live elsewhere ([SharedDatabase]): they
@@ -270,7 +270,7 @@ abstract class AppDatabase : RoomDatabase() {
          * to be retried, so it needs the same protection against being posted twice as anything
          * scanned afterwards. The expression is the standard SQLite v4 UUID construction —
          * random bytes with the version nibble and variant bits set — because SQLite has no
-         * UUID function of its own and NAV expects a well-formed GUID.
+         * UUID function of its own and the ERP expects a well-formed GUID.
          */
         val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
