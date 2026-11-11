@@ -280,28 +280,16 @@ fun ExtSystemConfigScreen(
                         onValueChange = { domain = it },
                     )
                     ConfigDivider()
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                        Text(
-                            stringResource(R.string.ext_config_session_duration),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
-                            ),
-                        )
-                        Text(
-                            stringResource(R.string.ext_config_session_desc),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            TTL_OPTIONS.forEachIndexed { idx, hours ->
-                                SegmentedButton(
-                                    selected = ttlHours == hours,
-                                    onClick  = { ttlHours = hours },
-                                    shape    = SegmentedButtonDefaults.itemShape(idx, TTL_OPTIONS.size),
-                                ) { Text(hours.ttlLabel(), style = monoLabel) }
-                            }
-                        }
-                    }
+                    ConfigSegmentedChoice(
+                        title = stringResource(R.string.ext_config_session_duration),
+                        description = stringResource(R.string.ext_config_session_desc),
+                        options = TTL_OPTIONS,
+                        selected = ttlHours,
+                        optionLabel = { it.ttlLabel() },
+                        onSelect = { ttlHours = it },
+                        verticalPadding = 14.dp,
+                        gap = 12.dp,
+                    )
                 }
             }
 
@@ -319,72 +307,18 @@ fun ExtSystemConfigScreen(
             }
             for (type in DocumentType.entries) {
                 item(key = type.key) {
-                    val enabled = type.key !in disabledDocTypes
-                    ConfigCard {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = if (enabled) 0.dp else 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                type.localizedDisplay(),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (enabled) PrimaPalette.Ink else PrimaPalette.Ink3,
-                                ),
-                                modifier = Modifier.weight(1f),
+                    DocTypeConfigCard(
+                        type = type,
+                        enabled = type.key !in disabledDocTypes,
+                        code = documentTypeCodes[type] ?: "",
+                        filterMode = docTypeFilters[type.key] ?: type.defaultFilterMode,
+                        onEnabledChange = { on ->
+                            onDisabledDocTypesChange(
+                                if (on) disabledDocTypes - type.key else disabledDocTypes + type.key
                             )
-                            Switch(
-                                checked = enabled,
-                                onCheckedChange = { on ->
-                                    onDisabledDocTypesChange(
-                                        if (on) disabledDocTypes - type.key else disabledDocTypes + type.key
-                                    )
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = PrimaPalette.Slate,
-                                    checkedThumbColor = Color.White,
-                                ),
-                            )
-                        }
-                        if (enabled) {
-                            ConfigField(
-                                label = stringResource(R.string.ext_config_doc_type_code),
-                                hint  = stringResource(R.string.ext_config_hint_doc_type_code),
-                                value = documentTypeCodes[type] ?: "",
-                                onValueChange = {},
-                                readOnly = true,
-                            )
-                            ConfigDivider()
-                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.ext_config_filter_by),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
-                                    ),
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                                    listOf(DocTypeFilterMode.LOCATION, DocTypeFilterMode.RESPONSIBILITY_CENTER).forEachIndexed { idx, mode ->
-                                        SegmentedButton(
-                                            selected = (docTypeFilters[type.key] ?: type.defaultFilterMode) == mode,
-                                            onClick = { onDocTypeFiltersChange(docTypeFilters + (type.key to mode)) },
-                                            shape = SegmentedButtonDefaults.itemShape(idx, 2),
-                                        ) {
-                                            Text(
-                                                when (mode) {
-                                                    DocTypeFilterMode.LOCATION -> stringResource(R.string.ext_config_filter_location)
-                                                    DocTypeFilterMode.RESPONSIBILITY_CENTER -> stringResource(R.string.ext_config_filter_rc)
-                                                },
-                                                style = monoLabel,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                        },
+                        onFilterModeChange = { mode -> onDocTypeFiltersChange(docTypeFilters + (type.key to mode)) },
+                    )
                     if (type != DocumentType.entries.last()) ConfigDivider()
                 }
             }
@@ -413,36 +347,19 @@ fun ExtSystemConfigScreen(
             item { ConfigSectionHeader(stringResource(R.string.ext_config_sec_recording)) }
             item {
                 ConfigCard {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Text(
-                            stringResource(R.string.ext_config_upload_mode),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
-                            ),
-                        )
-                        Text(
-                            stringResource(R.string.ext_config_upload_mode_desc),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            RecordingUploadMode.entries.forEachIndexed { idx, mode ->
-                                SegmentedButton(
-                                    selected = uploadMode == mode,
-                                    onClick  = { uploadMode = mode },
-                                    shape    = SegmentedButtonDefaults.itemShape(idx, RecordingUploadMode.entries.size),
-                                ) {
-                                    Text(
-                                        when (mode) {
-                                            RecordingUploadMode.PER_SCAN     -> stringResource(R.string.ext_config_upload_mode_per_scan)
-                                            RecordingUploadMode.PER_DOCUMENT -> stringResource(R.string.ext_config_upload_mode_per_document)
-                                        },
-                                        style = monoLabel,
-                                    )
-                                }
+                    ConfigSegmentedChoice(
+                        title = stringResource(R.string.ext_config_upload_mode),
+                        description = stringResource(R.string.ext_config_upload_mode_desc),
+                        options = RecordingUploadMode.entries,
+                        selected = uploadMode,
+                        optionLabel = { mode ->
+                            when (mode) {
+                                RecordingUploadMode.PER_SCAN     -> stringResource(R.string.ext_config_upload_mode_per_scan)
+                                RecordingUploadMode.PER_DOCUMENT -> stringResource(R.string.ext_config_upload_mode_per_document)
                             }
-                        }
-                    }
+                        },
+                        onSelect = { uploadMode = it },
+                    )
                     ConfigDivider()
                     ConfigField(
                         label = stringResource(R.string.ext_config_recording_url),
@@ -515,20 +432,10 @@ fun ExtSystemConfigScreen(
     }
 
     if (showEnvironmentMissingDialog) {
-        AlertDialog(
-            onDismissRequest = { showEnvironmentMissingDialog = false },
-            title = { Text(stringResource(R.string.ext_config_env_missing_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.ext_config_env_missing_text)) },
-            confirmButton = {
-                Button(onClick = { showEnvironmentMissingDialog = false; showEnvironmentSetDialog = true }) {
-                    Text(stringResource(R.string.ext_config_env_missing_pick), fontWeight = FontWeight.SemiBold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showEnvironmentMissingDialog = false; onSave(buildConfig()) }) {
-                    Text(stringResource(R.string.ext_config_env_missing_save_anyway))
-                }
-            },
+        EnvironmentMissingDialog(
+            onPick = { showEnvironmentMissingDialog = false; showEnvironmentSetDialog = true },
+            onSaveAnyway = { showEnvironmentMissingDialog = false; onSave(buildConfig()) },
+            onDismiss = { showEnvironmentMissingDialog = false },
         )
     }
 
@@ -546,101 +453,10 @@ fun ExtSystemConfigScreen(
     }
 
     if (testing) {
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        ) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Row(
-                    modifier = Modifier.padding(24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
-                    Spacer(Modifier.width(16.dp))
-                    Text(stringResource(R.string.ext_config_testing_connection), fontWeight = FontWeight.Medium)
-                }
-            }
-        }
+        ConnectionTestingDialog()
     }
 
     testResult?.let { (ok, message) ->
-        AlertDialog(
-            onDismissRequest = { testResult = null },
-            title = {
-                Text(
-                    if (ok) stringResource(R.string.ext_config_connection_ok) else stringResource(R.string.ext_config_connection_failed),
-                    fontWeight = FontWeight.Bold,
-                    color = if (ok) PrimaPalette.Teal else PrimaSignal.Danger,
-                )
-            },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = { testResult = null }) { Text(stringResource(R.string.btn_ok)) }
-            },
-        )
+        ConnectionResultDialog(ok, message, onDismiss = { testResult = null })
     }
-}
-
-@Composable
-private fun ConfigSectionHeader(title: String) {
-    Text(
-        title.uppercase(),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
-        style = monoLabel.copy(color = PrimaPalette.Ink3),
-    )
-}
-
-@Composable
-private fun ConfigCard(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White),
-        content = content,
-    )
-}
-
-@Composable
-private fun ConfigField(
-    label: String,
-    hint: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    imeAction: ImeAction = ImeAction.Next,
-    readOnly: Boolean = false,
-) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
-            ),
-        )
-        Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(hint, style = monoLabel.copy(color = PrimaPalette.Ink4)) },
-            singleLine = true,
-            readOnly = readOnly,
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = monoLabel.copy(color = if (readOnly) PrimaPalette.Ink3 else PrimaPalette.Ink),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-            shape = RoundedCornerShape(8.dp),
-            colors = if (readOnly) OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = PrimaLine.InputBorder,
-                unfocusedBorderColor = PrimaLine.InputBorder,
-                focusedContainerColor   = PrimaLine.ReadOnlyFill,
-                unfocusedContainerColor = PrimaLine.ReadOnlyFill,
-            ) else OutlinedTextFieldDefaults.colors(),
-        )
-    }
-}
-
-@Composable
-private fun ConfigDivider() {
-    HorizontalDivider(modifier = Modifier.padding(start = 16.dp), color = PrimaLine.Divider)
 }
