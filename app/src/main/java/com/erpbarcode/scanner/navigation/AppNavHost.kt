@@ -292,6 +292,7 @@ internal fun BarcodeApp(
     NavHost(navController = nav, startDestination = Routes.MAIN) {
         mainMenuRoute(shell)
         documentRoutes(shell)
+        dashboardRoutes(shell)
         with(shell) {
         composable(Routes.PROFILES) {
             // Re-read after a deletion rather than observed: profiles change only here, and a
@@ -428,52 +429,6 @@ internal fun BarcodeApp(
                 onSignInTap = { requireCredentials {} },
                 environment = extSystemConfig.environment,
                 companyName = extSystemConfig.companyName,
-            )
-        }
-        composable(
-            route = Routes.DASHBOARD,
-            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
-        ) { backStackEntry ->
-            val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
-            DocumentOverviewScreen(
-                locationCode = location?.code ?: "",
-                // The resolved centre, like the location above: a code no longer on the list is
-                // no selection at all, and "Moja lokacija" then has nothing to show.
-                rcCode = rc?.code ?: "",
-                documents = documents,
-                onBack = { nav.popBackStack() },
-                onDocTap = { selected -> nav.navigate(Routes.recording(selected.documentNo, selected.type.key)) },
-                onClearErrors = { appVm.clearErrorDocs() },
-                // Stays on the dashboard either way; only a failed blocking upload says so.
-                onUpload = { docs ->
-                    upload(
-                        docs,
-                        onBlockingDone = { failures ->
-                            if (failures > 0) showSyncErrorDialog = true
-                        },
-                    )
-                },
-                onErrorTap = { doc -> nav.navigate(Routes.uploadError(doc.documentNo)) },
-                filter = overviewFilter,
-                onOpenFilter = { src, rc ->
-                    overviewLockedSource = src
-                    overviewLockedRc = rc
-                    nav.navigate(Routes.OVERVIEW_FILTER)
-                },
-                docTypeFilters = docTypeFilters,
-                initialTab = initialTab,
-            )
-        }
-        composable(Routes.OVERVIEW_FILTER) {
-            DocumentFilterScreen(
-                initialFilter = overviewFilter,
-                lockedSourceCode = overviewLockedSource,
-                lockedRcCode = overviewLockedRc,
-                onApply = { newFilter ->
-                    overviewFilter = newFilter
-                    nav.popBackStack()
-                },
-                onBack = { nav.popBackStack() },
             )
         }
         composable(
