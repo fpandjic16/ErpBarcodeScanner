@@ -181,69 +181,8 @@ internal fun BarcodeApp(
     val readyDocs    = data.readyDocs
     val partialDocs  = data.partialDocs
     val overDocs     = data.overDocs
-    var selectedDocType by remember { mutableStateOf(DocumentType.WAREHOUSE_SHIPMENT) }
-    var docFilter by remember { mutableStateOf(DocumentFilter()) }
-    var overviewFilter by remember { mutableStateOf(DocumentFilter()) }
-    var overviewLockedSource by remember { mutableStateOf<String?>(null) }
-    var overviewLockedRc     by remember { mutableStateOf<String?>(null) }
-    var showSyncErrorDialog     by remember { mutableStateOf(false) }
-    var showDownloadErrorDialog by remember { mutableStateOf(false) }
-    var downloadErrorMessage    by remember { mutableStateOf("") }
-    // A string resource, resolved where it is shown: the places that set it are callbacks, not
-    // composable scopes, and a literal there is how "Downloading..." stayed English in every
-    // language.
-    var processingMessage by remember { mutableStateOf<Int?>(null) }
-
-    var debugUrls     by remember { mutableStateOf<List<String>>(emptyList()) }
-    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var pendingCancel by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var showDebugDialog by remember { mutableStateOf(false) }
-
-    fun launchWithDebug(urls: List<String>, onCancel: () -> Unit = {}, action: () -> Unit) {
-        if (debuggerActive && urls.isNotEmpty()) {
-            debugUrls = urls; pendingAction = action; pendingCancel = onCancel; showDebugDialog = true
-        } else {
-            action()
-        }
-    }
-
-    var showUploadLoginSheet by remember { mutableStateOf(false) }
-    var pendingUploadAction  by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var showMainLoginSheet   by remember { mutableStateOf(false) }
-
-    fun requireCredentials(action: () -> Unit) {
-        if (appVm.hasCredentials()) {
-            action()
-        } else {
-            pendingUploadAction = action
-            showUploadLoginSheet = true
-        }
-    }
-
-    // Shared by every LoginSheet that gates access behind a real sign-in (as opposed to
-    // ExtSystemConfigScreen's own LoginSheet usage, which *is* the explicit "Test connection"
-    // action and already handles testing itself) — verifies the ERP server actually accepts
-    // the credentials before the sheet treats sign-in as successful.
-    fun testSignIn(username: String, password: String, onResult: (success: Boolean, error: String?) -> Unit) {
-        appVm.testExtSystemConnection(extSystemConfig.serverBaseUrl, username, password) { result ->
-            when (result) {
-                is ExtSystemResult.Success -> onResult(true, null)
-                is ExtSystemResult.Failure -> onResult(false, if (result.code > 0) "HTTP ${result.code}: ${result.message}" else result.message)
-            }
-        }
-    }
-
-    // Shared by the configuration screen's "Test connection" on both sides of the gate, so the
-    // two do not drift apart.
-    fun reportTestResult(result: ExtSystemResult<Unit>, cb: (Boolean, String?) -> Unit) {
-        when (result) {
-            is ExtSystemResult.Success -> cb(true, context.getString(R.string.ext_config_test_ok))
-            is ExtSystemResult.Failure -> cb(
-                false,
-                if (result.code > 0) "HTTP ${result.code}: ${result.message}" else result.message,
-            )
-        }
-    }
+    // What is picked and which of the shell's dialogs is up; see AppShellState.
+    val state = remember { AppShellState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -306,7 +245,7 @@ internal fun BarcodeApp(
                 // savedCredentials left null on purpose: nobody is signed in, so there is nothing
                 // to prefill and nowhere a test's credentials would be stored.
                 onTestConnection = { serverUrl, username, password, cb ->
-                    appVm.testExtSystemConnection(serverUrl, username, password) { reportTestResult(it, cb) }
+                    appVm.testExtSystemConnection(serverUrl, username, password) { reportConnectionTest(context, it, cb) }
                 },
                 onImportJson = { json -> appVm.parseExtSystemConfigJson(json) },
             )
@@ -349,56 +288,67 @@ internal fun BarcodeApp(
         return
     }
 
-    // Changing operator swaps the database underneath everything, and a transfer that is still
-    // running would then be writing into the wrong person's file — an upload recording "this row
-    // reached the ERP", a download replacing documents someone else is holding. So the switch
-    // waits rather than the transfer being cancelled. Covers the background upload, which outlives
-    // the screen that started it, and every download: those resolve the database only once they
-    // have an answer from the server, by which point sign-out may already have taken it away.
     val erpWorkInFlight by appVm.erpWorkInFlight.collectAsState()
-    var showSwitchBlocked by remember { mutableStateOf(false) }
 
-    fun requestSignOut() {
-        if (erpWorkInFlight) showSwitchBlocked = true else appVm.signOut()
+    // Everything the routes need, as it stands in this composition; see Shell.
+    val shell = Shell(
+        state = state,
+        nav = nav,
+        appVm = appVm,
+        context = context,
+        exportLauncher = exportLauncher,
+        activeProfile = activeProfile,
+        user = user,
+        location = location,
+        rc = rc,
+        locations = locations,
+        rcs = rcs,
+        documents = documents,
+        extSystemConfig = extSystemConfig,
+        data = data,
+        erpWorkInFlight = erpWorkInFlight,
+        locationCode = locationCode,
+        rcCode = rcCode,
+        onLocationCodeChange = onLocationCodeChange,
+        onRcCodeChange = onRcCodeChange,
+        textSize = textSize,
+        uppercaseText = uppercaseText,
+        language = language,
+        debounceTime = debounceTime,
+        hapticEnabled = hapticEnabled,
+        soundEnabled = soundEnabled,
+        warnOnOver = warnOnOver,
+        backgroundSync = backgroundSync,
+        disabledDocTypes = disabledDocTypes,
+        onDisabledDocTypesChange = onDisabledDocTypesChange,
+        docTypeFilters = docTypeFilters,
+        onDocTypeFiltersChange = onDocTypeFiltersChange,
+        debuggerActive = debuggerActive,
+        onDebuggerActiveChange = onDebuggerActiveChange,
+        onSettingsSaved = onSettingsSaved,
+    )
+
+    if (state.showSwitchBlocked) {
+        SwitchBlockedDialog(onDismiss = { state.showSwitchBlocked = false })
     }
 
-    if (showSwitchBlocked) {
-        SwitchBlockedDialog(onDismiss = { showSwitchBlocked = false })
-    }
-
-    // A configuration that names another ERP installation (server or company) ends the session:
-    // the open database, the saved sign-in and the locations all belong to the one signed in to.
-    // That is asked about first, because it signs the operator out and because scans not yet sent
-    // stay behind with the installation they were made for. The rule itself is in
-    // AppViewModel.saveExtSystemConfig; this is only the asking.
-    var pendingServerChange by remember { mutableStateOf<ExtSystemConfig?>(null) }
-
-    /** Saves [config] if that can be done here and now; false when it had to ask, or refuse, first. */
-    fun requestConfigSave(config: ExtSystemConfig): Boolean {
-        if (config.serverIdentity == extSystemConfig.serverIdentity) {
-            appVm.saveExtSystemConfig(config)
-            return true
-        }
-        if (erpWorkInFlight) showSwitchBlocked = true else pendingServerChange = config
-        return false
-    }
-
-    pendingServerChange?.let { config ->
+    // Asked by Shell.requestConfigSave when a configuration being saved names another installation.
+    state.pendingServerChange?.let { config ->
         ServerChangeDialog(
             // Anything scanned and not yet accepted by the ERP, on any document of this operator.
             hasUnsentScans = documents.any { doc ->
                 doc.orphanedScans.isNotEmpty() || doc.lines.any { it.scanned > it.sentQuantity }
             },
             onConfirm = {
-                pendingServerChange = null
+                state.pendingServerChange = null
                 when (appVm.saveExtSystemConfig(config)) {
-                    AppViewModel.ConfigSave.RefusedTransferRunning -> showSwitchBlocked = true
+                    AppViewModel.ConfigSave.RefusedTransferRunning -> state.showSwitchBlocked = true
                     AppViewModel.ConfigSave.SavedAndSignedOut ->
                         Toast.makeText(context, context.getString(R.string.server_changed_toast), Toast.LENGTH_LONG).show()
                     AppViewModel.ConfigSave.Saved -> Unit
                 }
             },
-            onDismiss = { pendingServerChange = null },
+            onDismiss = { state.pendingServerChange = null },
         )
     }
 
@@ -410,6 +360,7 @@ internal fun BarcodeApp(
     }
 
     NavHost(navController = nav, startDestination = Routes.MAIN) {
+        with(shell) {
         composable(Routes.MAIN) {
             MainMenuScreen(
                 user = user,
@@ -500,7 +451,7 @@ internal fun BarcodeApp(
                     }
                 },
                 onSaveCredentials = { u, p -> appVm.saveCredentials(u, p) },
-                onTestConnection = ::testSignIn,
+                onTestConnection = shell::testSignIn,
                 onBack = { nav.popBackStack() },
             )
         }
@@ -594,24 +545,14 @@ internal fun BarcodeApp(
                 onDocTap = { selected -> nav.navigate(Routes.recording(selected.documentNo, selected.type.key)) },
                 onDownload = { nav.navigate(Routes.DOWNLOAD_FILTER) },
                 onUpload = { docs ->
-                    requireCredentials {
-                        if (backgroundSync) {
-                            launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                appVm.uploadInBackground(docs)
-                                nav.popBackStack(Routes.MAIN, false)
-                            }
-                        } else {
-                            val cb: (Int) -> Unit = { failures ->
-                                processingMessage = null
-                                nav.popBackStack(Routes.MAIN, false)
-                                if (failures > 0) showSyncErrorDialog = true
-                            }
-                            launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                processingMessage = R.string.processing_uploading
-                                appVm.uploadToExtSystem(docs, cb)
-                            }
-                        }
-                    }
+                    upload(
+                        docs,
+                        onBackgroundStarted = { nav.popBackStack(Routes.MAIN, false) },
+                        onBlockingDone = { failures ->
+                            nav.popBackStack(Routes.MAIN, false)
+                            if (failures > 0) showSyncErrorDialog = true
+                        },
+                    )
                 },
                 onErrorTap = { doc -> nav.navigate(Routes.uploadError(doc.documentNo)) },
                 onClearErrors = { appVm.clearErrorDocs() },
@@ -633,23 +574,14 @@ internal fun BarcodeApp(
                 onBack = { nav.popBackStack() },
                 onDocTap = { selected -> nav.navigate(Routes.recording(selected.documentNo, selected.type.key)) },
                 onClearErrors = { appVm.clearErrorDocs() },
+                // Stays on the dashboard either way; only a failed blocking upload says so.
                 onUpload = { docs ->
-                    requireCredentials {
-                        if (backgroundSync) {
-                            launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                appVm.uploadInBackground(docs)
-                            }
-                        } else {
-                            val cb: (Int) -> Unit = { failures ->
-                                processingMessage = null
-                                if (failures > 0) showSyncErrorDialog = true
-                            }
-                            launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                processingMessage = R.string.processing_uploading
-                                appVm.uploadToExtSystem(docs, cb)
-                            }
-                        }
-                    }
+                    upload(
+                        docs,
+                        onBlockingDone = { failures ->
+                            if (failures > 0) showSyncErrorDialog = true
+                        },
+                    )
                 },
                 onErrorTap = { doc -> nav.navigate(Routes.uploadError(doc.documentNo)) },
                 filter = overviewFilter,
@@ -708,7 +640,7 @@ internal fun BarcodeApp(
                 fixedRcCode     = if (dlFilterMode == DocTypeFilterMode.RESPONSIBILITY_CENTER) rcCode else null,
                 locations       = locations,
                 rcs             = rcs,
-                onTestConnection = ::testSignIn,
+                onTestConnection = shell::testSignIn,
                 onLoadInventoryBatches = { filter, username, password, onResult ->
                     if (username != null && password != null) appVm.saveCredentials(username, password)
                     appVm.loadInventoryBatches(filter) { result ->
@@ -766,24 +698,14 @@ internal fun BarcodeApp(
                         vm.setLineScanned(lineNo, newScanned, activeProfile.id, onRefused)
                     },
                     onUpload = {
-                        requireCredentials {
-                            if (backgroundSync) {
-                                launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                    appVm.uploadInBackground(listOf(currentDoc))
-                                    nav.popBackStack(Routes.MAIN, false)
-                                }
-                            } else {
-                                val cb: (Int) -> Unit = { failures ->
-                                    processingMessage = null
-                                    nav.popBackStack(Routes.MAIN, false)
-                                    if (failures > 0) showSyncErrorDialog = true
-                                }
-                                launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                    processingMessage = R.string.processing_uploading
-                                    appVm.uploadToExtSystem(listOf(currentDoc), cb)
-                                }
-                            }
-                        }
+                        upload(
+                            listOf(currentDoc),
+                            onBackgroundStarted = { nav.popBackStack(Routes.MAIN, false) },
+                            onBlockingDone = { failures ->
+                                nav.popBackStack(Routes.MAIN, false)
+                                if (failures > 0) showSyncErrorDialog = true
+                            },
+                        )
                     },
                         hapticEnabled = hapticEnabled,
                     soundEnabled = soundEnabled,
@@ -831,47 +753,40 @@ internal fun BarcodeApp(
                             nav.popBackStack()
                         }
                     },
+                    // Leaves this screen once the upload is handed over or has gone through; a
+                    // failed blocking upload stays here, under the dialog that says so.
                     onRetryUpload = {
-                        requireCredentials {
-                            if (backgroundSync) {
-                                launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                    appVm.uploadInBackground(listOf(currentDoc))
-                                    nav.popBackStack()
-                                }
-                            } else {
-                                val cb: (Int) -> Unit = { failures ->
-                                    processingMessage = null
-                                    if (failures > 0) { showSyncErrorDialog = true } else { nav.popBackStack() }
-                                }
-                                launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
-                                    processingMessage = R.string.processing_uploading
-                                    appVm.uploadToExtSystem(listOf(currentDoc), cb)
-                                }
-                            }
-                        }
+                        upload(
+                            listOf(currentDoc),
+                            onBackgroundStarted = { nav.popBackStack() },
+                            onBlockingDone = { failures ->
+                                if (failures > 0) { showSyncErrorDialog = true } else { nav.popBackStack() }
+                            },
+                        )
                     },
                 )
             }
         }
+        } // with(shell)
     }
 
-    processingMessage?.let { message ->
+    state.processingMessage?.let { message ->
         ProcessingDialog(message)
     }
 
-    if (showDownloadErrorDialog) {
-        DownloadErrorDialog(downloadErrorMessage, onDismiss = { showDownloadErrorDialog = false })
+    if (state.showDownloadErrorDialog) {
+        DownloadErrorDialog(state.downloadErrorMessage, onDismiss = { state.showDownloadErrorDialog = false })
     }
 
-    if (showDebugDialog) {
+    if (state.showDebugDialog) {
         DebugUrlsDialog(
-            urls = debugUrls,
-            onProceed = { showDebugDialog = false; pendingAction?.invoke() },
-            onCancel = { showDebugDialog = false; pendingCancel?.invoke() },
+            urls = state.debugUrls,
+            onProceed = { state.showDebugDialog = false; state.pendingAction?.invoke() },
+            onCancel = { state.showDebugDialog = false; state.pendingCancel?.invoke() },
         )
     }
 
-    if (showUploadLoginSheet) {
+    if (state.showUploadLoginSheet) {
         LoginSheet(
             credentialTtlHours = extSystemConfig.credentialTtlHours,
             ctaLabel           = stringResource(R.string.btn_sign_in),
@@ -880,33 +795,33 @@ internal fun BarcodeApp(
             loginQrKey         = extSystemConfig.loginQrKey,
             hapticEnabled      = hapticEnabled,
             soundEnabled       = soundEnabled,
-            onDismiss          = { showUploadLoginSheet = false; pendingUploadAction = null },
-            onTestConnection   = ::testSignIn,
+            onDismiss          = { state.showUploadLoginSheet = false; state.pendingUploadAction = null },
+            onTestConnection   = shell::testSignIn,
             onSubmit           = { _, _ ->
-                showUploadLoginSheet = false
-                pendingUploadAction?.invoke()
-                pendingUploadAction = null
+                state.showUploadLoginSheet = false
+                state.pendingUploadAction?.invoke()
+                state.pendingUploadAction = null
             },
         )
     }
 
-    if (showMainLoginSheet) {
+    if (state.showMainLoginSheet) {
         LoginSheet(
             credentialTtlHours = extSystemConfig.credentialTtlHours,
             ctaLabel           = stringResource(R.string.btn_sign_in),
             loginQrKey         = extSystemConfig.loginQrKey,
             hapticEnabled      = hapticEnabled,
             soundEnabled       = soundEnabled,
-            onDismiss          = { showMainLoginSheet = false },
-            onTestConnection   = ::testSignIn,
-            onSubmit           = { _, _ -> showMainLoginSheet = false },
+            onDismiss          = { state.showMainLoginSheet = false },
+            onTestConnection   = shell::testSignIn,
+            onSubmit           = { _, _ -> state.showMainLoginSheet = false },
         )
     }
 
-    if (showSyncErrorDialog) {
+    if (state.showSyncErrorDialog) {
         SyncErrorDialog(
-            onSeeErrors = { showSyncErrorDialog = false; nav.navigate(Routes.DASHBOARD_ERRORS) },
-            onDismiss = { showSyncErrorDialog = false },
+            onSeeErrors = { state.showSyncErrorDialog = false; nav.navigate(Routes.DASHBOARD_ERRORS) },
+            onDismiss = { state.showSyncErrorDialog = false },
         )
     }
 }
