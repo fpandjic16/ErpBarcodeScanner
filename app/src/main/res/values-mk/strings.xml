@@ -319,11 +319,11 @@
     <string name="settings_profiles">Оператори на овој уред</string>
     <string name="settings_profiles_desc">Кој може да се најави тука, и отстранување оператор</string>
     <string name="profiles_title">Оператори</string>
-    <string name="profiles_explainer">Сите што се најавиле на овој уред. Отстранувањето ги брише и неговите документи и скенирања од овој уред.</string>
+    <string name="profiles_explainer">Сите што се најавиле на овој уред, по еднаш за секој систем (сервер и компанија) на кој се најавиле. Отстранувањето на ставка ги брише документите и скенирањата на тој оператор за тој систем од овој уред.</string>
     <string name="profiles_signed_in">најавен</string>
     <string name="profiles_delete_title">Да се отстрани операторот?</string>
     <string name="profiles_delete_counting">Проверка што би се избришало…</string>
-    <string name="profiles_delete_text">%1$s ќе биде отстранет од овој уред, заедно со своите документи, скенирања, зачуваната најава и поставките. Ова дејство не може да се врати.</string>
+    <string name="profiles_delete_text">%1$s на системот %2$s се отстранува од овој уред, заедно со документите, скенирањата и зачуваната најава за тој систем. Ова не може да се врати.</string>
     <string name="profiles_delete_scans">Ќе бидат избришани %1$d скенирања на %2$d документи.</string>
     <string name="profiles_delete_unsent">%1$d од нив никогаш не стигнале до надворешниот систем и не постојат никаде другаде.</string>
     <string name="profiles_delete_confirm">Отстрани</string>
@@ -382,4 +382,9 @@
     <string name="ext_config_env_missing_pick">Избери</string>
     <string name="ext_config_env_missing_save_anyway">Сепак зачувај</string>
     <string name="upload_error_document_url_missing">URL-то за испраќање документ не е конфигурирано</string>
+    <string name="server_change_title">Да се смени системот?</string>
+    <string name="server_change_text">Серверот или компанијата се разликува од оној на кој сте најавени. Ќе бидете одјавени и повторно ќе се најавите на новиот систем. Вашите документи и скенирања остануваат зачувани кај досегашниот систем и повторно се достапни кога уредот ќе се врати на него.</string>
+    <string name="server_change_unsent">Имате неиспратени скенирања. Не може да се испратат во новиот систем: испратете ги пред промената или подоцна вратете се на овој систем.</string>
+    <string name="server_change_confirm">Смени и одјави ме</string>
+    <string name="server_changed_toast">Системот е сменет. Најавете се повторно.</string>
 </resources>

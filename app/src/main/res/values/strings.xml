@@ -319,11 +319,11 @@
     <string name="settings_profiles">Operators on this device</string>
     <string name="settings_profiles_desc">See who can sign in here, and remove someone</string>
     <string name="profiles_title">Operators</string>
-    <string name="profiles_explainer">Everyone who has signed in on this device. Removing someone deletes their documents and scans from this device as well.</string>
+    <string name="profiles_explainer">Everyone who has signed in on this device, once for each system (server and company) they signed in to. Removing an entry deletes that operator\'s documents and scans for that system from this device.</string>
     <string name="profiles_signed_in">signed in</string>
     <string name="profiles_delete_title">Remove operator?</string>
     <string name="profiles_delete_counting">Checking what this would delete…</string>
-    <string name="profiles_delete_text">%1$s will be removed from this device, along with their documents, their scans, their saved sign-in and their settings. This cannot be undone.</string>
+    <string name="profiles_delete_text">%1$s on %2$s will be removed from this device, along with the documents, scans and saved sign-in kept for that system. This cannot be undone.</string>
     <string name="profiles_delete_scans">%1$d scans across %2$d documents will be deleted.</string>
     <string name="profiles_delete_unsent">%1$d of them have never reached the external system and exist nowhere else.</string>
     <string name="profiles_delete_confirm">Remove</string>
@@ -382,4 +382,9 @@
     <string name="ext_config_env_missing_pick">Choose</string>
     <string name="ext_config_env_missing_save_anyway">Save anyway</string>
     <string name="upload_error_document_url_missing">Document upload URL not configured</string>
+    <string name="server_change_title">Change the system?</string>
+    <string name="server_change_text">The server or the company differs from the one you are signed in to. You will be signed out and sign in again on the new system. Your documents and scans stay stored with the current system and are there again when the device is set back to it.</string>
+    <string name="server_change_unsent">You have scans that have not been sent. They cannot be sent to the new system: send them first, or come back to this system later.</string>
+    <string name="server_change_confirm">Change and sign out</string>
+    <string name="server_changed_toast">System changed. Sign in again.</string>
 </resources>

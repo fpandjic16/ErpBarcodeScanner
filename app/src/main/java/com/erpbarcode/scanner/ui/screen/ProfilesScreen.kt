@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
+import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.auth.UserProfile
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
@@ -55,16 +56,21 @@ private data class Footprint(val documents: Int, val scans: Int, val unsentScans
  *
  * Removing an operator takes their documents and recordings with it, which is why this screen is
  * mostly a confirmation dialog with a list attached.
+ *
+ * A row is an operator **on one ERP installation** (server and company): that pair is what the
+ * data is filed under, so the same person appears once for each installation they signed in to,
+ * and each row is removed on its own. Rows of other installations are how work left behind on a
+ * previous server or company is still seen, and counted, from here.
  */
 @Composable
 fun ProfilesScreen(
     profiles: List<UserProfile>,
-    signedInId: String?,
+    signedInKey: String?,
     onBack: () -> Unit,
     // Counting opens the other operator's database, so it is asked for only when a deletion is
     // actually proposed — never merely to draw the list.
-    loadFootprint: (profileId: String, onResult: (Int, Int, Int) -> Unit) -> Unit,
-    onDelete: (profileId: String) -> Unit,
+    loadFootprint: (profileKey: String, onResult: (Int, Int, Int) -> Unit) -> Unit,
+    onDelete: (profileKey: String) -> Unit,
 ) {
     var pending by remember { mutableStateOf<UserProfile?>(null) }
     var footprint by remember { mutableStateOf<Footprint?>(null) }
@@ -85,14 +91,14 @@ fun ProfilesScreen(
                     style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
-            items(profiles, key = { it.id }) { profile ->
+            items(profiles, key = { it.key }) { profile ->
                 ProfileManageRow(
                     profile = profile,
-                    isSignedIn = profile.id == signedInId,
+                    isSignedIn = profile.key == signedInKey,
                     onDelete = {
                         pending = profile
                         footprint = null
-                        loadFootprint(profile.id) { docs, scans, unsent ->
+                        loadFootprint(profile.key) { docs, scans, unsent ->
                             footprint = Footprint(docs, scans, unsent)
                         }
                     },
@@ -117,7 +123,7 @@ fun ProfilesScreen(
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(R.string.profiles_delete_text, profile.displayName))
+                        Text(stringResource(R.string.profiles_delete_text, profile.displayName, profile.serverLine()))
                         if (counts.scans > 0) {
                             // Its own block, not a clause in the sentence above. Documents come
                             // back on the next download; scans do not come back at all.
@@ -155,7 +161,7 @@ fun ProfilesScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = { onDelete(profile.id); pending = null },
+                    onClick = { onDelete(profile.key); pending = null },
                     enabled = counts != null,
                     colors = ButtonDefaults.textButtonColors(contentColor = SignOutRed),
                 ) { Text(stringResource(R.string.profiles_delete_confirm)) }
@@ -165,6 +171,16 @@ fun ProfilesScreen(
             },
         )
     }
+}
+
+/** The installation a profile belongs to, as shown under its name: company (or address) · Test/Production. */
+@Composable
+private fun UserProfile.serverLine(): String {
+    val env = ExtSystemEnvironment.entries.firstOrNull { it.name == environment }
+    return listOfNotNull(
+        serverLabel.takeIf { it.isNotBlank() },
+        env?.let { stringResource(it.labelRes) },
+    ).joinToString(" · ")
 }
 
 @Composable
@@ -195,6 +211,15 @@ private fun ProfileManageRow(profile: UserProfile, isSignedIn: Boolean, onDelete
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            val serverLine = profile.serverLine()
+            if (serverLine.isNotBlank()) {
+                Text(
+                    serverLine,
+                    style = monoLabel.copy(color = AppPalette.Ink3),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (isSignedIn) {
                 Text(
                     stringResource(R.string.profiles_signed_in),

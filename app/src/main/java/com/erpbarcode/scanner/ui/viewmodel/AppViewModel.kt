@@ -19,7 +19,7 @@ import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.auth.UserProfile
 import com.erpbarcode.scanner.data.auth.UserProfileStore
 import com.erpbarcode.scanner.data.db.DatabaseProvider
-import com.erpbarcode.scanner.data.db.LocationDao
+import com.erpbarcode.scanner.data.db.SharedDatabaseProvider
 import com.erpbarcode.scanner.data.db.LocationEntity
 import com.erpbarcode.scanner.data.db.ResponsibilityCenterEntity
 import com.erpbarcode.scanner.data.db.toDomain
@@ -40,7 +40,10 @@ import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.repository.DocumentRepository
 import com.erpbarcode.scanner.i18n.inAppLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -65,7 +68,7 @@ import timber.log.Timber
 class AppViewModel @Inject constructor(
     @param:dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context,
     private val repository: DocumentRepository,
-    private val locationDao: LocationDao,
+    private val sharedDatabaseProvider: SharedDatabaseProvider,
     private val exporter: DatabaseExporter,
     val extSystemConfigStore: ExtSystemConfigStore,
     private val extSystemCredentialStore: ExtSystemCredentialStore,
@@ -103,7 +106,7 @@ class AppViewModel @Inject constructor(
     /** Who is signed in. Null only before sign-in — every screen but the sign-in one is behind it. */
     val currentProfile: StateFlow<UserProfile?> = _currentProfile
 
-    private val _credentials = MutableStateFlow(extSystemCredentialStore.get(profileStore.currentId()))
+    private val _credentials = MutableStateFlow(extSystemCredentialStore.get(profileStore.currentKey()))
     val credentials: StateFlow<ExtSystemCredentials?> = _credentials
 
     /**
@@ -141,11 +144,31 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    val locations: StateFlow<List<Location>> = locationDao.observeLocations()
+    // Declared above the two flows below because they follow it, and properties initialise in
+    // the order they are written.
+    private val _extSystemConfig = MutableStateFlow(extSystemConfigStore.get())
+    val extSystemConfig: StateFlow<ExtSystemConfig> = _extSystemConfig
+
+    /**
+     * The reference data of the ERP installation the device is pointed at, re-read whenever the
+     * configuration names another one. Locations belong to a server and a company, so each has
+     * its own list (see [SharedDatabaseProvider]): another company's locations are never offered,
+     * and coming back to a company finds its list where it was.
+     */
+    private val installationData = _extSystemConfig
+        .map { it.serverIdentity }
+        .distinctUntilChanged()
+        .map { sharedDatabaseProvider.forServer(it) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val locations: StateFlow<List<Location>> = installationData
+        .flatMapLatest { it.locationDao().observeLocations() }
         .map { it.map { e -> e.toDomain() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val responsibilityCenters: StateFlow<List<ResponsibilityCenter>> = locationDao.observeRcs()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val responsibilityCenters: StateFlow<List<ResponsibilityCenter>> = installationData
+        .flatMapLatest { it.locationDao().observeRcs() }
         .map { it.map { e -> e.toDomain() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -209,12 +232,32 @@ class AppViewModel @Inject constructor(
     val documents: StateFlow<List<Document>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _extSystemConfig = MutableStateFlow(extSystemConfigStore.get())
-    val extSystemConfig: StateFlow<ExtSystemConfig> = _extSystemConfig
+    /** What [saveExtSystemConfig] did. */
+    enum class ConfigSave { Saved, SavedAndSignedOut, RefusedTransferRunning }
 
-    fun saveExtSystemConfig(config: ExtSystemConfig) {
+    /**
+     * Saves the configuration, and ends the session when it names another ERP installation.
+     *
+     * **A session never outlives its installation.** The open database, the saved sign-in and the
+     * list of locations all belong to the server and company the operator signed in to
+     * (`ExtSystemConfig.serverIdentity`). Carrying the session on under new addresses is how one
+     * company's unsent scans would be uploaded to another, and how its documents would be merged
+     * with the other's on the next download. So a change of installation signs the operator out;
+     * they sign in again, against the new server, into the data kept for it.
+     *
+     * Refused while a transfer is running, for the reason signing out is: the transfer is still
+     * writing through the database this would release. The screens ask before calling this with
+     * a changed installation (see `BarcodeApp`); this is the rule itself, kept here so no path
+     * can save around it.
+     */
+    fun saveExtSystemConfig(config: ExtSystemConfig): ConfigSave {
+        val endsSession = profileStore.current() != null &&
+            config.serverIdentity != extSystemConfig.value.serverIdentity
+        if (endsSession && _erpWorkCount.value > 0) return ConfigSave.RefusedTransferRunning
+        if (endsSession) signOut()
         extSystemConfigStore.save(config)
         _extSystemConfig.value = config
+        return if (endsSession) ConfigSave.SavedAndSignedOut else ConfigSave.Saved
     }
 
     /**
@@ -230,10 +273,10 @@ class AppViewModel @Inject constructor(
      * nowhere to store the answer.
      */
     fun saveCredentials(username: String, password: String): CredentialSave {
-        val id = profileStore.currentId() ?: return CredentialSave.NoProfile
-        if (UserProfileStore.normalise(username) != id) return CredentialSave.WrongOperator
-        extSystemCredentialStore.save(id, username, password, extSystemConfig.value.credentialTtlHours)
-        _credentials.value = extSystemCredentialStore.get(id)
+        val current = profileStore.current() ?: return CredentialSave.NoProfile
+        if (UserProfileStore.normalise(username) != current.id) return CredentialSave.WrongOperator
+        extSystemCredentialStore.save(current.key, username, password, extSystemConfig.value.credentialTtlHours)
+        _credentials.value = extSystemCredentialStore.get(current.key)
         return CredentialSave.Stored
     }
 
@@ -248,9 +291,9 @@ class AppViewModel @Inject constructor(
     enum class CredentialSave { Stored, NoProfile, WrongOperator }
 
     /** Server access for the signed-in operator, or null once its TTL has lapsed. */
-    fun savedCredentials(): ExtSystemCredentials? = extSystemCredentialStore.get(profileStore.currentId())
+    fun savedCredentials(): ExtSystemCredentials? = extSystemCredentialStore.get(profileStore.currentKey())
 
-    fun hasCredentials(): Boolean = extSystemCredentialStore.isValid(profileStore.currentId())
+    fun hasCredentials(): Boolean = extSystemCredentialStore.isValid(profileStore.currentKey())
 
     /**
      * Leaves the app, not the data.
@@ -261,7 +304,7 @@ class AppViewModel @Inject constructor(
      * them. Their profile stays enrolled, so signing back in works offline.
      */
     fun signOut() {
-        profileStore.currentId()?.let { extSystemCredentialStore.clear(it) }
+        profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }
         _credentials.value = null
         _currentProfile.value = null
         databaseProvider.release()
@@ -275,11 +318,11 @@ class AppViewModel @Inject constructor(
      * the end of them.
      */
     fun profileFootprint(
-        profileId: String,
+        profileKey: String,
         onResult: (documents: Int, scans: Int, unsentScans: Int) -> Unit,
     ) {
         viewModelScope.launch {
-            val db = databaseProvider.forProfile(profileId)
+            val db = databaseProvider.forProfile(profileKey)
             val recordings = db.recordingDao().getAll()
             onResult(
                 db.documentHeaderDao().getAll().size,
@@ -303,13 +346,19 @@ class AppViewModel @Inject constructor(
      * That refusal is also what keeps this clear of [duringErpWork] — every ERP transfer writes
      * through `provider.current()`, so it can only ever touch the one profile this cannot delete.
      */
-    fun deleteProfile(profileId: String, onDone: () -> Unit = {}) {
-        if (profileId == profileStore.currentId()) return
+    fun deleteProfile(profileKey: String, onDone: () -> Unit = {}) {
+        if (profileKey == profileStore.currentKey()) return
+        val profile = profileStore.profiles().firstOrNull { it.key == profileKey } ?: return
         viewModelScope.launch {
-            databaseProvider.deleteProfileData(profileId)
-            extSystemCredentialStore.clear(profileId)
-            appSettingsStore.deletePersonal(profileId)
-            profileStore.delete(profileId)
+            databaseProvider.deleteProfileData(profileKey)
+            extSystemCredentialStore.clear(profileKey)
+            // Personal settings belong to the person, not to one installation, so they go with the
+            // person's last profile — and never while that person is the one signed in.
+            val lastOfThisOperator = profileStore.profiles().none { it.id == profile.id && it.key != profileKey }
+            if (lastOfThisOperator && profile.id != profileStore.currentId()) {
+                appSettingsStore.deletePersonal(profile.id)
+            }
+            profileStore.delete(profileKey)
             onDone()
         }
     }
@@ -341,7 +390,14 @@ class AppViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val config = extSystemConfig.value
-            val profile = UserProfile(id = id, displayName = id)
+            // Filed under the installation that is about to vouch for them, not only their name.
+            val profile = UserProfile(
+                id = id,
+                displayName = id,
+                serverKey = config.serverIdentity,
+                serverLabel = config.serverLabel,
+                environment = config.environment?.name,
+            )
             val serverResult = if (config.serverBaseUrl.isBlank()) null else {
                 extSystemClient.configure(config, ExtSystemCredentials(typedUsername.trim(), password))
                 extSystemClient.testConnection(config.serverBaseUrl.trim())
@@ -349,10 +405,10 @@ class AppViewModel @Inject constructor(
 
             if (serverResult is ExtSystemResult.Success) {
                 profileStore.enroll(profile)
-                databaseProvider.switchTo(id)
+                databaseProvider.switchTo(profile)
                 _currentProfile.value = profile
-                extSystemCredentialStore.save(id, typedUsername, password, config.credentialTtlHours)
-                _credentials.value = extSystemCredentialStore.get(id)
+                extSystemCredentialStore.save(profile.key, typedUsername, password, config.credentialTtlHours)
+                _credentials.value = extSystemCredentialStore.get(profile.key)
                 onResult(SignInResult.Online)
             } else {
                 // `serverResult == null` means there is no server URL to ask at all, which is a
@@ -396,7 +452,12 @@ class AppViewModel @Inject constructor(
             // the test is to obtain access for this session, and access that cannot be stored is
             // access this session does not have. Nobody signed in is a different matter — see
             // [CredentialSave.NoProfile].
-            if (result is ExtSystemResult.Success &&
+            //
+            // Kept only when the server tested is the one this session belongs to. The form can
+            // name another server before it is saved, and a password that server accepted says
+            // nothing about this one.
+            val sameInstallation = config.serverIdentity == extSystemConfig.value.serverIdentity
+            if (result is ExtSystemResult.Success && sameInstallation &&
                 saveCredentials(username.trim(), password) == CredentialSave.WrongOperator
             ) {
                 onResult(ExtSystemResult.Failure(inAppText(R.string.signin_wrong_operator)))
@@ -474,7 +535,7 @@ class AppViewModel @Inject constructor(
     fun clearCache() {
         viewModelScope.launch {
             repository.clearAll()
-            profileStore.currentId()?.let { extSystemCredentialStore.clear(it) }
+            profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }
             _credentials.value = null
         }
     }

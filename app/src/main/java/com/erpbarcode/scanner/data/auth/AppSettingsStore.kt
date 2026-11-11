@@ -13,10 +13,12 @@ import javax.inject.Singleton
 /**
  * Settings, split by who they actually belong to.
  *
- * **Personal, one set per profile:** text size, uppercase, language, debounce, haptics, sound,
+ * **Personal, one set per operator:** text size, uppercase, language, debounce, haptics, sound,
  * over-scan warning, background sync, and the last location / responsibility centre. These
  * describe a person — how they read the screen, where they are working today — and it would be
- * rude for each shift to reset the next one's.
+ * rude for each shift to reset the next one's. They follow the person across ERP installations,
+ * except the location and the centre: those belong to a company's site, so each installation
+ * remembers its own (see [siteKey]).
  *
  * **The device's, shared by everyone:** which document types are switched off, how each type is
  * scoped, and the debugger flag. These describe the installation, the same way `ExtSystemConfig`
@@ -83,6 +85,17 @@ class AppSettingsStore @Inject constructor(
         return context.getSharedPreferences("app_settings_$id", Context.MODE_PRIVATE)
     }
 
+    /**
+     * The name a site setting (location, responsibility centre) is stored under for the
+     * installation the operator is signed in to. An operator who works for two companies has a
+     * location in each; one shared value would be wrong in whichever they opened second, and
+     * would be overwritten there.
+     */
+    private fun siteKey(name: String): String {
+        val server = profileStore.current()?.serverKey.orEmpty()
+        return if (server.isEmpty()) name else "$name@$server"
+    }
+
     fun get(): AppSettings {
         val personal = personalPrefs()
         // Missing keys fall back to AppSettings' own defaults, so they are written down once.
@@ -96,8 +109,8 @@ class AppSettingsStore @Inject constructor(
             soundEnabled     = personal.getBoolean("soundEnabled", true),
             warnOnOver          = personal.getBoolean("warnOnOver", true),
             backgroundSync      = personal.getBoolean("backgroundSync", false),
-            lastLocationCode = personal.getString("lastLocationCode", "") ?: "",
-            lastRcCode       = personal.getString("lastRcCode", "") ?: "",
+            lastLocationCode = personal.getString(siteKey("lastLocationCode"), "") ?: "",
+            lastRcCode       = personal.getString(siteKey("lastRcCode"), "") ?: "",
             // Still handed out as the switched-off set, so nothing above this class changed.
             disabledDocTypes = allDocTypeKeys - enabledDocTypes(),
             docTypeFilters = devicePrefs.getString("docTypeFilters", "")
@@ -113,7 +126,8 @@ class AppSettingsStore @Inject constructor(
     }
 
     /**
-     * Drops one operator's personal settings. The device's are untouched, as are everyone else's.
+     * Drops one operator's personal settings, for every installation they worked on. The device's
+     * are untouched, as are everyone else's. Called when the operator's last profile is removed.
      *
      * Guards against the signed-in id only by not being called for it: `personalPrefs()` falls
      * back to the device file when nobody is signed in, so deleting "the current profile's" file
@@ -133,8 +147,8 @@ class AppSettingsStore @Inject constructor(
             .putBoolean("soundEnabled",       settings.soundEnabled)
             .putBoolean("warnOnOver",          settings.warnOnOver)
             .putBoolean("backgroundSync",      settings.backgroundSync)
-            .putString ("lastLocationCode",   settings.lastLocationCode)
-            .putString ("lastRcCode",         settings.lastRcCode)
+            .putString (siteKey("lastLocationCode"), settings.lastLocationCode)
+            .putString (siteKey("lastRcCode"),       settings.lastRcCode)
             .apply()
         devicePrefs.edit()
             .putString (KEY_ENABLED_DOC_TYPES, (allDocTypeKeys - settings.disabledDocTypes).joinToString(","))

@@ -31,6 +31,7 @@ Nazivi gumba i ekrana navedeni su onako kako ih aplikacija prikazuje na hrvatsko
 18. [Česte situacije i što učiniti](#18-česte-situacije-i-što-učiniti)
 18a. [Uklanjanje operatera s uređaja](#18a-uklanjanje-operatera-s-uređaja)
 18b. [QR kodovi za prijavu (za administratore)](#18b-qr-kodovi-za-prijavu-za-administratore)
+18c. [Uređaj koji se koristi za više tvrtki](#18c-uređaj-koji-se-koristi-za-više-tvrtki)
 19. [Pojmovnik](#19-pojmovnik)
 
 ---
@@ -488,13 +489,13 @@ Ako je riječ o posebnoj etiketi `Barkod|JM|Količina`, provjerite s uredom je l
 
 ## 18a. Uklanjanje operatera s uređaja
 
-Kad netko ode ili se uređaj trajno preda drugome, njegovo se ime može ukloniti s uređaja: **Postavke → Korisnički račun → Operateri na ovom uređaju**, zatim crvena kanta pokraj imena.
+Kad netko ode ili se uređaj trajno preda drugome, njegovo se ime može ukloniti s uređaja: **Postavke → Korisnički račun → Operateri na ovom uređaju**, zatim crvena kanta pokraj imena. Tko se prijavio na više sustava ima po jedan redak za svaki; svaki se redak uklanja zasebno i sa sobom odnosi samo dokumente i skeniranja tog sustava.
 
 To nije samo pospremanje popisa. Uklanjanjem operatera s tog uređaja brišu se i:
 
 - svi dokumenti koje je preuzeo,
 - **sva skeniranja koja je napravio**,
-- njegova spremljena prijava i osobne postavke (veličina teksta, jezik, radna lokacija).
+- njegova spremljena prijava i, kad se ukloni njegov zadnji redak, osobne postavke (veličina teksta, jezik, radna lokacija).
 
 Prije nego što zatraži potvrdu, aplikacija prebroji što bi nestalo i kaže vam — uključujući koliko tih skeniranja **nikad nije stiglo u vanjski sustav**. Ta skeniranja postoje na tom uređaju i nigdje drugdje; kad nestanu, nema ih odakle vratiti. Ako taj broj nije nula, siguran redoslijed je: neka se ta osoba najprije prijavi i pošalje, a tek je onda uklonite.
 
@@ -522,6 +523,15 @@ Operateri se mogu prijaviti skeniranjem QR koda umjesto upisivanja ([§3](#3-prv
 - **Ispisani kod nosi lozinku.** Čuvajte ga kao samu lozinku, a CSV nakon ispisa obrišite.
 
 Za naredbeni redak postoji i `tools/make_login_qr.py`.
+
+## 18c. Uređaj koji se koristi za više tvrtki
+
+Sve što preuzmete i skenirate pripada sustavu na koji ste prijavljeni: jednom poslužitelju i jednoj tvrtki. Ako se uređaj postavi za drugu tvrtku (ili prebaci između testnog i produkcijskog sustava), prikazuje dokumente, skeniranja i lokacije te tvrtke, a ništa od prve.
+
+- **Promjena sustava vas odjavljuje.** Kad se spreme postavke veze koje imenuju drugi poslužitelj ili tvrtku, aplikacija najprije pita **Promijeniti sustav?**, a zatim vas odjavljuje da se ponovno prijavite na novi.
+- **Vaš rad ostaje ondje gdje je nastao.** Dokumenti i skeniranja prve tvrtke ostaju sačuvani i netaknuti te su ponovno dostupni čim se uređaj vrati na nju. Neposlana skeniranja ne mogu se poslati u drugu tvrtku: aplikacija vas na njih upozori pri promjeni, pa ih pošaljite prije ako možete.
+- **Svaka tvrtka ima svoje lokacije i vašu zadnju lokaciju u njoj.** Pri povratku ništa ne treba ponovno osvježavati.
+- **Popis Operateri ima po jedan redak za svaku osobu i svaki sustav**, s nazivom tvrtke i oznakom je li testni ili produkcijski. Ondje se vidi i rad ostavljen u drugoj tvrtki te se, ako više nije potreban, uklanja.
 
 ## 19. Pojmovnik
 

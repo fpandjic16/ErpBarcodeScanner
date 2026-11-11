@@ -116,6 +116,45 @@ internal fun SyncErrorDialog(onSeeErrors: () -> Unit, onDismiss: () -> Unit) {
     )
 }
 
+/**
+ * Before a saved configuration moves the device to another ERP installation: that signs the
+ * operator out, and what they scanned stays with the installation it was scanned for.
+ */
+@Composable
+internal fun ServerChangeDialog(hasUnsentScans: Boolean, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.server_change_title), fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.server_change_text))
+                if (hasUnsentScans) {
+                    Text(
+                        stringResource(R.string.server_change_unsent),
+                        color = AppSignal.Danger,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) { Text(stringResource(R.string.server_change_confirm), fontWeight = FontWeight.Bold) }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) { Text(stringResource(R.string.btn_cancel)) }
+            }
+        },
+    )
+}
+
 /** Signing out, or switching operator, while a transfer is still running. */
 @Composable
 internal fun SwitchBlockedDialog(onDismiss: () -> Unit) {

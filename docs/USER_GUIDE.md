@@ -29,6 +29,7 @@ This guide explains what every screen does, what every button and toggle means, 
 18. [Common Situations & What To Do](#18-common-situations--what-to-do)
 18a. [Removing an Operator From a Device](#18a-removing-an-operator-from-a-device)
 18b. [Sign-in QR Codes (for administrators)](#18b-sign-in-qr-codes-for-administrators)
+18c. [A Device Used for More Than One Company](#18c-a-device-used-for-more-than-one-company)
 19. [Glossary](#19-glossary)
 
 ---
@@ -481,13 +482,13 @@ If it's a special `Barcode|UoM|Qty` label, verify with the office that it was pr
 
 ## 18a. Removing an operator from a device
 
-When someone leaves, or a device is handed on for good, their name can be taken off it: **Settings → Account → Operators on this device**, then the red bin next to their name.
+When someone leaves, or a device is handed on for good, their name can be taken off it: **Settings → Account → Operators on this device**, then the red bin next to their name. Someone who has signed in to more than one system has a row for each; each row is removed on its own, and takes only that system's documents and scans with it.
 
 This is not just tidying the list. Removing an operator also deletes, from that device:
 
 - every document they had downloaded,
 - **every scan they had made**,
-- their saved sign-in, and their personal settings (text size, language, working location).
+- their saved sign-in, and, once their last row is removed, their personal settings (text size, language, working location).
 
 Before it asks you to confirm, the app counts what would go and tells you — including how many of those scans have **never reached the central system**. Those exist on that device and nowhere else; once they are gone there is nothing to recover them from. If you see that number and it is not zero, the safe order is: have that person sign in and upload first, then remove them.
 
@@ -513,6 +514,15 @@ Operators can sign in by scanning a QR code instead of typing ([§3](#3-first-ti
 - **A printed code carries the password.** Keep it as you would the password itself, and delete the CSV after printing.
 
 For the command line there is also `tools/make_login_qr.py`.
+
+## 18c. A device used for more than one company
+
+Everything you download and scan belongs to the system you are signed in to: one server and one company. If the device is set up for another company (or switched between the test and the production system), it shows that company's documents, scans and locations, and nothing of the first one's.
+
+- **Changing the system signs you out.** When connection settings that name another server or company are saved, the app asks **Change the system?** first, then signs you out so you sign in again on the new one.
+- **Your work stays where it was made.** Documents and scans of the first company are kept, untouched, and are there again as soon as the device is set back to it. Scans not yet sent cannot be sent to another company: the app warns you about them when you change, so send them first if you can.
+- **Each company keeps its own locations and your last location in it.** Nothing has to be refreshed again when you come back.
+- **The Operators list has one row per person per system**, naming the company and whether it is the test or the production system. That is also where work left behind in another company is seen and, if it is no longer needed, removed.
 
 ## 19. Glossary
 

@@ -320,11 +320,11 @@
     <string name="settings_profiles">Operateri na ovom uređaju</string>
     <string name="settings_profiles_desc">Tko se ovdje može prijaviti, i uklanjanje operatera</string>
     <string name="profiles_title">Operateri</string>
-    <string name="profiles_explainer">Svi koji su se prijavili na ovom uređaju. Uklanjanje operatera briše i njegove dokumente i skeniranja s ovog uređaja.</string>
+    <string name="profiles_explainer">Svi koji su se prijavili na ovom uređaju, po jednom za svaki sustav (poslužitelj i tvrtku) na koji su se prijavili. Uklanjanje stavke briše dokumente i skeniranja tog operatera za taj sustav s ovog uređaja.</string>
     <string name="profiles_signed_in">prijavljen</string>
     <string name="profiles_delete_title">Ukloniti operatera?</string>
     <string name="profiles_delete_counting">Provjera što bi se obrisalo…</string>
-    <string name="profiles_delete_text">%1$s se uklanja s ovog uređaja, zajedno sa svojim dokumentima, skeniranjima, spremljenom prijavom i postavkama. Ova radnja se ne može poništiti.</string>
+    <string name="profiles_delete_text">%1$s na sustavu %2$s uklanja se s ovog uređaja, zajedno s dokumentima, skeniranjima i spremljenom prijavom za taj sustav. Ova radnja se ne može poništiti.</string>
     <string name="profiles_delete_scans">Bit će obrisano %1$d skeniranja na %2$d dokumenata.</string>
     <string name="profiles_delete_unsent">Njih %1$d nikad nije stiglo u vanjski sustav i ne postoji nigdje drugdje.</string>
     <string name="profiles_delete_confirm">Ukloni</string>
@@ -384,4 +384,9 @@
     <string name="ext_config_env_missing_pick">Odaberi</string>
     <string name="ext_config_env_missing_save_anyway">Spremi svejedno</string>
     <string name="upload_error_document_url_missing">URL slanja dokumenta nije konfiguriran</string>
+    <string name="server_change_title">Promijeniti sustav?</string>
+    <string name="server_change_text">Poslužitelj ili tvrtka razlikuje se od onoga na koji ste prijavljeni. Bit ćete odjavljeni i prijavit ćete se ponovno na novi sustav. Vaši dokumenti i skeniranja ostaju spremljeni uz dosadašnji sustav i ponovno su dostupni kad se uređaj vrati na njega.</string>
+    <string name="server_change_unsent">Imate neposlana skeniranja. U novi sustav se ne mogu poslati: pošaljite ih prije promjene ili se kasnije vratite na ovaj sustav.</string>
+    <string name="server_change_confirm">Promijeni i odjavi me</string>
+    <string name="server_changed_toast">Sustav je promijenjen. Prijavite se ponovno.</string>
 </resources>

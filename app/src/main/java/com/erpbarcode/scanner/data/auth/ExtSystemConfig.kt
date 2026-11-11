@@ -74,6 +74,32 @@ data class ExtSystemConfig(
             return decoded.replace("''", "'").takeIf { it.isNotBlank() }
         }
 
+    /**
+     * Which ERP installation this configuration talks to: the server that decides whether a
+     * password is good, and the company on it. Blank while no server is configured.
+     *
+     * Everything an operator owns on the device is filed under their id **and** this (see
+     * `UserProfile.key`): documents, scans, the saved sign-in, and the device's list of locations.
+     * So a device pointed at another server or another company opens other, separate data, and
+     * nothing scanned for one can be sent to, or mixed with, the other. It is also what stops a
+     * device being pointed at a server that accepts any password in order to open an enrolled
+     * operator's work: under that server, their data is simply not there.
+     *
+     * Trailing slashes and letter case do not make a different installation; a different host,
+     * port, instance or company does, and so does a test and a production system. Renaming a
+     * service in one of the endpoint addresses does not.
+     */
+    val serverIdentity: String
+        get() {
+            val server = serverBaseUrl.trim().trimEnd('/').lowercase()
+            if (server.isEmpty()) return ""
+            return server + "|" + companyName.orEmpty().trim().lowercase()
+        }
+
+    /** What to call that installation on screen: the company, or the server's address when the URL names none. */
+    val serverLabel: String
+        get() = companyName ?: serverBaseUrl.trim().substringAfter("://").trimEnd('/')
+
     private companion object {
         val COMPANY_IN_URL = Regex("""Company\('((?:[^']|'')*)'\)""")
     }

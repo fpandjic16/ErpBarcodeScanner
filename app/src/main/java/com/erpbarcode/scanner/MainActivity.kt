@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             // Deliberately does not save: this is reading what is already stored, and writing it
             // back would let a half-applied state overwrite the real one.
             val signedInProfile by appVm.currentProfile.collectAsState()
-            LaunchedEffect(signedInProfile?.id) {
+            LaunchedEffect(signedInProfile?.key) {
                 if (signedInProfile == null) return@LaunchedEffect
                 val s = appVm.loadSettings()
                 // Against the locale actually on screen, not against `language`. That starts from

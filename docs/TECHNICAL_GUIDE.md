@@ -249,7 +249,7 @@ Two databases, and which one a table lives in is the whole of the per-user isola
 
 **`AppDatabase`** — one file **per operator**, `user_<sha256-prefix>.db`, **schema version 21**. Holds `documentHeader`, `documentLine` and `recordings`. Opened by `DatabaseProvider`, not by Dagger: a `@Singleton AppDatabase` would have pinned the first operator's file for the life of the process. Built with `.addMigrations(MIGRATION_7_8 … MIGRATION_20_21)`. `MIGRATION_19_20` changes no schema: it deletes every row of the retired `COMPLAINT` type (§B.17) and **no `fallbackToDestructiveMigration`** — see `DatabaseModule` for why that must never come back.
 
-**`SharedDatabase`** — one file for the device, `shared.db`, version 1. Holds `locations` and `responsibility_centers`. They describe the site, not the person; per-profile copies would have forced every new operator to re-download them before they could pick a location, which needs a server that may not be reachable.
+**`SharedDatabase`** — one file per ERP installation since 3.6.53, `shared_<sha256 prefix>.db`, opened by `SharedDatabaseProvider` (it was one `shared.db` for the device, provided by Dagger), version 1. Holds `locations` and `responsibility_centers`. They describe the site, not the person; per-profile copies would have forced every new operator to re-download them before they could pick a location, which needs a server that may not be reachable.
 
 **The pre-split file is gone.** Everything once lived in one database file. Per-operator files replaced it, and until 3.6.48 a startup cleanup deleted the old file; the new application id (§A.7) starts with an empty data directory, so that cleanup was removed with it.
 
@@ -647,8 +647,33 @@ Two screens apply a loaded configuration, and they differ only in *when* it pers
 ### `SecureStore` (3.6.28)
 Replaces androidx.security's `EncryptedSharedPreferences`, which Google deprecated. Values are encrypted with one AES-256-GCM key in the Android Keystore (alias `secure_store_v1`, created on first use, never exportable) and stored as `base64(iv ‖ ciphertext ‖ tag)` in a plain `SharedPreferences` file; names are stored as their SHA-256 digest, so the file does not list who has used the device. A value that no longer decrypts (a Keystore that lost its key after a restore or an OS update) reads as absent and is removed, where the old library crashed at startup. **Nothing was migrated, by decision:** each store deletes its old file unread on first use (`legacyFileName`), so every operator signs in once after the update, and the profile list refills as they do. A profile's database is named after its id (`databaseName`), so no documents or unsent scans are lost. The `security-crypto` dependency is gone.
 
+### Profiles are bound to an ERP installation (3.6.53)
+
+**The installation** is `ExtSystemConfig.serverIdentity`: the server base URL (trimmed, without trailing slashes, lower case) plus the company read from `Company('…')` in the document lines URL. A different host, port, instance or company is a different installation, and so are test and production; renaming a service in an endpoint address is not. `serverLabel` is what a screen calls it: the company, or the address when the URL names none.
+
+**A profile is an operator on one installation.** `UserProfile(id, displayName, serverKey, serverLabel, environment)`; `UserProfile.key` = `profileKey(id, serverKey)` (the id's length first, so two different pairs can never read alike). Everything a profile owns is filed under the key:
+
+| What | Where | Keyed by |
+|---|---|---|
+| Documents, lines, recordings | `user_<sha256(key) prefix>.db` (`DatabaseProvider`) | profile key |
+| Saved sign-in | `ExtSystemCredentialStore` | profile key |
+| Enrolment | `UserProfileStore`, one JSON list | profile key |
+| Locations, responsibility centres | `shared_<sha256(identity) prefix>.db` (`SharedDatabaseProvider`) | installation, shared by its operators |
+| Last location and centre | the operator's personal settings, as `lastLocationCode@<identity>` | operator + installation |
+| Text size, language and the other personal settings | `app_settings_<id>` | operator only: they follow the person |
+
+**Why.** (1) Security: with one file per operator, anyone who could change the server could point the device at one that accepts every password, sign in under an enrolled name and open that person's documents and unsent scans. Now that name on that server is a different, empty profile. The setup door closed in 3.6.52 stops this before sign-in; the binding stops a signed-in operator doing it from Settings. (2) Correctness: a device moved between companies used to keep one database, so company A's unsent scans were uploaded to company B (and booked there whenever B had a document with the same number), and B's download merged with or pruned A's documents.
+
+**A session never outlives its installation.** `AppViewModel.saveExtSystemConfig` returns `Saved`, `SavedAndSignedOut` or `RefusedTransferRunning`: when the configuration being saved has another `serverIdentity` and somebody is signed in, it signs them out (refusing while a transfer is in flight, as sign-out itself does). `BarcodeApp.requestConfigSave` asks first with `ServerChangeDialog`, which adds a warning when the operator has unsent scans, since those stay with the installation they were made for and reappear when the device is pointed back at it. Both ways of saving a configuration while signed in go through it: the External System Configuration screen (which stays open while the question is asked) and the Settings exit-save. `testExtSystemConnection` keeps the tested credentials only when the server tested is the one the session belongs to.
+
+**On screen.** The sign-in screen lists the operators enrolled on the configured installation (`profilesOn`). **Operators** lists every profile on every installation, each row naming its company and environment, and removes them one at a time; an operator's personal settings go with their last profile.
+
+**Limits.** The identity is the address the device talks to, not proof of who answers there: without HTTPS, somebody able to impersonate the real server's address on the network is outside what the app can detect (§B.12). A server that moves to a new address is a new installation: send everything first, or point the device back at the old address to reach what was left.
+
+**Upgrading from 3.6.48–3.6.52** (test devices only): the profile list and the database names changed shape, so an operator enrols again and starts empty; clear the app's data to remove the unreachable old files.
+
 ### `UserProfileStore`
-`SecureStore("user_profiles_v2")` (was `EncryptedSharedPreferences("user_profiles")`). Holds the operators this device knows — id and display name, and nothing else; the id list is stored as a JSON array. **No expiry**, deliberately: it is what reaches an operator's own data, and that data does not expire either. The PBKDF2 digests an older version kept went with the old file.
+`SecureStore("user_profiles_v2")` (was `EncryptedSharedPreferences("user_profiles")`). Holds the profiles this device knows — operator id, display name and the installation — and nothing else, as one JSON list. **No expiry**, deliberately: it is what reaches an operator's own data, and that data does not expire either. The PBKDF2 digests an older version kept went with the old file.
 
 The current profile is held **in memory only**, not in the prefs. Persisting it would restore the session on the next launch, which is exactly what must not happen — a device left on a shelf would come back up inside the last operator's data with no password asked. A process restart means signing in again, against the ERP.
 
@@ -708,7 +733,7 @@ Holds the NAV password in the clear, because NTLM computes its response from the
 
 ### The gate, and the doors through it
 
-**The setup door is for first setup only (3.6.52).** `onOpenConfig` is passed only while `ExtSystemConfig.serverBaseUrl` is blank, and the configuration screen behind it renders only then. The server decides whether a password is good, so changing it before signing in let anyone holding a configured device point it at a server that accepts everything and sign in as any enrolled operator, opening that person's database. Once an address is saved, the configuration changes only after signing in (Settings → Server & endpoints). A device with a wrong saved address, or whose server moved, is reset by clearing the app's data or reinstalling. Binding each profile's data to the server it was enrolled on is the second half of this, proposed but not built yet.
+**The setup door is for first setup only (3.6.52).** `onOpenConfig` is passed only while `ExtSystemConfig.serverBaseUrl` is blank, and the configuration screen behind it renders only then. The server decides whether a password is good, so changing it before signing in let anyone holding a configured device point it at a server that accepts everything and sign in as any enrolled operator, opening that person's database. Once an address is saved, the configuration changes only after signing in (Settings → Server & endpoints). A device with a wrong saved address, or whose server moved, is reset by clearing the app's data or reinstalling. The second half is the binding of each profile's data to its installation, below.
 
 `BarcodeApp` (`navigation/AppNavHost.kt`) early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
 

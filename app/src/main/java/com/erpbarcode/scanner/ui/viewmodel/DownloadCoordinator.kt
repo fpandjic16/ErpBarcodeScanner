@@ -6,7 +6,7 @@ import com.google.gson.reflect.TypeToken
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
-import com.erpbarcode.scanner.data.db.LocationDao
+import com.erpbarcode.scanner.data.db.SharedDatabaseProvider
 import com.erpbarcode.scanner.data.db.LocationEntity
 import com.erpbarcode.scanner.data.db.ResponsibilityCenterEntity
 import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
@@ -42,7 +42,7 @@ import javax.inject.Inject
 class DownloadCoordinator @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val repository: DocumentRepository,
-    private val locationDao: LocationDao,
+    private val sharedDatabaseProvider: SharedDatabaseProvider,
     private val extSystemClient: ExtSystemODataClient,
 ) {
 
@@ -52,7 +52,10 @@ class DownloadCoordinator @Inject constructor(
     private fun inAppText(id: Int, vararg args: Any): String =
         appContext.inAppLanguage().getString(id, *args)
 
-    /** Locations and their responsibility centres into the shared database. Returns null on success, or an error message on failure. */
+    /**
+     * Locations and their responsibility centres into the reference data of [config]'s ERP
+     * installation. Returns null on success, or an error message on failure.
+     */
     suspend fun downloadLocations(config: ExtSystemConfig, savedCreds: ExtSystemCredentials?): String? {
         val creds  = savedCreds ?: return inAppText(R.string.ext_error_not_signed_in)
         if (!config.isConfigured) return inAppText(R.string.ext_error_not_configured)
@@ -63,6 +66,9 @@ class DownloadCoordinator @Inject constructor(
                 val typeToken = object : TypeToken<ODataList<ErpLocationRow>>() {}.type
                 val odata = gson.fromJson<ODataList<ErpLocationRow>>(result.data, typeToken)
                 val rcCodes = odata.value.map { it.rcCode }.filter { it.isNotBlank() }.distinct()
+                // The list of the installation that was asked, even if the configuration has
+                // moved on to another one while the answer was on its way.
+                val locationDao = sharedDatabaseProvider.forServer(config.serverIdentity).locationDao()
                 locationDao.clearRcs()
                 locationDao.upsertRcs(rcCodes.map { ResponsibilityCenterEntity(it, it, null) })
                 locationDao.clearLocations()

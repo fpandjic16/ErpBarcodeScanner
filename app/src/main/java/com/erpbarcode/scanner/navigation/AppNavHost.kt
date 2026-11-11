@@ -54,6 +54,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.AppSettings
+import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
 import com.erpbarcode.scanner.data.model.DocState
@@ -385,7 +386,11 @@ internal fun BarcodeApp(
             loginQrKey = extSystemConfig.loginQrKey,
             hapticEnabled = hapticEnabled,
             soundEnabled = soundEnabled,
-            profiles = remember(signingIn) { appVm.profileStore.profiles() },
+            // Those enrolled on the installation the device is pointed at: a name known only on
+            // another server or company would be offered here and then find none of its work.
+            profiles = remember(signingIn, extSystemConfig.serverIdentity) {
+                appVm.profileStore.profilesOn(extSystemConfig.serverIdentity)
+            },
             busy = signingIn,
             error = signInError,
             onErrorDismiss = { signInError = null },
@@ -420,10 +425,46 @@ internal fun BarcodeApp(
         SwitchBlockedDialog(onDismiss = { showSwitchBlocked = false })
     }
 
+    // A configuration that names another ERP installation (server or company) ends the session:
+    // the open database, the saved sign-in and the locations all belong to the one signed in to.
+    // That is asked about first, because it signs the operator out and because scans not yet sent
+    // stay behind with the installation they were made for. The rule itself is in
+    // AppViewModel.saveExtSystemConfig; this is only the asking.
+    var pendingServerChange by remember { mutableStateOf<ExtSystemConfig?>(null) }
+
+    /** Saves [config] if that can be done here and now; false when it had to ask, or refuse, first. */
+    fun requestConfigSave(config: ExtSystemConfig): Boolean {
+        if (config.serverIdentity == extSystemConfig.serverIdentity) {
+            appVm.saveExtSystemConfig(config)
+            return true
+        }
+        if (erpWorkInFlight) showSwitchBlocked = true else pendingServerChange = config
+        return false
+    }
+
+    pendingServerChange?.let { config ->
+        ServerChangeDialog(
+            // Anything scanned and not yet accepted by the ERP, on any document of this operator.
+            hasUnsentScans = documents.any { doc ->
+                doc.orphanedScans.isNotEmpty() || doc.lines.any { it.scanned > it.sentQuantity }
+            },
+            onConfirm = {
+                pendingServerChange = null
+                when (appVm.saveExtSystemConfig(config)) {
+                    AppViewModel.ConfigSave.RefusedTransferRunning -> showSwitchBlocked = true
+                    AppViewModel.ConfigSave.SavedAndSignedOut ->
+                        Toast.makeText(context, context.getString(R.string.server_changed_toast), Toast.LENGTH_LONG).show()
+                    AppViewModel.ConfigSave.Saved -> Unit
+                }
+            },
+            onDismiss = { pendingServerChange = null },
+        )
+    }
+
     // The nav controller is remembered above the sign-in gate, so its back stack outlives a change
     // of operator. Without this the next person lands wherever the last one left off — typically a
     // document route they have no copy of, which renders as a blank screen.
-    LaunchedEffect(profile?.id) {
+    LaunchedEffect(profile?.key) {
         nav.popBackStack(Routes.MAIN, inclusive = false)
     }
 
@@ -463,10 +504,10 @@ internal fun BarcodeApp(
             var profilesRefresh by remember { mutableStateOf(0) }
             ProfilesScreen(
                 profiles = remember(profilesRefresh) { appVm.profileStore.profiles() },
-                signedInId = activeProfile.id,
+                signedInKey = activeProfile.key,
                 onBack = { nav.popBackStack() },
-                loadFootprint = { id, onResult -> appVm.profileFootprint(id, onResult) },
-                onDelete = { id -> appVm.deleteProfile(id) { profilesRefresh++ } },
+                loadFootprint = { key, onResult -> appVm.profileFootprint(key, onResult) },
+                onDelete = { key -> appVm.deleteProfile(key) { profilesRefresh++ } },
             )
         }
         composable(Routes.RECORDINGS_LIST) {
@@ -527,10 +568,9 @@ internal fun BarcodeApp(
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,
                 initial = extSystemConfig,
-                onSave  = { config ->
-                    appVm.saveExtSystemConfig(config)
-                    nav.popBackStack()
-                },
+                // Stays on the screen, with the form as it is, while a change of installation is
+                // being asked about; confirming it signs out, which leaves this screen anyway.
+                onSave  = { config -> if (requestConfigSave(config)) nav.popBackStack() },
                 onDiscard = { nav.popBackStack() },
                 loadDefaults = { fileName -> appVm.loadExtSystemDefaults(fileName) },
                 listCompanies = { appVm.listExtSystemDefaultsCompanies() },
@@ -575,7 +615,7 @@ internal fun BarcodeApp(
                 initial = initialSettingsSnapshot,
                 onSave = { s -> onSettingsSaved(s); nav.popBackStack() },
                 onDiscard = { nav.popBackStack() },
-                onSaveExtSystemConfig = { config -> appVm.saveExtSystemConfig(config) },
+                onSaveExtSystemConfig = { config -> requestConfigSave(config) },
                 loadExtSystemConfigDefaults = { fileName -> appVm.loadExtSystemDefaults(fileName) },
                 listExtSystemDefaultsCompanies = { appVm.listExtSystemDefaultsCompanies() },
                 parseExtSystemConfigJson = { json -> appVm.parseExtSystemConfigJson(json) },

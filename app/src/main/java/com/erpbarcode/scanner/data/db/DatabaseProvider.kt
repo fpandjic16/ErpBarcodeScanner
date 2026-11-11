@@ -2,6 +2,7 @@ package com.erpbarcode.scanner.data.db
 
 import android.content.Context
 import androidx.room.Room
+import com.erpbarcode.scanner.data.auth.UserProfile
 import com.erpbarcode.scanner.data.auth.UserProfileStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +13,10 @@ import javax.inject.Singleton
 
 /**
  * Owns the database of whoever is signed in.
+ *
+ * One file per operator **per ERP installation** (`UserProfile.key`): the same person on another
+ * server or company opens another file, so work scanned for one can never be sent to, or merged
+ * with, the other.
  *
  * This is the whole of the per-user isolation. Every query in the app is scoped by
  * `(documentNo, type)` and nothing more, which is safe precisely because a query cannot reach
@@ -58,9 +63,9 @@ class DatabaseProvider @Inject constructor(
     fun current(): AppDatabase =
         _database.value ?: error("No profile is signed in; there is no database to use")
 
-    fun switchTo(profileId: String) {
-        profileStore.setCurrent(profileId)
-        _database.value = openFor(profileId)
+    fun switchTo(profile: UserProfile) {
+        profileStore.setCurrent(profile)
+        _database.value = openFor(profile.key)
     }
 
     /** Signs out without touching a byte of anyone's data. */
@@ -77,7 +82,7 @@ class DatabaseProvider @Inject constructor(
      * Nothing else should call it, and nothing may hold what it returns — the rule in this class's
      * header applies here with the usual force.
      */
-    fun forProfile(profileId: String): AppDatabase = openFor(profileId)
+    fun forProfile(profileKey: String): AppDatabase = openFor(profileKey)
 
     /**
      * Deletes a profile's database file and everything in it. Not undoable.
@@ -87,17 +92,17 @@ class DatabaseProvider @Inject constructor(
      * `deleteDatabase` takes the `-wal` and `-shm` files with it, which a plain file delete would
      * leave behind to be found by the next database of the same name.
      */
-    fun deleteProfileData(profileId: String) {
-        if (profileId == profileStore.currentId()) return
-        open.remove(profileId)?.close()
-        context.deleteDatabase(UserProfileStore.databaseName(profileId))
+    fun deleteProfileData(profileKey: String) {
+        if (profileKey == profileStore.currentKey()) return
+        open.remove(profileKey)?.close()
+        context.deleteDatabase(UserProfileStore.databaseName(profileKey))
     }
 
-    private fun openFor(profileId: String): AppDatabase = open.getOrPut(profileId) {
+    private fun openFor(profileKey: String): AppDatabase = open.getOrPut(profileKey) {
         Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            UserProfileStore.databaseName(profileId),
+            UserProfileStore.databaseName(profileKey),
         ).addMigrations(
             AppDatabase.MIGRATION_7_8,
             AppDatabase.MIGRATION_8_9,
