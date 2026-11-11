@@ -114,10 +114,6 @@ fun SettingsScreen(
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showDeleteAllDocumentsDialog by remember { mutableStateOf(false) }
     var showInsertSystemDefaultsDialog by remember { mutableStateOf(false) }
-    var showCompanyPickDialog by remember { mutableStateOf(false) }
-    // Asked before the company: "which system" is the question that carries the risk.
-    var showEnvironmentPickDialog by remember { mutableStateOf(false) }
-    var pickedEnvironment by remember { mutableStateOf<ExtSystemEnvironment?>(null) }
     var pendingExtSystemConfig by remember { mutableStateOf<ExtSystemConfig?>(null) }
 
     /**
@@ -674,135 +670,15 @@ fun SettingsScreen(
     }
 
     if (showInsertSystemDefaultsDialog) {
-        Dialog(onDismissRequest = { showInsertSystemDefaultsDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.settings_insert_defaults_dialog_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Button(
-                        onClick = {
-                            showInsertSystemDefaultsDialog = false
-                            showEnvironmentPickDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_load_builtin), fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showInsertSystemDefaultsDialog = false
-                            downloadExtSystemDefaultsLauncher.launch(EXPORT_FILE_NAME)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_export_current), fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showInsertSystemDefaultsDialog = false
-                            importExtSystemDefaultsLauncher.launch("application/json")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_load_from_file), fontWeight = FontWeight.SemiBold)
-                    }
-                    TextButton(
-                        onClick = { showInsertSystemDefaultsDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showEnvironmentPickDialog) {
-        Dialog(onDismissRequest = { showEnvironmentPickDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_pick_environment_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    ExtSystemEnvironment.entries.forEach { env ->
-                        OutlinedButton(
-                            onClick = {
-                                showEnvironmentPickDialog = false
-                                pickedEnvironment = env
-                                showCompanyPickDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(env.labelRes), fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    TextButton(
-                        onClick = { showEnvironmentPickDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showCompanyPickDialog) {
-        Dialog(onDismissRequest = { showCompanyPickDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_pick_company_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    val companies = remember(pickedEnvironment) {
-                        listExtSystemDefaultsCompanies().filter { it.environment == pickedEnvironment }
-                    }
-                    if (companies.isEmpty()) {
-                        Text(
-                            stringResource(R.string.ext_config_no_companies_found),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
-                        )
-                    }
-                    companies.forEach { company ->
-                        OutlinedButton(
-                            // Shown but not loadable when the file has been added and not filled
-                            // in: its blank addresses would wipe a working configuration.
-                            enabled = company.isConfigured,
-                            onClick = {
-                                showCompanyPickDialog = false
-                                val defaults = loadExtSystemConfigDefaults(company.assetFileName)
-                                if (defaults != null) {
-                                    applyConfiguration(defaults)
-                                    Toast.makeText(context, context.getString(R.string.ext_config_import_success), Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.ext_config_company_load_error, company.assetFileName), Toast.LENGTH_LONG).show()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(
-                                if (company.isConfigured) company.label
-                                else stringResource(R.string.ext_config_company_not_configured, company.label),
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
-                    TextButton(
-                        onClick = { showCompanyPickDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
+        ConfigLoadFlow(
+            title = stringResource(R.string.settings_insert_defaults_dialog_title),
+            listCompanies = listExtSystemDefaultsCompanies,
+            loadDefaults = loadExtSystemConfigDefaults,
+            onLoaded = { applyConfiguration(it) },
+            onExport = { downloadExtSystemDefaultsLauncher.launch(EXPORT_FILE_NAME) },
+            onImport = { importExtSystemDefaultsLauncher.launch("application/json") },
+            onClose = { showInsertSystemDefaultsDialog = false },
+        )
     }
 
     if (showClearCacheDialog) {

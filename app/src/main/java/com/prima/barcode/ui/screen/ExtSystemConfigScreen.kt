@@ -103,11 +103,6 @@ fun ExtSystemConfigScreen(
     var testResult     by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showLoadDialog by remember { mutableStateOf(false) }
-    var showCompanyPickDialog by remember { mutableStateOf(false) }
-    // Which set of bundled files the company picker is about to show. Asked before the
-    // company, because "which system" is the question that actually carries risk.
-    var showEnvironmentPickDialog by remember { mutableStateOf(false) }
-    var pickedEnvironment by remember { mutableStateOf<ExtSystemEnvironment?>(null) }
     var environment by remember { mutableStateOf(initial.environment) }
     // Saving with a server address but no environment asks first; see [requestSave].
     var showEnvironmentMissingDialog by remember { mutableStateOf(false) }
@@ -490,136 +485,15 @@ fun ExtSystemConfigScreen(
     }
 
     if (showLoadDialog) {
-        Dialog(onDismissRequest = { showLoadDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_load_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Button(
-                        onClick = {
-                            showLoadDialog = false
-                            showEnvironmentPickDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_load_builtin), fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showLoadDialog = false
-                            downloadLauncher.launch(EXPORT_FILE_NAME)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_export_current), fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showLoadDialog = false
-                            importLauncher.launch("application/json")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.ext_config_load_from_file), fontWeight = FontWeight.SemiBold)
-                    }
-                    TextButton(
-                        onClick = { showLoadDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showEnvironmentPickDialog) {
-        Dialog(onDismissRequest = { showEnvironmentPickDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_pick_environment_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    ExtSystemEnvironment.entries.forEach { env ->
-                        OutlinedButton(
-                            onClick = {
-                                showEnvironmentPickDialog = false
-                                pickedEnvironment = env
-                                showCompanyPickDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(env.labelRes), fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    TextButton(
-                        onClick = { showEnvironmentPickDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showCompanyPickDialog) {
-        Dialog(onDismissRequest = { showCompanyPickDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_pick_company_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    val companies = remember(pickedEnvironment) {
-                        listCompanies().filter { it.environment == pickedEnvironment }
-                    }
-                    if (companies.isEmpty()) {
-                        Text(
-                            stringResource(R.string.ext_config_no_companies_found),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
-                        )
-                    }
-                    companies.forEach { company ->
-                        OutlinedButton(
-                            // A file added but not filled in is shown rather than hidden, so it is
-                            // clear the company exists and what is missing, but it cannot be
-                            // loaded: its blank addresses would wipe a working configuration.
-                            enabled = company.isConfigured,
-                            onClick = {
-                                showCompanyPickDialog = false
-                                val defaults = loadDefaults(company.assetFileName)
-                                if (defaults != null) {
-                                    applyConfiguration(defaults)
-                                    Toast.makeText(context, context.getString(R.string.ext_config_import_success), Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.ext_config_company_load_error, company.assetFileName), Toast.LENGTH_LONG).show()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(
-                                if (company.isConfigured) company.label
-                                else stringResource(R.string.ext_config_company_not_configured, company.label),
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
-                    TextButton(
-                        onClick = { showCompanyPickDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
+        ConfigLoadFlow(
+            title = stringResource(R.string.ext_config_load_title),
+            listCompanies = listCompanies,
+            loadDefaults = loadDefaults,
+            onLoaded = { applyConfiguration(it) },
+            onExport = { downloadLauncher.launch(EXPORT_FILE_NAME) },
+            onImport = { importLauncher.launch("application/json") },
+            onClose = { showLoadDialog = false },
+        )
     }
 
     if (showExitDialog) {
@@ -658,38 +532,17 @@ fun ExtSystemConfigScreen(
         )
     }
 
-    // Sets the environment of the form as it stands and saves it; the bundled-file picker above
-    // asks the same question, but to choose which file to load.
+    // Sets the environment of the form as it stands and saves it; ConfigLoadFlow asks the same
+    // question, but to choose which bundled file to load.
     if (showEnvironmentSetDialog) {
-        Dialog(onDismissRequest = { showEnvironmentSetDialog = false }) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.ext_config_pick_environment_title), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    ExtSystemEnvironment.entries.forEach { env ->
-                        OutlinedButton(
-                            onClick = {
-                                showEnvironmentSetDialog = false
-                                environment = env
-                                onSave(buildConfig().copy(environment = env))
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(env.labelRes), fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    TextButton(
-                        onClick = { showEnvironmentSetDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                }
-            }
-        }
+        EnvironmentPickDialog(
+            onPick = { env ->
+                showEnvironmentSetDialog = false
+                environment = env
+                onSave(buildConfig().copy(environment = env))
+            },
+            onDismiss = { showEnvironmentSetDialog = false },
+        )
     }
 
     if (testing) {
