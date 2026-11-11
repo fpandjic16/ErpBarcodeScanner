@@ -38,7 +38,7 @@ internal object DocumentUploadSoap {
             element("DocumentLineNo", row.documentLineNo.toString())
             element("RecordingLineNo", row.recordingLineNo.toString())
             element("Barcode", row.barcode)
-            element("ScannedQuantity", BigDecimal(row.scannedQuantity.toString()).toPlainString())
+            element("ScannedQuantity", plainDecimal(row.scannedQuantity))
             element("UnitOfMeasureCode", row.unitOfMeasureCode)
             element("SourceCreationDateTime", xmlDateTime(row.sourceCreationDateTime))
             element("SourceUserID", row.sourceUserId)
@@ -57,6 +57,14 @@ internal object DocumentUploadSoap {
     private fun StringBuilder.element(name: String, value: String) {
         append('<').append(name).append('>').append(escape(value)).append("</").append(name).append('>')
     }
+
+    /**
+     * xs:decimal: digits and a point, never an exponent, which a `Double` prints below 0.001 and
+     * from ten million up. Trailing zeros go as well, or the "1.0E-4" a `Double` gives for 0.0001
+     * would come out as 0.00010; a whole quantity is sent as "12", not "12.0".
+     */
+    private fun plainDecimal(value: Double): String =
+        BigDecimal(value.toString()).stripTrailingZeros().toPlainString()
 
     /**
      * xs:dateTime as the ERP reads it: .NET takes at most seven fractional digits, and a clock that

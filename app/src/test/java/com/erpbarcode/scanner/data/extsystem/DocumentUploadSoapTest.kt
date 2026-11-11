@@ -41,6 +41,15 @@ class DocumentUploadSoapTest {
     }
 
     @Test
+    fun `a quantity is written without trailing zeros`() {
+        fun sent(qty: Double) = DocumentUploadSoap.envelope(listOf(row(qty = qty)))
+        assertTrue(sent(12.0).contains("<ScannedQuantity>12</ScannedQuantity>"))
+        assertTrue(sent(100.0).contains("<ScannedQuantity>100</ScannedQuantity>"))
+        assertTrue(sent(2.5).contains("<ScannedQuantity>2.5</ScannedQuantity>"))
+        assertTrue(sent(12_000_000.0).contains("<ScannedQuantity>12000000</ScannedQuantity>"))
+    }
+
+    @Test
     fun `scan time is cut to milliseconds`() {
         val xml = DocumentUploadSoap.envelope(listOf(row()))
         assertTrue(xml.contains("<SourceCreationDateTime>2026-11-10T08:15:30.123Z</SourceCreationDateTime>"))
