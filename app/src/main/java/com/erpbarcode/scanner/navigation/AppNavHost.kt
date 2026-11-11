@@ -1,108 +1,37 @@
 package com.erpbarcode.scanner.navigation
 
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.core.os.LocaleListCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.AppSettings
-import com.erpbarcode.scanner.data.auth.ExtSystemConfig
-import com.erpbarcode.scanner.data.barcode.DataWedgeManager
-import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
-import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
-import com.erpbarcode.scanner.data.model.DocumentFilter
-import com.erpbarcode.scanner.data.model.DocumentType
-import com.erpbarcode.scanner.data.model.DownloadFilter
-import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.User
-import com.erpbarcode.scanner.data.model.scanStatus
-import com.erpbarcode.scanner.ui.screen.AppInfoScreen
-import com.erpbarcode.scanner.ui.screen.DocTypeSummary
-import com.erpbarcode.scanner.ui.screen.DocumentFilterScreen
-import com.erpbarcode.scanner.ui.screen.DocumentListScreen
-import com.erpbarcode.scanner.ui.screen.DocumentOverviewScreen
-import com.erpbarcode.scanner.ui.screen.DownloadFilterScreen
-import com.erpbarcode.scanner.ui.screen.ExtSystemConfigScreen
-import com.erpbarcode.scanner.ui.screen.LocationRcPickScreen
 import com.erpbarcode.scanner.ui.screen.LoginSheet
-import com.erpbarcode.scanner.ui.screen.MainMenuScreen
-import com.erpbarcode.scanner.ui.screen.ProfilesScreen
-import com.erpbarcode.scanner.ui.screen.RecordingScreen
-import com.erpbarcode.scanner.ui.screen.RecordingsListScreen
-import com.erpbarcode.scanner.ui.screen.RecordingsTreeScreen
-import com.erpbarcode.scanner.ui.screen.SettingsScreen
-import com.erpbarcode.scanner.ui.screen.SignInScreen
-import com.erpbarcode.scanner.ui.screen.UploadErrorScreen
-import com.erpbarcode.scanner.ui.screen.UserInfoScreen
-import com.erpbarcode.scanner.ui.screen.localizedDisplay
 import com.erpbarcode.scanner.ui.theme.Language
-import com.erpbarcode.scanner.ui.theme.AppTheme
 import com.erpbarcode.scanner.ui.theme.TextSize
 import com.erpbarcode.scanner.ui.viewmodel.AppViewModel
-import com.erpbarcode.scanner.ui.viewmodel.RecordingViewModel
-import com.erpbarcode.scanner.ui.viewmodel.RecordingsTreeViewModel
-import dagger.hilt.android.AndroidEntryPoint
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /*
- * The app shell: the sign-in gate, the NavHost with every route, and the dialogs that can sit over
- * any screen. Moved out of MainActivity.kt, which keeps onCreate, the theme, the settings that
- * follow the operator, the hidden navigation bar and DataWedge.
+ * The app shell: what is collected for every screen, the sign-in gate, the NavHost, and the dialogs
+ * that can sit over any screen. MainActivity.kt keeps onCreate, the theme, the settings that follow
+ * the operator, the hidden navigation bar and DataWedge.
+ *
+ * The routes themselves are in the files beside this one, one per group of screens, each an
+ * extension of NavGraphBuilder that takes the Shell: MainMenuRoute, DocumentRoutes,
+ * DashboardRoutes, RecordingRoutes, SettingsRoutes. What they share is in AppShell.kt (state and
+ * actions) and ShellData.kt (what the lists show); the signed-out screens are in SignInGate.kt.
  */
-
-private val exportTimestampFmt = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-    .withZone(ZoneId.systemDefault())
 
 @Composable
 internal fun BarcodeApp(
@@ -174,13 +103,7 @@ internal fun BarcodeApp(
     // What the menu and the lists show. The rules — the strict location scope, the blocked types,
     // the unfiltered RECORDINGS list — are in ShellData.kt, where they are tested on their own.
     val data = shellData(documents, location, rc, docTypeFilters, disabledDocTypes)
-    val docTypes     = data.docTypes
-    val recordedDocs = data.recordedDocs
-    val shiftScans   = data.shiftScans
-    val errorDocs    = data.errorDocs
-    val readyDocs    = data.readyDocs
-    val partialDocs  = data.partialDocs
-    val overDocs     = data.overDocs
+
     // What is picked and which of the shell's dialogs is up; see AppShellState.
     val state = remember { AppShellState() }
 
@@ -294,138 +217,7 @@ internal fun BarcodeApp(
         documentRoutes(shell)
         dashboardRoutes(shell)
         recordingRoutes(shell)
-        with(shell) {
-        composable(Routes.PROFILES) {
-            // Re-read after a deletion rather than observed: profiles change only here, and a
-            // Flow over the encrypted profile store would be machinery for one screen.
-            var profilesRefresh by remember { mutableStateOf(0) }
-            ProfilesScreen(
-                profiles = remember(profilesRefresh) { appVm.profileStore.profiles() },
-                signedInKey = activeProfile.key,
-                onBack = { nav.popBackStack() },
-                loadFootprint = { key, onResult -> appVm.profileFootprint(key, onResult) },
-                onDelete = { key -> appVm.deleteProfile(key) { profilesRefresh++ } },
-            )
-        }
-        composable(Routes.USER_INFO) {
-            UserInfoScreen(
-                user = user,
-                location = location,
-                rc = rc,
-                onBack = { nav.popBackStack() },
-                onSignOut = { requestSignOut() },
-            )
-        }
-        composable(Routes.LOCATION_RC_PICK) {
-            val isRefreshing by appVm.isRefreshingLocations.collectAsState()
-            val lastSyncedAt by appVm.lastLocationSyncAt.collectAsState()
-            LocationRcPickScreen(
-                currentRcCode = rcCode,
-                currentLocationCode = locationCode,
-                availableRcs = rcs,
-                availableLocations = locations,
-                isRefreshing = isRefreshing,
-                lastSyncedAt = lastSyncedAt,
-                hasCredentials = appVm.hasCredentials(),
-                credentialTtlHours = extSystemConfig.credentialTtlHours,
-                loginQrKey = extSystemConfig.loginQrKey,
-                hapticEnabled = hapticEnabled,
-                soundEnabled = soundEnabled,
-                onSelect = { rc, loc ->
-                    onRcCodeChange(rc)
-                    onLocationCodeChange(loc)
-                    nav.popBackStack()
-                },
-                onRefresh = {
-                    launchWithDebug(
-                        listOf(appVm.getLocationsUrl()).filter { it.isNotBlank() }
-                    ) {
-                        appVm.downloadLocations { error ->
-                            if (error != null) {
-                                downloadErrorMessage = error
-                                showDownloadErrorDialog = true
-                            }
-                        }
-                    }
-                },
-                onSaveCredentials = { u, p -> appVm.saveCredentials(u, p) },
-                onTestConnection = shell::testSignIn,
-                onBack = { nav.popBackStack() },
-            )
-        }
-        composable(Routes.EXT_SYSTEM_CONFIG) {
-            ExtSystemConfigScreen(
-                hapticEnabled = hapticEnabled,
-                soundEnabled = soundEnabled,
-                initial = extSystemConfig,
-                // Stays on the screen, with the form as it is, while a change of installation is
-                // being asked about; confirming it signs out, which leaves this screen anyway.
-                onSave  = { config -> if (requestConfigSave(config)) nav.popBackStack() },
-                onDiscard = { nav.popBackStack() },
-                loadDefaults = { fileName -> appVm.loadExtSystemDefaults(fileName) },
-                listCompanies = { appVm.listExtSystemDefaultsCompanies() },
-                exportConfiguration = { appVm.exportConfigurationJson() },
-                disabledDocTypes = disabledDocTypes,
-                onDisabledDocTypesChange = onDisabledDocTypesChange,
-                docTypeFilters = docTypeFilters,
-                onDocTypeFiltersChange = onDocTypeFiltersChange,
-                onDebuggerActiveChange = onDebuggerActiveChange,
-                savedCredentials = appVm.savedCredentials(),
-                onTestConnection = { serverUrl, username, password, cb ->
-                    launchWithDebug(
-                        listOf(serverUrl.trim()),
-                        onCancel = { cb(false, null) },
-                    ) {
-                        appVm.testExtSystemConnection(serverUrl, username, password) { reportTestResult(it, cb) }
-                    }
-                },
-                onImportJson = { json -> appVm.parseExtSystemConfigJson(json) },
-            )
-        }
-        composable(Routes.SETTINGS) {
-            val initialSettingsSnapshot = AppSettings(
-                textSize = textSize,
-                uppercaseText = uppercaseText,
-                language = language,
-                debounceTime = debounceTime,
-                hapticEnabled = hapticEnabled,
-                soundEnabled = soundEnabled,
-                warnOnOver = warnOnOver,
-                backgroundSync = backgroundSync,
-                lastLocationCode = locationCode,
-                lastRcCode = rcCode,
-                disabledDocTypes = disabledDocTypes,
-                docTypeFilters = docTypeFilters,
-                debuggerActive = debuggerActive,
-            )
-            SettingsScreen(
-                user = user,
-                location = location,
-                rc = rc,
-                initial = initialSettingsSnapshot,
-                onSave = { s -> onSettingsSaved(s); nav.popBackStack() },
-                onDiscard = { nav.popBackStack() },
-                onSaveExtSystemConfig = { config -> requestConfigSave(config) },
-                loadExtSystemConfigDefaults = { fileName -> appVm.loadExtSystemDefaults(fileName) },
-                listExtSystemDefaultsCompanies = { appVm.listExtSystemDefaultsCompanies() },
-                parseExtSystemConfigJson = { json -> appVm.parseExtSystemConfigJson(json) },
-                exportConfiguration = { appVm.exportConfigurationJson() },
-                onExport = {
-                    val ts = exportTimestampFmt.format(Instant.now())
-                    exportLauncher.launch("barcode_export_${ts}.json")
-                },
-                onClearCache = { appVm.clearCache() },
-                onDeleteAllDocuments = { appVm.deleteAllDocuments() },
-                onChangeLocation = { nav.navigate(Routes.LOCATION_RC_PICK) },
-                onOpenExtSystemConfig = { nav.navigate(Routes.EXT_SYSTEM_CONFIG) },
-                onOpenProfiles = { nav.navigate(Routes.PROFILES) },
-                onSignOut = { requestSignOut() },
-                onSignInTap = { requireCredentials {} },
-                environment = extSystemConfig.environment,
-                companyName = extSystemConfig.companyName,
-            )
-        }
-        } // with(shell)
+        settingsRoutes(shell)
     }
 
     state.processingMessage?.let { message ->
