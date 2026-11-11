@@ -174,6 +174,16 @@ These map 1:1 to the User Guide's Settings section but framed for support/consul
 | Barcode with `|` scans as garbage | Printed with Code 39 symbology, which cannot encode `|` | Reprint the label as Code 128 |
 | A scan is rejected as "Barcode not found" even though the item is on the document | The scanned value doesn't byte-for-byte match that line's `Barcode` field (wrong symbology, stray whitespace, wrong `\|UOM\|QTY` suffix) | Compare the raw scanned value against the line's `Barcode` field; reprint the label if needed |
 
+### New application id (3.6.48)
+
+The app's package and application id changed from `com.prima.barcode` to `com.erpbarcode.scanner`, and the code no longer names Prima or NAV (the display name stays *Prima Barcode*). To Android this is a new app, so on every device:
+
+1. Send everything still unsent from the old app.
+2. Install the new app (it can sit beside the old one meanwhile), load the configuration, sign in.
+3. Uninstall the old app.
+
+Nothing carries over: databases (`user_<hash>.db`, `shared.db`), credentials and settings start empty under the new id. The DataWedge profile is now *Prima Barcode*, created by the app on first start; the old *PrimaBarcode* profile goes with the old app. The state before is tagged `pre-rename` in git.
+
 ### The device is shared, the data is not (3.0.0)
 
 Each operator gets their own database file. Documents, lines and recordings are scoped by which file a query runs in — not by a predicate — so two operators on one device cannot see or send each other's work, and both may hold the same NAV document independently, each with their own scans. The ERP refuses nothing, so those two copies add up there, which is the point when they are splitting one job between them.
@@ -211,12 +221,12 @@ Locations and responsibility centres stay device-wide in `SharedDatabase`, along
 | Logging | Timber |
 
 ```
-app/src/main/java/com/prima/barcode/
+app/src/main/java/com/erpbarcode/scanner/
 ├── MainActivity.kt               # NavHost, app shell, all settings state hoisting
 ├── data/
 │   ├── auth/                     # AppSettings(Store), ExtSystemConfig(Store), credential store
 │   ├── barcode/                  # BarcodeAnalyzer (ML Kit), DataWedgeManager (Zebra wedge)
-│   ├── db/                       # Room entities, DAOs, PrimaDatabase, Mappers
+│   ├── db/                       # Room entities, DAOs, AppDatabase, Mappers
 │   ├── export/                   # DatabaseExporter (raw DB → JSON dump)
 │   ├── extsystem/                # ExtSystemODataClient, NtlmAuthenticator, DTOs
 │   ├── model/                    # Domain models (Models.kt, Filter.kt, Status.kt)
@@ -233,17 +243,17 @@ There is deliberately **no separate "SyncRepository"** — NAV networking (downl
 
 ## B.2 Database Schema (Room)
 
-The schema version is `PRIMA_DB_VERSION` in `PrimaDatabase.kt` (20 as of 2026-11), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
+The schema version is `DB_VERSION` in `AppDatabase.kt` (20 as of 2026-11), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
 
 Two databases, and which one a table lives in is the whole of the per-user isolation.
 
-**`PrimaDatabase`** — one file **per operator**, `prima_<sha256-prefix>.db`, **schema version 20**. Holds `documentHeader`, `documentLine` and `recordings`. Opened by `DatabaseProvider`, not by Dagger: a `@Singleton PrimaDatabase` would have pinned the first operator's file for the life of the process. Built with `.addMigrations(MIGRATION_7_8 … MIGRATION_19_20)`. `MIGRATION_19_20` changes no schema: it deletes every row of the retired `COMPLAINT` type (§B.17) and **no `fallbackToDestructiveMigration`** — see `DatabaseModule` for why that must never come back.
+**`AppDatabase`** — one file **per operator**, `user_<sha256-prefix>.db`, **schema version 21**. Holds `documentHeader`, `documentLine` and `recordings`. Opened by `DatabaseProvider`, not by Dagger: a `@Singleton AppDatabase` would have pinned the first operator's file for the life of the process. Built with `.addMigrations(MIGRATION_7_8 … MIGRATION_20_21)`. `MIGRATION_19_20` changes no schema: it deletes every row of the retired `COMPLAINT` type (§B.17) and **no `fallbackToDestructiveMigration`** — see `DatabaseModule` for why that must never come back.
 
-**`SharedDatabase`** — one file for the device, `prima_shared.db`, version 1. Holds `locations` and `responsibility_centers`. They describe the site, not the person; per-profile copies would have forced every new operator to re-download them before they could pick a location, which needs a server that may not be reachable.
+**`SharedDatabase`** — one file for the device, `shared.db`, version 1. Holds `locations` and `responsibility_centers`. They describe the site, not the person; per-profile copies would have forced every new operator to re-download them before they could pick a location, which needs a server that may not be reachable.
 
-**The pre-split file is deleted, not migrated.** Everything used to live in one `prima_barcode.db`. Per-operator files are named from a hash of the operator id, so nothing opens that name any more — the migration chain never runs on it and every row in it became unreachable the moment the split shipped. `PrimaBarcodeApplication.discardPreSplitDatabase()` removes it on a background thread at startup. That is a decision and not an oversight: nothing shipped under the old shape, so a new version starts clean. If that file ever holds work worth keeping, it has to become a carry-over instead.
+**The pre-split file is gone.** Everything once lived in one database file. Per-operator files replaced it, and until 3.6.48 a startup cleanup deleted the old file; the new application id (§A.7) starts with an empty data directory, so that cleanup was removed with it.
 
-**Upgrading a device therefore starts with no locations and no responsibility centres.** `MIGRATION_18_19` drops those two tables from `PrimaDatabase` and `SharedDatabase` is created empty; `upsertLocations` has exactly one caller, `realDownloadLocations`, and nothing calls it automatically. The operator gets them back through **Refresh** on `LocationRcPickScreen`, which is deliberate — nothing downloads behind their back.
+**Upgrading a device therefore starts with no locations and no responsibility centres.** `MIGRATION_18_19` drops those two tables from `AppDatabase` and `SharedDatabase` is created empty; `upsertLocations` has exactly one caller, `realDownloadLocations`, and nothing calls it automatically. The operator gets them back through **Refresh** on `LocationRcPickScreen`, which is deliberate — nothing downloads behind their back.
 
 That empty state used to make the document filter look broken, because the two modes failed in opposite directions: with nothing selected, a missing centre passed **everything** while a missing location passed **nothing**. Both modes now require their selection (see `filteredDocs` in `MainActivity`):
 
@@ -365,7 +375,7 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 
 ## B.4 `DocumentRepository` — Full Function Reference
 
-`@Singleton class DocumentRepositoryImpl @Inject constructor(private val db: PrimaDatabase)` — talks directly to `db.documentHeaderDao()` / `db.documentLineDao()` / `db.recordingDao()`; no field-level DAO injection.
+`@Singleton class DocumentRepositoryImpl @Inject constructor(private val db: AppDatabase)` — talks directly to `db.documentHeaderDao()` / `db.documentLineDao()` / `db.recordingDao()`; no field-level DAO injection.
 
 | Function | Behavior |
 |---|---|
@@ -497,7 +507,7 @@ sealed class ExtSystemResult<out T> {
 | Function | Behavior |
 |---|---|
 | `testConnection(baseUrl)` (suspend) | `GET baseUrl`; resets `ntlmAuth.resetPhase()` first; on failure inspects `phaseReached` to distinguish "NTLM not enabled" (phase 0) vs "handshake completed, credentials rejected" (phase 2 + 401) vs a generic HTTP error (body, truncated 300 chars) |
-| `uploadRecording(url, row: NavBarcodeAppRecording)` (suspend) | `POST url`, `Content-Type: application/json`, body = `gson.toJson(row)`. On 401: the localized `ext_error_http_401`. On any other non-2xx: `Failure("HTTP ${status}: $body".take(300), status)` — NAV's own text is the most precise thing there is. On thrown exception: `Failure(describe(e), code=-1)` |
+| `uploadRecording(url, row: ErpRecordingRow)` (suspend) | `POST url`, `Content-Type: application/json`, body = `gson.toJson(row)`. On 401: the localized `ext_error_http_401`. On any other non-2xx: `Failure("HTTP ${status}: $body".take(300), status)` — NAV's own text is the most precise thing there is. On thrown exception: `Failure(describe(e), code=-1)` |
 | `downloadRaw(url)` (suspend) | `GET url`; follows OData `@odata.nextLink` pagination, merging every page's `value` array into one combined JSON array before returning |
 | `close()` | Closes/clears the underlying client |
 | `companion.parseDomainUser(raw)` | Splits `DOMAIN\user` or `user@domain`; falls back to `("", raw)` |
@@ -536,15 +546,15 @@ Keying by profile is what makes the TTL mean what it reads like: an operator sig
 
 ### B.6.3 DTOs — `data/extsystem/ExtSystemPayload.kt`
 
-**`NavBarcodeAppRecording`** (upload) — see field table in §A.5.4. `recordingGuid` is read straight off the stored `RecordingEntity`; it is generated once in `DocumentRepository.recordScan` when the scan is recorded and never regenerated, so every attempt for a row sends the same value. `setLineScanned` also mints one, but only when a manual edit raises a line — that added quantity is a genuinely new recording. Lowering a line mints nothing: it deletes or trims existing queued rows, and a trimmed row keeps its GUID. Sent rows are never touched either way, so a GUID the ERP already holds is never reused, altered or dropped.
+**`ErpRecordingRow`** (upload) — see field table in §A.5.4. `recordingGuid` is read straight off the stored `RecordingEntity`; it is generated once in `DocumentRepository.recordScan` when the scan is recorded and never regenerated, so every attempt for a row sends the same value. `setLineScanned` also mints one, but only when a manual edit raises a line — that added quantity is a genuinely new recording. Lowering a line mints nothing: it deletes or trims existing queued rows, and a trimmed row keeps its GUID. Sent rows are never touched either way, so a GUID the ERP already holds is never reused, altered or dropped.
 
-**`NavBarcodeAppEntry`** (download) — see field table in §A.5.3. Rows with `lineNo <= 0` are excluded from `lines` (treated as the header row). `documentDate` is parsed as `Instant.parse("${it}T00:00:00Z")`.
+**`ErpDocumentLineRow`** (download) — see field table in §A.5.3. Rows with `lineNo <= 0` are excluded from `lines` (treated as the header row). `documentDate` is parsed as `Instant.parse("${it}T00:00:00Z")`.
 
-**`NavLocation`**: `Code`→code, `Name`→name, `Responsibility_Center`→rcCode.
+**`ErpLocationRow`**: `Code`→code, `Name`→name, `Responsibility_Center`→rcCode.
 
-**`NavResponsibilityCenter`**: `Code`, `Name`, `Short?` — defined but **not currently used**; RCs are derived client-side from distinct `NavLocation.rcCode` values rather than fetched from a dedicated endpoint.
+**`ErpResponsibilityCenterRow`**: `Code`, `Name`, `Short?` — defined but **not currently used**; RCs are derived client-side from distinct `ErpLocationRow.rcCode` values rather than fetched from a dedicated endpoint.
 
-**`NavODataList<T>`**: `{ "value": List<T> }` generic OData envelope, used for all three GET response types.
+**`ODataList<T>`**: `{ "value": List<T> }` generic OData envelope, used for all three GET response types.
 
 ### B.6.4 Full download flow
 
@@ -555,14 +565,14 @@ Keying by profile is what makes the TTL mean what it reads like: an operator sig
    - `buildODataFilterString(filter, typeCode, type)`: `Document_Type eq '<typeCode>'` (always, if non-blank) + `Retail_Location eq true/false` (whenever `type.retailLocation` is non-null, i.e. everything except transport sheets — see §A.5.3) + `Document_Date ge/le` (if set) + `Destination_No eq` (if set) + `Source_No eq` (if set) + `Responsibility_Center eq` (if set) + `Document_No eq` (if set — the picked inventory batch) — joined with `" and "`.
    - `appendODataFilter`: appends `?$filter=<urlencoded>` (or `&$filter=` if `?` already present); `URLEncoder.encode(..., "UTF-8")` with a `+`→`%20` post-fix.
    - `downloadRaw(finalUrl)` — paginated GET.
-   - Parses as `NavODataList<NavBarcodeAppEntry>`, groups by `documentNo`, builds `Document`+`Line`s, `state=Downloaded`.
+   - Parses as `ODataList<ErpDocumentLineRow>`, groups by `documentNo`, builds `Document`+`Line`s, `state=Downloaded`.
    - `repository.replaceDownloadedDocuments(type, documents, pruneMissing = filter.documentNo.isBlank())`.
    - On failure: increments `failures`, appends the message, **continues to the next doc type** (doesn't abort the whole batch).
 4. `onComplete(failures, errorMessages)`.
 
 **Inventory batch list:** `AppViewModel.loadInventoryBatches(filter, onResult)`, called by `DownloadFilterScreen` for a stock count in place of the date range. Same checks and same lines URL, filtered by type and scope, plus `$select=Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name`. Parsed as `NavInventoryBatchRow`, grouped by `Document_No` into `InventoryBatch` (template, batch, date, line count) and sorted by template, batch and number. The operator's pick becomes `DownloadFilter.documentNo`. Signed out, the screen's sign-in sheet loads the list instead of downloading (§B.18, Inventory).
 
-Locations: `realDownloadLocations()` — single `GET config.locationsUrl` → `NavODataList<NavLocation>` → derives distinct non-blank `rcCode`s → `locationDao.clearRcs()+upsertRcs()` then `clearLocations()+upsertLocations()`. No `$filter` applied.
+Locations: `realDownloadLocations()` — single `GET config.locationsUrl` → `ODataList<ErpLocationRow>` → derives distinct non-blank `rcCode`s → `locationDao.clearRcs()+upsertRcs()` then `clearLocations()+upsertLocations()`. No `$filter` applied.
 
 ### B.6.5 Full upload flow
 
@@ -635,7 +645,7 @@ Two screens apply a loaded configuration, and they differ only in *when* it pers
 ## B.7 Auth & Config Storage
 
 ### `SecureStore` (3.6.28)
-Replaces androidx.security's `EncryptedSharedPreferences`, which Google deprecated. Values are encrypted with one AES-256-GCM key in the Android Keystore (alias `prima_secure_store_v1`, created on first use, never exportable) and stored as `base64(iv ‖ ciphertext ‖ tag)` in a plain `SharedPreferences` file; names are stored as their SHA-256 digest, so the file does not list who has used the device. A value that no longer decrypts (a Keystore that lost its key after a restore or an OS update) reads as absent and is removed, where the old library crashed at startup. **Nothing was migrated, by decision:** each store deletes its old file unread on first use (`legacyFileName`), so every operator signs in once after the update, and the profile list refills as they do. A profile's database is named after its id (`databaseName`), so no documents or unsent scans are lost. The `security-crypto` dependency is gone.
+Replaces androidx.security's `EncryptedSharedPreferences`, which Google deprecated. Values are encrypted with one AES-256-GCM key in the Android Keystore (alias `secure_store_v1`, created on first use, never exportable) and stored as `base64(iv ‖ ciphertext ‖ tag)` in a plain `SharedPreferences` file; names are stored as their SHA-256 digest, so the file does not list who has used the device. A value that no longer decrypts (a Keystore that lost its key after a restore or an OS update) reads as absent and is removed, where the old library crashed at startup. **Nothing was migrated, by decision:** each store deletes its old file unread on first use (`legacyFileName`), so every operator signs in once after the update, and the profile list refills as they do. A profile's database is named after its id (`databaseName`), so no documents or unsent scans are lost. The `security-crypto` dependency is gone.
 
 ### `UserProfileStore`
 `SecureStore("user_profiles_v2")` (was `EncryptedSharedPreferences("user_profiles")`). Holds the operators this device knows — id and display name, and nothing else; the id list is stored as a JSON array. **No expiry**, deliberately: it is what reaches an operator's own data, and that data does not expire either. The PBKDF2 digests an older version kept went with the old file.
@@ -694,11 +704,11 @@ data class ExtSystemCredentials(val username: String, val password: String)
 
 Holds the NAV password in the clear, because NTLM computes its response from the password itself and cannot work without it. It is also the only credential on the device now that `UserProfileStore` keeps no digest.
 
-**Android auto-backup is off** (`android:allowBackup="false"`, no `dataExtractionRules`/`fullBackupContent` — those were the project template's empty samples and were removed). Left on, it copied this file and every operator's `prima_<hash>.db` — unsent scans included — into whatever Google account happens to be signed in on a shared warehouse scanner. The restore side could not work regardless: the Keystore key is device-bound and is not backed up, so restored values would not decrypt.
+**Android auto-backup is off** (`android:allowBackup="false"`, no `dataExtractionRules`/`fullBackupContent` — those were the project template's empty samples and were removed). Left on, it copied this file and every operator's `user_<hash>.db` — unsent scans included — into whatever Google account happens to be signed in on a shared warehouse scanner. The restore side could not work regardless: the Keystore key is device-bound and is not backed up, so restored values would not decrypt.
 
 ### The gate, and the doors through it
 
-`MainActivity.PrimaBarcodeApp` early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
+`MainActivity.BarcodeApp` early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
 
 That gate had a chicken and egg in it. Signing in asks the server whether the password is good (`testConnection`), and a device out of the box has no `serverBaseUrl` to ask; with no server there is nothing to ask and the sign-in simply fails. A fresh install could not be configured, and so could not be signed into either.
 
@@ -726,12 +736,12 @@ abstract class DatabaseModule {
     @Binds @Singleton
     abstract fun bindDocumentRepository(impl: DocumentRepositoryImpl): DocumentRepository
     companion object {
-        @Provides @Singleton fun provideDatabase(...): PrimaDatabase = ...
+        @Provides @Singleton fun provideDatabase(...): AppDatabase = ...
         @Provides @Singleton fun provideLocationDao(db): LocationDao = db.locationDao()
     }
 }
 ```
-Other DAOs (`DocumentHeaderDao`, `DocumentLineDao`, `RecordingDao`) are **not** separately provided — consumers inject the whole `PrimaDatabase` and call `db.documentHeaderDao()` etc. directly. No dedicated network/auth module — `ExtSystemODataClient`, `AppSettingsStore`, `ExtSystemConfigStore`, `ExtSystemCredentialStore`, `DatabaseExporter` are plain `@Singleton @Inject constructor(...)` classes. `DataWedgeManager` is a plain Kotlin `object` (no DI). Entry points: `PrimaBarcodeApplication` (`@HiltAndroidApp`), `MainActivity` (`@AndroidEntryPoint`), `AppViewModel`/`RecordingViewModel` (`@HiltViewModel`).
+Other DAOs (`DocumentHeaderDao`, `DocumentLineDao`, `RecordingDao`) are **not** separately provided — consumers inject the whole `AppDatabase` and call `db.documentHeaderDao()` etc. directly. No dedicated network/auth module — `ExtSystemODataClient`, `AppSettingsStore`, `ExtSystemConfigStore`, `ExtSystemCredentialStore`, `DatabaseExporter` are plain `@Singleton @Inject constructor(...)` classes. `DataWedgeManager` is a plain Kotlin `object` (no DI). Entry points: `BarcodeApplication` (`@HiltAndroidApp`), `MainActivity` (`@AndroidEntryPoint`), `AppViewModel`/`RecordingViewModel` (`@HiltViewModel`).
 
 ## B.9 Barcode Scanning Subsystem
 
@@ -747,10 +757,10 @@ Two independent input paths feed the same domain logic (`RecordingScreen.handleS
 
 ### B.9.2 Hardware wedge path (Zebra DataWedge)
 - **`DataWedgeManager.kt`** — plain Kotlin `object`, talks to the DataWedge service via broadcast intents.
-  - `configure(context)` — creates/updates a DataWedge profile `"PrimaBarcode"` scoped to this app's package, configures the `INTENT` output plugin (`intent_action = "com.prima.barcode.SCAN"`, `intent_delivery = "2"`), **switches the `KEYSTROKE` plugin off**, and a `BARCODE` plugin that pins `aim_type = "0"` (single shot) and enables `decoder_qrcode`. `RESET_CONFIG = "false"` on the barcode plugin, so this merges rather than replacing a site's other decoder settings. Called once from `MainActivity.onCreate()`.
+  - `configure(context)` — creates/updates a DataWedge profile `"Prima Barcode"` scoped to this app's package, configures the `INTENT` output plugin (`intent_action = "com.erpbarcode.scanner.SCAN"`, `intent_delivery = "2"`), **switches the `KEYSTROKE` plugin off**, and a `BARCODE` plugin that pins `aim_type = "0"` (single shot) and enables `decoder_qrcode`. `RESET_CONFIG = "false"` on the barcode plugin, so this merges rather than replacing a site's other decoder settings. Called once from `MainActivity.onCreate()`.
   - Continuous read was offered as a setting until 2026-09 and is gone. It changed the hardware `aim_type` app-wide while its label only mentioned the camera, and the two scan paths already need a debounce against each other, which continuous read pushed on. Single shot is now pinned rather than inherited, so a unit left in continuous read by another profile doesn't deliver a burst the app has no reason to expect.
-  - `createReceiver(onScan)` — `BroadcastReceiver` extracting the scanned string from extra `com.symbol.datawedge.data_string`. Every screen registers it through `register(context, receiver)`, which uses **`RECEIVER_EXPORTED`** on API 33+ (no flag below). It used to be `RECEIVER_NOT_EXPORTED`, copied into each screen: on Android 13+ that drops DataWedge's broadcast without an error, because DataWedge is another app. Keystroke output hid it until 3.6.0 turned keystrokes off, after which an Android 14 TC21 beeped on every scan and nothing happened anywhere. The cost of exporting is that another app on the device could broadcast `com.prima.barcode.SCAN` and pass for a scan.
-  - `intentFilter()` — `IntentFilter("com.prima.barcode.SCAN")`, registered via `DisposableEffect` for the composed lifetime of every screen that scans: `RecordingScreen`, `DocumentListScreen`, `SignInScreen` and `LoginSheet`.
+  - `createReceiver(onScan)` — `BroadcastReceiver` extracting the scanned string from extra `com.symbol.datawedge.data_string`. Every screen registers it through `register(context, receiver)`, which uses **`RECEIVER_EXPORTED`** on API 33+ (no flag below). It used to be `RECEIVER_NOT_EXPORTED`, copied into each screen: on Android 13+ that drops DataWedge's broadcast without an error, because DataWedge is another app. Keystroke output hid it until 3.6.0 turned keystrokes off, after which an Android 14 TC21 beeped on every scan and nothing happened anywhere. The cost of exporting is that another app on the device could broadcast `com.erpbarcode.scanner.SCAN` and pass for a scan.
+  - `intentFilter()` — `IntentFilter("com.erpbarcode.scanner.SCAN")`, registered via `DisposableEffect` for the composed lifetime of every screen that scans: `RecordingScreen`, `DocumentListScreen`, `SignInScreen` and `LoginSheet`.
   - `isAvailable(context)` — whether the DataWedge package is installed, i.e. whether the device has a scanner. Needs the `<queries>` entry for `com.symbol.datawedge` in the manifest, or from Android 11 the package is invisible and every device looks scanner-less.
   - `startScan(context)` — the soft trigger (`SOFT_SCAN_TRIGGER` = `START_SCANNING`): a read exactly like a trigger pull, its result arriving through the same intent. Behind the "Scan QR code" button on the sign-in screen and `LoginSheet`.
 
@@ -786,7 +796,7 @@ val matchedLine = doc.lines.find { it.barcodeNo == barcode }
 ## B.10 Screens (`ui/screen/`) — Reference
 
 ### `MainMenuScreen.kt`
-`data class DocTypeSummary(type, count, statusMini: List<LineStatus>, blocked: Boolean = false)`. Home screen: `PrimaTopBar` → `DocumentStatsDashboard` (tap → Dashboard) → RC/Location pill row (either cell → Location/RC pick) → "DOCUMENTS" `LazyColumn` of type rows (icon, label, mini `StatusProgressBar`, count badge) → **"RECORDINGS"** section.
+`data class DocTypeSummary(type, count, statusMini: List<LineStatus>, blocked: Boolean = false)`. Home screen: `AppTopBar` → `DocumentStatsDashboard` (tap → Dashboard) → RC/Location pill row (either cell → Location/RC pick) → "DOCUMENTS" `LazyColumn` of type rows (icon, label, mini `StatusProgressBar`, count badge) → **"RECORDINGS"** section.
 
 A blocked type is *not* dimmed: it stays tappable and the tap raises the "choose a location first" dialog. Greying it out only told the operator "no" without telling them why. A type is blocked while what it is scoped by is not selected — a location, or for Complaint a responsibility centre (§B.11.4).
 
@@ -823,7 +833,7 @@ Since 3.6.46 its pieces live beside it: `ExtSystemConfigComponents.kt` (`ConfigS
 Two picker rows (RC, then Location filtered to that RC) opening bottom sheets (`RcPickerSheet`/`LocationPickerSheet`, also reused by `DownloadFilterScreen`). Refresh icon triggers `onRefresh` directly if credentials exist, else opens `LoginSheet` first. Selecting a different RC clears the selected location; selecting a location auto-syncs its owning RC.
 
 ### `LoginSheet.kt`
-Full-screen `Dialog` with a `PrimaTopBar` back arrow (not a bottom sheet, see §B.7's Login flow note), username/password fields (visibility toggle), footer line naming the credential TTL, submit enabled only when both non-blank; only username is `.trim()`'d, password is sent as-typed. If `onTestConnection` is supplied, submit blocks on a live NAV auth check first (spinner + inline error on failure) before calling `onSubmit`.
+Full-screen `Dialog` with a `AppTopBar` back arrow (not a bottom sheet, see §B.7's Login flow note), username/password fields (visibility toggle), footer line naming the credential TTL, submit enabled only when both non-blank; only username is `.trim()`'d, password is sent as-typed. If `onTestConnection` is supplied, submit blocks on a live NAV auth check first (spinner + inline error on failure) before calling `onSubmit`.
 
 **Keyboard handling.** The dialog owns its own `Window`, which `MainActivity`'s `enableEdgeToEdge()` never reaches — so the sheet sets `WindowCompat.setDecorFitsSystemWindows(window, false)` and adjust-resize soft-input mode itself. Without both, the `Modifier.imePadding()` on the form's scrolling column can't see this window's keyboard and the password field sits behind the IME (the original MC3300 report). `SOFT_INPUT_ADJUST_RESIZE` is deprecated as of API 30, and its documented replacement is that same `setDecorFitsSystemWindows(false)` — but below API 30 `WindowInsets.ime` only reports the keyboard while the window is in adjust-resize mode, and the MC3300 is API 27. **Do not "clean up" the deprecation**: removing the flag reinstates the bug on the target device. It stays until `minSdk` reaches 30, isolated in a `private fun Window.resizeForSoftInput()` that carries the `@Suppress("DEPRECATION")`, so the suppression covers that one line rather than the whole composable.
 
@@ -887,7 +897,7 @@ Four decisions worth keeping:
 - **A `LaunchedEffect`** returns to `OVERVIEW` when the active line disappears, which a line added on the device does once it is set to 0.
 
 ### `AppInfo.kt` — `AppInfoCard` and `AppInfoScreen`
-One block, shown in two places: Settings → System info, and `AppInfoScreen` at the sign-in gate (§B.7). Rows: app version and build, Android and API, SDK (min/target, with the Android release each maps to), database version, ERP environment (`ExtSystemConfig.environment`, "Nije postavljeno" when null) and company. The database row reads `PRIMA_DB_VERSION`, the constant `@Database(version = …)` itself uses — it used to show its own constant, "7.0.0", that nobody updated while the schema went to 19. The company is `ExtSystemConfig.companyName`, read from `Company('…')` in the document lines URL (percent-decoded, OData's doubled apostrophe undone) rather than stored separately: it is the company the device actually addresses, and a stored name could disagree with the URL. That is how the test configurations of Mebel, Mobilis and Pohištvo were found still pointing at Prima Commerce (fixed 2026-10). `SettingsIcon` and `SettingsDivider` are `internal` in `SettingsScreen.kt` so the card can share them.
+One block, shown in two places: Settings → System info, and `AppInfoScreen` at the sign-in gate (§B.7). Rows: app version and build, Android and API, SDK (min/target, with the Android release each maps to), database version, ERP environment (`ExtSystemConfig.environment`, "Nije postavljeno" when null) and company. The database row reads `DB_VERSION`, the constant `@Database(version = …)` itself uses — it used to show its own constant, "7.0.0", that nobody updated while the schema went to 19. The company is `ExtSystemConfig.companyName`, read from `Company('…')` in the document lines URL (percent-decoded, OData's doubled apostrophe undone) rather than stored separately: it is the company the device actually addresses, and a stored name could disagree with the URL. That is how the test configurations of Mebel, Mobilis and Pohištvo were found still pointing at Prima Commerce (fixed 2026-10). `SettingsIcon` and `SettingsDivider` are `internal` in `SettingsScreen.kt` so the card can share them.
 
 ### `SignInScreen.kt`
 The gate itself — see §B.7 for why it exists and what it may open. Lists the operators the device knows (tap to fill the name), takes name and password, and signs in by QR from the hardware trigger or, on a device without a scanner, the camera (`parseLoginQr`, the same as `LoginSheet`). Two outlined buttons below: "Postava vanjskog sustava" (`onOpenConfig`) and "O aplikaciji" (`onOpenAppInfo`).
@@ -928,11 +938,11 @@ Read-only failed-upload detail: header card, document-info card, full raw error-
 ### `MainActivity.kt`
 `@AndroidEntryPoint class MainActivity : AppCompatActivity()`. `onCreate`: `enableEdgeToEdge()`, `hideNavBar()` (immersive nav-bar hiding, re-applied on `onWindowFocusChanged`), `DataWedgeManager.configure(this)`, then `setContent { ... }`.
 
-Inside `setContent`: obtains `AppViewModel` via `hiltViewModel()`, loads `initialSettings` once, holds every setting as its own `remember { mutableStateOf(...) }`, with `buildSettings()` reassembling `AppSettings` and every `on...Change` callback persisting via `appVm.saveSettings(...)`. Wraps everything in `PrimaBarcodeTheme(textSizeOffset, uppercaseEnabled) { PrimaBarcodeApp(...) }`.
+Inside `setContent`: obtains `AppViewModel` via `hiltViewModel()`, loads `initialSettings` once, holds every setting as its own `remember { mutableStateOf(...) }`, with `buildSettings()` reassembling `AppSettings` and every `on...Change` callback persisting via `appVm.saveSettings(...)`. Wraps everything in `AppTheme(textSizeOffset, uppercaseEnabled) { BarcodeApp(...) }`.
 
-**Split in 3.6.40–3.6.42** (no change in behaviour): the shell lives in `navigation/` — `PrimaNavHost.kt` (`PrimaBarcodeApp`), `Routes.kt` (every route pattern and the builders for the three with arguments) and `AppDialogs.kt` (processing, download error, debugger, upload errors, blocked change of operator). The same round split `RecordingScreen.kt` into four files and moved `AppViewModel`'s configuration files, upload loop and downloads into `ConfigController`, `UploadCoordinator` and `DownloadCoordinator` (§B.11.2). The state before is tagged `pre-split`.
+**Split in 3.6.40–3.6.42** (no change in behaviour): the shell lives in `navigation/` — `AppNavHost.kt` (`BarcodeApp`), `Routes.kt` (every route pattern and the builders for the three with arguments) and `AppDialogs.kt` (processing, download error, debugger, upload errors, blocked change of operator). The same round split `RecordingScreen.kt` into four files and moved `AppViewModel`'s configuration files, upload loop and downloads into `ConfigController`, `UploadCoordinator` and `DownloadCoordinator` (§B.11.2). The state before is tagged `pre-split`.
 
-### `PrimaBarcodeApp` composable (internal, in `navigation/PrimaNavHost.kt`) — the NavHost/app shell
+### `BarcodeApp` composable (internal, in `navigation/AppNavHost.kt`) — the NavHost/app shell
 Creates `nav = rememberNavController()`; derives `user` from `appVm.credentials`; collects `locations`/`responsibilityCenters`/`documents`/`extSystemConfig` (all `StateFlow`, `collectAsState()`); auto-recovers stale RC/location selections; filters `documents` per document type via `DocTypeFilterMode`; builds `docTypes: List<DocTypeSummary>`; computes shift-wide counters:
 ```kotlin
 val shiftScans  = filteredDocs.sumOf { d -> d.lines.count { it.scanned > 0 } }  // count of lines-with-progress, not total qty
@@ -1011,7 +1021,7 @@ That is the Settings-save path, only when the language actually changed. On API 
 
 **Defaults** live once, in `AppSettings`: Croatian, `TextSize.LARGER`, 200 ms debounce. `AppSettingsStore.get()` falls back to `AppSettings()` for any key not stored, so an operator who has saved settings keeps them and a new one starts from these.
 
-**Re-applied on cold start** (fixed 2026-09) by `PrimaBarcodeApplication.applySavedLanguage()`. This is required, not belt-and-braces: below API 33 `AppCompatDelegate` persists *nothing* unless the app declares `AppLocalesMetadataHolderService` with `autoStoreLocales` (this app does not), so the chosen locale used to survive only for the life of the process. The symptom was a language selection silently reverting after any restart, most visibly after an APK upgrade — `AppSettings.language` (plain SharedPreferences, survives upgrades) still said Croatian, so the Settings screen showed Croatian while every string rendered English. On the Zebra MC3300 (API 27) this hit on every launch.
+**Re-applied on cold start** (fixed 2026-09) by `BarcodeApplication.applySavedLanguage()`. This is required, not belt-and-braces: below API 33 `AppCompatDelegate` persists *nothing* unless the app declares `AppLocalesMetadataHolderService` with `autoStoreLocales` (this app does not), so the chosen locale used to survive only for the life of the process. The symptom was a language selection silently reverting after any restart, most visibly after an APK upgrade — `AppSettings.language` (plain SharedPreferences, survives upgrades) still said Croatian, so the Settings screen showed Croatian while every string rendered English. On the Zebra MC3300 (API 27) this hit on every launch.
 
 The startup pass is deliberately narrow — it only fills a gap, never overrides:
 
@@ -1103,7 +1113,7 @@ A systematic sweep for orphaned files/functions/fields found and removed:
 
 ## B.14 Design System / Theme
 
-### `Color.kt` — `PrimaPalette` (brand palette)
+### `Color.kt` — `AppPalette` (brand palette)
 
 | Token | Hex |
 |---|---|
@@ -1119,33 +1129,33 @@ A systematic sweep for orphaned files/functions/fields found and removed:
 | Oak | `#B49880` |
 | Ink / Ink2 / Ink3 / Ink4 | `#1A1C1F` / `#3D4046` / `#6F7378` / `#A4A6AC` (darkest → lightest text hierarchy) |
 
-`PrimaStatus` — the four-state semantic language (see §A.4), in two shades since 3.6.31:
+`AppStatus` — the four-state semantic language (see §A.4), in two shades since 3.6.31:
 - **Fill** (bars, dots, progress, tints; ≥ 3:1 on Cream and White): `Empty #CE3A3A`, `Partial #AC8032` (was `#C7943A`, 2.3:1 on Cream), `Exact #2E8C5E`, `Over #2D6CE0`, each with a ~10–12%-alpha `*Bg` tint. Read via `LineStatus.color`.
 - **Ink** (counters, status text, solid badges with white text; ≥ 4.5:1 on the state's tint and with white): `EmptyInk #B33232`, `PartialInk #816026`, `ExactInk #25704B`, `OverInk #275DC2`. Read via `LineStatus.inkColor`. On the dark chrome keep the fill: the dashboard's Partial pill uses `PartialOnDark #C7943A`.
 
-**Every other colour is a token too** (3.6.30): `PrimaSignal` (Danger = the Empty red, Warning = the Partial ink, `WarningOnDark`, tints and borders), `PrimaLine` (dividers, card borders, outlines, input borders on light surfaces), `PrimaOnDark` (the same on Slate) and `PrimaCamera`. There is no `Color(0x…)` literal left in a screen or component; the six near-duplicates merged on the way are listed at the top of `Color.kt`.
+**Every other colour is a token too** (3.6.30): `AppSignal` (Danger = the Empty red, Warning = the Partial ink, `WarningOnDark`, tints and borders), `AppLine` (dividers, card borders, outlines, input borders on light surfaces), `AppOnDark` (the same on Slate) and `AppCamera`. There is no `Color(0x…)` literal left in a screen or component; the six near-duplicates merged on the way are listed at the top of `Color.kt`.
 
 **Touch targets** (3.6.29): top bar buttons 60 × 48 dp (`TOP_BAR_BUTTON_HEIGHT`) in a 52 dp bar; the date chips' clear icon (14 dp) sits in a 48 dp `minimumInteractiveComponentSize()`.
 
 **Rolling the look back.** The state before these three changes is the git tag `pre-design-tokens`, and each change is one commit (`6db6b2d` sizes, `50cb6a2` colour tokens, `e210655` status shades), so any one of them can be undone with `git revert` alone.
 
-`PrimaLightColors` (Material3 `lightColorScheme`) is the **only** scheme actually applied: primary=Coral, secondary=Slate, tertiary=Teal, background=Cream, surface=White, error=`PrimaStatus.Empty`. **`PrimaDarkColors` is defined in `Color.kt` but never referenced anywhere else in the codebase — dead code.** The app always renders light, regardless of system dark-mode setting.
+`AppLightColors` (Material3 `lightColorScheme`) is the **only** scheme actually applied: primary=Coral, secondary=Slate, tertiary=Teal, background=Cream, surface=White, error=`AppStatus.Empty`. **`AppDarkColors` is defined in `Color.kt` but never referenced anywhere else in the codebase — dead code.** The app always renders light, regardless of system dark-mode setting.
 
 ### `Type.kt` — Typography
 `Geist`/`GeistMono` `FontFamily`s (wired to bundled `res/font/` TTFs as of the 2026-08 audit, see §B.13). `LocalTextSizeOffset` (Settings → Text size, adds an sp offset app-wide) and `LocalUppercaseEnabled` (Settings → Uppercase text, drives the `.uppercased` string extension used pervasively on labels/tabs/buttons/status chips). `TextSize` enum: `NORMAL(+2sp)`, `LARGER(+4sp)`. `monoCounter`/`monoLabel` composable vals are the two GeistMono styles used for quantity counters and codes/timestamps respectively.
 
-### `Shape.kt` — `PrimaShapes`
+### `Shape.kt` — `AppShapes`
 `extraSmall=4dp`, `small=8dp`, `medium=12dp`, `large=14dp`, `extraLarge=22dp` (all `RoundedCornerShape`).
 
 ### Theme entry point
-**`Theme.kt` → `PrimaBarcodeTheme(textSizeOffset, uppercaseEnabled, content)`** — the only theme composable, wired into `MainActivity`; provides `LocalTextSizeOffset`+`LocalUppercaseEnabled`, then `MaterialTheme(colorScheme=PrimaLightColors, typography=scaledTypography(...), shapes=PrimaShapes)`.
+**`Theme.kt` → `AppTheme(textSizeOffset, uppercaseEnabled, content)`** — the only theme composable, wired into `MainActivity`; provides `LocalTextSizeOffset`+`LocalUppercaseEnabled`, then `MaterialTheme(colorScheme=AppLightColors, typography=scaledTypography(...), shapes=AppShapes)`.
 
 (Until 2026-08 there was a second, dead `PrimaTheme.kt → PrimaTheme(textSizeOffset, content)` — an older, unreferenced duplicate. Removed in a dead-code sweep; if you're looking at git history from before that and see two theme files, that's why.)
 
 ## B.15 Build & Project Configuration
 
 ### `app/build.gradle.kts`
-- `namespace`/`applicationId`: `com.prima.barcode`. `compileSdk` 36, `minSdk` 26, `targetSdk` 36. Java/Kotlin target `VERSION_11`. `versionCode`/`versionName` are bumped on every commit to this project (see `app/build.gradle.kts` for the current value — don't hardcode it here, it's stale the moment it's written).
+- `namespace`/`applicationId`: `com.erpbarcode.scanner`. `compileSdk` 36, `minSdk` 26, `targetSdk` 36. Java/Kotlin target `VERSION_11`. `versionCode`/`versionName` are bumped on every commit to this project (see `app/build.gradle.kts` for the current value — don't hardcode it here, it's stale the moment it's written).
 - Only the `release` build type is customized (`isMinifyEnabled = false`); no `debug` overrides, no product flavors.
 - `buildFeatures`: `compose = true`, `buildConfig = true`. KSP arg `room.schemaLocation = "$projectDir/schemas"` (Room schema JSON exports are committed to the repo per convention — include them in commits when the schema changes).
 - Notable dependency facts:
@@ -1194,7 +1204,7 @@ Separately, a full audit (2026-08, same pass) checked every one of the then-247 
 - **`COMPLAINT` (since replaced) and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies (`Qty. (Calculated)`), with two differences flagged by `DocumentType.isStockCount`: the download picks one inventory journal batch first (§B.6), and an item NAV didn't send is added on the device rather than rejected (§A.3).
 - **Adding a new AppSettings field**: add to the `AppSettings` data class + `AppSettingsStore` serialization, add local `remember` state + callback wiring in `MainActivity.kt`, and a control in `SettingsScreen.kt`. Remember the buffered-edit pattern — don't persist directly from the toggle, let it flow through `buildSettings()`/exit-save.
 - **The upload payload is intentionally flat and per-row**, not batched — if ERP-side batching is ever desired, `AppViewModel.runUpload`'s row loop is the place to change, but note the per-row-immediate-delete behavior is what makes partial-failure retries safe; batching would need an equivalent all-or-nothing safety guarantee.
-- **`NavResponsibilityCenter` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
+- **`ErpResponsibilityCenterRow` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
 - **`Document.isSourceRetail`** (`documentHeader.isSourceRetail`) — written on every download/merge from NAV's `Retail_Location` flag, and since 2026-09 it is what an uploaded recording sends back in `Retail_Location` (§A.5.4). Note the two sides use different sources on purpose: the *download filter* comes from `DocumentType.retailLocation` (the bucket being fetched), the *upload value* from `isSourceRetail` (what NAV said about that specific document). They agree whenever NAV populates the field. The one case where they don't is a document downloaded before `Retail_Location` was exposed on the OData page — `isSourceRetail` was stored `false` then, including for retail documents, and re-downloading is what refreshes it.
 
 ## B.18 The NAV side — C/AL objects in `NAV/`
