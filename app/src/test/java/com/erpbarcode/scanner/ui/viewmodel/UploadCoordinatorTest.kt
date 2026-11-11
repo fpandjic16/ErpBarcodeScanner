@@ -14,6 +14,9 @@ import com.erpbarcode.scanner.testing.testDocument
 import com.erpbarcode.scanner.testing.testLine
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -396,5 +399,31 @@ class UploadCoordinatorTest {
         assertEquals(3, rows.size)
         assertEquals(listOf(20000), rows.filter { it.sentAt == null }.map { it.documentLine })
         assertNotNull(device.document("D1"))
+    }
+
+    // ── Two uploads at once ────────────────────────────────────────────────────
+
+    @Test
+    fun `two uploads of one document at once send each row once`(): Unit = runBlocking {
+        d1WithScans(2)
+        val stored = device.recordings("D1")
+        // Both are handed the document as the list showed it when Upload was pressed.
+        val asListed = listOf(device.document("D1")!!)
+        // Slow enough that the second upload starts while the first is still sending.
+        erp.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                accepted().setBodyDelay(200, TimeUnit.MILLISECONDS)
+        }
+
+        val failures = List(2) {
+            async(Dispatchers.IO) { coordinator.runUpload(asListed, perScan(), credentials) }
+        }.awaitAll()
+
+        // The second waited, found the document gone, and had nothing to send or to report.
+        assertEquals(listOf(0, 0), failures)
+        assertEquals(2, erp.requestCount)
+        val sent = List(2) { nextRequest().json()["Recording_Guid"].asString }
+        assertEquals(stored.map { it.recordingGuid }, sent)
+        assertNull(device.document("D1"))
     }
 }

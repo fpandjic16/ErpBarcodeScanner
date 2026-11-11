@@ -199,6 +199,17 @@ data class Document(
     val expectedQty: Double get() = lines.sumOf { it.expected }
     val hasProgress: Boolean get() = lines.any { it.scanned > 0.0 }
     val needsReview: Boolean get() = orphanedScans.isNotEmpty() || failedScans.isNotEmpty()
+    /**
+     * Whether an Upload button may send this document now: the one rule for every list.
+     *
+     * It has to hold something. A document with nothing scanned is not uploaded, and one whose
+     * scans need review counts as holding something, because pressing Upload is what turns it
+     * into an error the operator can open and act on.
+     *
+     * And it must not be on its way already: a document a background upload is sending is left
+     * to that upload, not handed to a second one.
+     */
+    val isUploadable: Boolean get() = state != DocState.PendingUpload && (hasProgress || needsReview)
     /** Everything recorded on this document, sent or not — what the operator actually scanned. */
     val totalScans: Int get() = sentScans + pendingScans
     val partlySent: Boolean get() = sentScans > 0 && pendingScans > 0

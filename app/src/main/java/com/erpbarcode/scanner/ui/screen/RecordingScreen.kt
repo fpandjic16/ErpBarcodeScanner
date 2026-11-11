@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
+import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.Line
 import com.erpbarcode.scanner.data.model.LineStatus
@@ -131,7 +132,8 @@ fun RecordingScreen(
     // maxOf keeps this safe against a lagging emission: the database wins as soon as it is ahead.
     val scannedRunningTotal = remember { mutableStateMapOf<Int, Double>() }
     val sizeOffset = LocalTextSizeOffset.current
-    val showUpload = doc.lines.any { it.scanned > 0.0 }
+    // Not while a background upload is sending this very document: it would be sent twice.
+    val showUpload = doc.hasProgress && doc.state != DocState.PendingUpload
     val context = LocalContext.current
     val hapticEngine = remember { HapticEngine(context) }
     // Sound marks the outcome of a scan and nothing else — not the keypad, not the steppers. A

@@ -13,7 +13,10 @@ import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.repository.DocumentRepository
 import com.erpbarcode.scanner.i18n.inAppLanguage
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Sends documents' recordings to the ERP, per scan or per document (ExtSystemConfig.uploadMode), and
@@ -28,12 +31,28 @@ import javax.inject.Inject
  * Split out of AppViewModel, which keeps the two entry points (blocking and background), holds the
  * change of operator off while this runs, and passes in the configuration and the signed-in
  * operator's credentials.
+ *
+ * One instance for the process, because [oneAtATime] only means anything if every upload goes
+ * through the same one.
  */
+@Singleton
 class UploadCoordinator @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val repository: DocumentRepository,
     private val extSystemClient: ExtSystemODataClient,
 ) {
+
+    /**
+     * Held for the length of an upload, so that a second one waits for the first to finish.
+     *
+     * A background upload returns the screen to the operator at once, and nothing stops them
+     * pressing Upload again while it runs. Two runs over the same document each read its queued
+     * rows before the other had marked any as sent, and sent every row twice; the ERP refused the
+     * second copy as already there, and the document ended up marked as failed although it had
+     * gone through. A run that waited reads the queue afterwards and finds what is really left:
+     * nothing, where the first run removed the document.
+     */
+    private val oneAtATime = Mutex()
 
     /** In the app's language, not the device's; see AppViewModel.inAppText. */
     private fun inAppText(id: Int, vararg args: Any): String =
@@ -41,9 +60,12 @@ class UploadCoordinator @Inject constructor(
 
     /**
      * Uploads each doc; on success removes it unless a new scan has arrived meanwhile, on failure
-     * marks it UploadFailed. Returns the failure count.
+     * marks it UploadFailed. Returns the failure count. Waits for an upload already running.
      */
-    suspend fun runUpload(docs: List<Document>, config: ExtSystemConfig, creds: ExtSystemCredentials?): Int {
+    suspend fun runUpload(docs: List<Document>, config: ExtSystemConfig, creds: ExtSystemCredentials?): Int =
+        oneAtATime.withLock { upload(docs, config, creds) }
+
+    private suspend fun upload(docs: List<Document>, config: ExtSystemConfig, creds: ExtSystemCredentials?): Int {
         if (!config.isConfigured || creds == null) {
             docs.forEach {
                 repository.updateDocState(it.documentNo, it.type.key,

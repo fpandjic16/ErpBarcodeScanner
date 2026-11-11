@@ -103,7 +103,7 @@ fun DocumentOverviewScreen(
     )
     val visibleDocs = when (selectedTab) { 0 -> errors; 1 -> atLocation; else -> filtered }
     val uploadableDocs = remember(visibleDocs) {
-        visibleDocs.filter { doc -> doc.lines.any { it.scanned > 0.0 } || doc.needsReview }
+        visibleDocs.filter { it.isUploadable }
     }
     val listState = rememberLazyListState()
     Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {

@@ -509,7 +509,7 @@ class AppViewModel @Inject constructor(
             // Documents needing review are deliberately included even though no line shows
             // progress: runUpload is what raises their error, so filtering them out here would
             // turn Retry into a no-op that closes the screen as if it had worked.
-            val uploadable = docs.filter { doc -> doc.lines.any { it.scanned > 0.0 } || doc.needsReview }
+            val uploadable = docs.filter { it.isUploadable }
             uploadable.forEach { repository.updateDocState(it.documentNo, it.type.key, DocState.PendingUpload) }
             duringErpWork { runUpload(uploadable) }
         }
