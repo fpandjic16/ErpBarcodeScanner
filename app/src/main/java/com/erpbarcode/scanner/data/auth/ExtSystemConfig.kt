@@ -100,20 +100,23 @@ data class ExtSystemConfig(
      * it; and changing where any endpoint leads ends the session like any other change of
      * installation.
      *
-     * The SOAP upload address is the one exception to "same port": an instance's SOAP services
-     * listen on another port than its OData ones. It adds nothing to the identity while its host,
-     * instance and company match an OData endpoint's — so filling it in later does not strand the
-     * work already on the device — and counts in full when they do not.
+     * The SOAP upload address ([documentUploadUrl], and only that field, whatever an address in
+     * another field looks like) is the one exception to "same port": an instance's SOAP services
+     * listen on another port than its OData ones, and nothing in the configuration says which. It
+     * adds nothing to the identity while its scheme, host, instance and company match an OData
+     * endpoint's — so filling it in later does not strand the work already on the device — and
+     * counts in full when they do not. What that leaves open is another port on the ERP's own
+     * host, under the same instance and company path; whoever can listen there has the server.
      */
     val serverIdentity: String
         get() {
             val server = serverBaseUrl.trim().trimEnd('/').lowercase()
             if (server.isEmpty()) return ""
-            val keys = listOf(documentLinesUrl, recordingSyncUrl, locationsUrl, inventoryBatchesUrl, documentUploadUrl)
+            val odata = listOf(documentLinesUrl, recordingSyncUrl, locationsUrl, inventoryBatchesUrl)
                 .filter { it.isNotBlank() }
-                .map { endpointKey(it) }
-            val odata = keys.filter { !it.soap }
-            val straySoap = keys.filter { it.soap && odata.none { o -> o.loose == it.loose } }
+                .map { endpointKey(it, soap = false) }
+            val soap = documentUploadUrl.takeIf { it.isNotBlank() }?.let { endpointKey(it, soap = true) }
+            val straySoap = listOfNotNull(soap).filter { key -> odata.none { it.loose == key.loose } }
             val entries = (odata + straySoap).map { it.strict }.distinct().sorted()
             return server + "|" + entries.joinToString(";")
         }
@@ -125,56 +128,60 @@ data class ExtSystemConfig(
     private companion object {
         val COMPANY_IN_URL = Regex("""Company\('((?:[^']|'')*)'\)""")
 
-        /** `Company('…')` as a whole path segment, already percent-decoded. */
-        val COMPANY_SEGMENT = Regex("""Company\('((?:[^']|'')*)'\)""", RegexOption.IGNORE_CASE)
+        /** `Company('…')` as a whole path segment, already percent-decoded. Exactly this spelling. */
+        val COMPANY_SEGMENT = Regex("""Company\('((?:[^']|'')*)'\)""")
 
         /**
          * Where one endpoint address leads.
          *
-         * [strict] is `scheme://host:port/instance|company`; [loose] leaves scheme and port out,
-         * for comparing a SOAP address ([soap]) with the OData ones of the same instance.
+         * [strict] is `scheme://host:port/instance|company`; [loose] leaves the port out, for
+         * comparing the SOAP upload address with the OData ones of the same instance.
          */
-        class EndpointKey(val strict: String, val loose: String, val soap: Boolean)
+        class EndpointKey(val strict: String, val loose: String)
 
         /**
          * Reads an endpoint address the way the HTTP client will, and says where it leads.
          *
          * Parsed with OkHttp's own `HttpUrl`, the parser the requests go through, so what is
          * compared here is what is actually called: dot segments resolved, host canonical,
-         * segments decoded. The company is `Company('…')` in the path, a `company` query parameter,
-         * or the segment after `/WS/` in a SOAP address.
+         * segments decoded. Which form the company must take is decided by the **field** the
+         * address sits in ([soap]), never by what the address looks like: `Company('…')` as one
+         * path segment for an OData endpoint, the segment after `/<instance>/WS/` for the SOAP one.
          *
-         * **Anything ambiguous is returned whole**, which makes it match nothing but itself — a
-         * different installation rather than a trusted one:
+         * **Anything else is returned whole**, which makes it match nothing but itself — a
+         * different installation rather than a trusted one. There is exactly one accepted reading
+         * and no tidying up towards it, because the server may not tidy the same way:
          * - an address that does not parse;
          * - encoded dots, slashes or backslashes in it, which two parsers may read two ways;
-         * - no company at all (the server would pick its default), or more than one.
+         * - a `company` query parameter, in any spelling or with any value;
+         * - a path segment that starts like `Company(` but is not exactly `Company('…')`;
+         * - no company in the expected place, or more than one.
          */
-        fun endpointKey(url: String): EndpointKey {
+        fun endpointKey(url: String, soap: Boolean): EndpointKey {
             val raw = url.trim()
             val lower = raw.lowercase()
-            val whole = EndpointKey(strict = lower, loose = lower, soap = false)
+            val whole = EndpointKey(strict = lower, loose = lower)
             if ("%2e" in lower || "%2f" in lower || "%5c" in lower || '\\' in raw) return whole
             val http = raw.toHttpUrlOrNull() ?: return whole
+            if (http.queryParameterNames.any { it.equals("company", ignoreCase = true) }) return whole
+
             val segments = http.pathSegments.filter { it.isNotEmpty() }
             val instance = segments.firstOrNull()?.lowercase() ?: return whole
+            val companyLike = segments.filter { it.startsWith("company(", ignoreCase = true) }
+            val inPath = companyLike.mapNotNull { COMPANY_SEGMENT.matchEntire(it)?.groupValues?.get(1) }
+            if (inPath.size != companyLike.size) return whole
 
-            val inPath = segments.mapNotNull { COMPANY_SEGMENT.matchEntire(it)?.groupValues?.get(1)?.replace("''", "'") }
-            val inQuery = http.queryParameterNames
-                .filter { it.equals("company", ignoreCase = true) }
-                .flatMap { http.queryParameterValues(it) }
-                .filterNotNull()
-                .map { it.trim().removeSurrounding("'") }
-            val ws = segments.drop(1).indexOfFirst { it.equals("WS", ignoreCase = true) }
-            val inSoap = if (ws >= 0) listOfNotNull(segments.getOrNull(ws + 2)) else emptyList()
-
-            val companies = inPath + inQuery + inSoap
-            if (companies.size != 1 || companies[0].isBlank()) return whole
-            val company = companies[0].trim().lowercase()
+            val company = if (soap) {
+                if (inPath.isNotEmpty() || segments.size < 3 || !segments[1].equals("WS", ignoreCase = true)) return whole
+                segments[2]
+            } else {
+                inPath.singleOrNull()?.replace("''", "'") ?: return whole
+            }
+            if (company.isBlank()) return whole
+            val where = "${http.host}/$instance|${company.lowercase()}"
             return EndpointKey(
-                strict = "${http.scheme}://${http.host}:${http.port}/$instance|$company",
-                loose = "${http.host}/$instance|$company",
-                soap = ws >= 0,
+                strict = "${http.scheme}://${http.host}:${http.port}/$instance|${company.lowercase()}",
+                loose = "${http.scheme}://$where",
             )
         }
     }

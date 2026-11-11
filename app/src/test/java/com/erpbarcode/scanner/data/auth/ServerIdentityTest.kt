@@ -87,11 +87,31 @@ class ServerIdentityTest {
     }
 
     @Test
-    fun `a company given in the query counts like one in the path`() {
-        val same = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Ltd")
-        assertEquals(config(live).serverIdentity, same.serverIdentity)
-        val other = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Retail")
-        assertNotEquals(config(live).serverIdentity, other.serverIdentity)
+    fun `a company given in the query is never read as the path one`() {
+        val a = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Ltd")
+        val b = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Retail")
+        val both = config(live, upload = "http://erp:7048/Live/ODataV4/Company('Acme%20Ltd')/X?company=Acme%20Retail")
+        assertNotEquals(config(live).serverIdentity, a.serverIdentity)
+        assertNotEquals(a.serverIdentity, b.serverIdentity)
+        assertNotEquals(config(live).serverIdentity, both.serverIdentity)
+    }
+
+    @Test
+    fun `only the exact spelling of the company segment is read`() {
+        val lowerCase = config(live, upload = "http://erp:7048/Live/ODataV4/company('Acme%20Ltd')/X")
+        val trailing = config(live, upload = "http://erp:7048/Live/ODataV4/Company('Acme%20Ltd')x/X")
+        assertNotEquals(config(live).serverIdentity, lowerCase.serverIdentity)
+        assertNotEquals(config(live).serverIdentity, trailing.serverIdentity)
+    }
+
+    @Test
+    fun `the port exemption belongs to the SOAP field, not to an address that looks like SOAP`() {
+        // A SOAP-shaped address in an OData field names no company where one must be: not trusted.
+        val inODataField = config(live, upload = "http://erp:9999/Live/WS/Acme%20Ltd/Codeunit/X")
+        assertNotEquals(config(live).serverIdentity, inODataField.serverIdentity)
+        // And http cannot stand in for https, or the other way round.
+        val otherScheme = config(live, soap = "https://erp:7047/Live/WS/Acme%20Ltd/Codeunit/BarcodeAppUpload")
+        assertNotEquals(config(live).serverIdentity, otherScheme.serverIdentity)
     }
 
     @Test
