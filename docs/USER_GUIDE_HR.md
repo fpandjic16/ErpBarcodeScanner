@@ -343,6 +343,7 @@ Dodirnite **POŠALJI** na bilo kojem popisu dokumenata (ili gumb za slanje na ek
 - Ovisno o postavkama aplikacije, slanje se odvija **u pozadini** (možete odmah nastaviti raditi dok se šalje) ili se do kraja prikazuje **ekran napretka** („Slanje…”).
 - Nakon uspješnog slanja dokument se potpuno uklanja s uređaja — s njim ste gotovi.
 - Ako nešto pođe krivo (greška poslužitelja, problem s mrežom, nedostaje konfiguracija), dokument umjesto toga prelazi na karticu **Greške**, uz zabilježen točan razlog. Ništa se ne gubi, a ponovno treba poslati samo ono što nije uspjelo (ono što je uspjelo prije greške ne šalje se ponovno).
+- **Ako uređaj šalje skeniranje po skeniranje** (uobičajena postavka), skeniranje koje vanjski sustav odbije ne zaustavlja ostala: ostala se pošalju, a dokument čeka na kartici **Greške** i pokazuje koja su skeniranja odbijena i zašto.
 - **Ako uređaj šalje po dokumentu** (postavlja IT), dokument ulazi cijeli ili nikako: vanjski sustav prihvaća sva njegova skeniranja ili nijedno, a dokument čeka na kartici **Greške** s razlogom. Dokument nikad nije napola poslan.
 
 ---
@@ -355,6 +356,9 @@ Otvorite karticu **Greške** (s popisa dokumenata ili iz Pregleda) i dodirnite n
 - podatke o dokumentu (vrsta, izvor, odredište, CC, broj stavki, datum),
 - **cijelu poruku o grešci** koju je vratio vanjski sustav — nju je najkorisnije proslijediti IT-u ili podršci ako problem nije očit (npr. „niste prijavljeni”, „poslužitelj je odbio zahtjev” ili određena poruka provjere iz poslovnog sustava),
 - gumb **Pokušaj ponovo** na dnu — koristan kad je uzrok (mreža, poslužitelj, prijava) riješen.
+- **odbijena skeniranja**, ako ih ima: skeniranja koja vanjski sustav nije prihvatio, svako sa svojim razlogom. Sve ostalo s dokumenta je poslano. Skeniranje odbijeno zbog vlastitog sadržaja bit će odbijeno pri svakom ponovnom pokušaju, pa ga, kad je riješeno na drugi način, uklonite gumbom **Odbaci odbijena**: ta se skeniranja brišu s uređaja i nikad se ne šalju, a dokument se može dovršiti,
+- **skenirane artikle kojih više nema na dokumentu**, ako ih ima: ured je uklonio stavku nakon što ste je skenirali. Dokument se ne šalje dok su oni tu. Provjerite robu, pa ih uklonite gumbom **Odbaci skeniranja**,
+- **Poslano, linija poslije uklonjena**: skeniranja koja su stigla u vanjski sustav prije nego što je njihova stavka ondje uklonjena. S uređaja se ne mogu poništiti; javite uredu ako je bitno.
 
 Greške možete i skupno **obrisati** s kartice Greške na popisu dokumenata ili u Pregledu — time se **neuspjeli dokumenti uklanjaju s uređaja bez slanja**. Učinite to samo ako ste sigurni da podaci ne moraju stići u vanjski sustav (npr. bio je duplikat ili probni dokument).
 

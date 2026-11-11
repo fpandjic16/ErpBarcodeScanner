@@ -15,6 +15,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Use `gradlew.bat` instead of `./gradlew` on Windows.
 
+### Tests
+
+Unit tests are plain JUnit 4 (`./gradlew test`, no Android runtime) and cover the logic kept free of Compose and Android for exactly that purpose: `ScanMatcherTest`, `DocumentUploadSoapTest`, `ODataFilterTest`, `ServerIdentityTest`, `ShellDataTest`. Nothing tests the repository's merge and state rules, the upload loop or the migrations yet (TECHNICAL_GUIDE §B.15, §B.17). Logic that decides what an operator sees or what is sent belongs in a plain function with a test, not inside a composable.
+
 ## Architecture
 
 **Native Android barcode scanning app** for warehouse inventory operations backed by Dynamics NAV 2018. Kotlin + Jetpack Compose, minSdk 26 (Android 8.0+), compileSdk 36.
@@ -41,8 +45,11 @@ Dependency versions are centralized in `gradle/libs.versions.toml` (and inline i
 ```
 app/src/main/java/com/erpbarcode/scanner/
 ├── MainActivity.kt              # Entry point: onCreate, theme, the settings that follow the operator, nav bar, DataWedge
-├── navigation/                  # AppNavHost.kt (BarcodeApp: sign-in gate + NavHost), Routes.kt, AppDialogs.kt
-├── di/                          # Hilt modules (DatabaseModule)
+├── navigation/                  # The app shell. AppNavHost.kt (BarcodeApp: collects state, gate, NavHost, overlay dialogs),
+│                                # AppShell.kt (AppShellState + Shell), ShellData.kt (what the lists show), SignInGate.kt,
+│                                # MainMenuRoute / DocumentRoutes / DashboardRoutes / RecordingRoutes / SettingsRoutes.kt,
+│                                # Routes.kt, AppDialogs.kt
+├── di/                          # DatabaseModule: binds the repository, provides no database
 └── ui/
     ├── theme/                   # Color.kt, Type.kt, Shape.kt, Theme.kt, Language.kt
     ├── component/               # Reusable Compose components (ScanBar, ScanField, CameraPreview, ...)
@@ -87,6 +94,10 @@ Outside the app:
 - **UploadErrorScreen** — Failure detail + retry for a single document
 
 Helpers shared between screens live in their own file as `internal`, not as a private copy per screen. `DocumentTypeLabel.kt` holds the one `@Composable internal fun DocumentType.localizedDisplay()`; seven screens each carried an identical private version of it, which meant an eighth screen could not call any of them and adding a document type meant finding all seven. `LineStatusLabel.kt` does the same for `LineStatus.localizedLabel()`, which three screens used to copy. `ScanMatcher.kt` decides which line a scan lands on (several lines with one barcode fill in line order), free of Compose so it is unit-tested. The recording screen itself is four files: `RecordingScreen.kt` (state, scan handling, top bar), `RecordingLineList.kt` (overview rows, status chip), `RecordingLineEditor.kt` (steppers, keypad), `RecordingDialogs.kt`. `ConfigLoadDialogs.kt` is the one "load configuration" flow (what to do → which system → which company) used by both External System Configuration and Settings, plus `EnvironmentPickDialog`. Settings is built from `SettingsComponents.kt` (nav, danger, toggle and choice rows, the confirm dialog), External System Configuration from `ExtSystemConfigComponents.kt` (cards, fields, `ConfigSegmentedChoice`, `DocTypeConfigCard`) and `ExtSystemConfigDialogs.kt`.
+
+**The app shell is `navigation/`, and no route is written in `AppNavHost.kt`.** `BarcodeApp` collects what every screen needs, puts up `SignInGate` while nobody is signed in, builds a `Shell` and calls five functions, one per group of screens (`mainMenuRoute`, `documentRoutes`, `dashboardRoutes`, `recordingRoutes`, `settingsRoutes`), each written as `internal fun NavGraphBuilder.xRoutes(shell: Shell) { with(shell) { composable(…) { … } } }`. `Shell` (`AppShell.kt`) is everything a route needs in one composition — who is signed in, the settings in effect, what is picked — plus the shell's actions (`upload`, `launchWithDebug`, `requireCredentials`, `requestSignOut`, `requestConfigSave`); it is rebuilt on every recomposition, and only `AppShellState` outlives one. **Every upload button goes through `Shell.upload`**: do not copy the sign-in → debugger → background-or-blocking sequence into a route. What the menu and the lists show (`Document.isInScope`, the type summaries, the shift's counters) is `shellData()` in `ShellData.kt`, free of Compose and unit-tested. A new route: its pattern in `Routes.kt`, its `composable` in the group's file; something the shell does not offer yet goes into `Shell` and is passed in `BarcodeApp`. TECHNICAL_GUIDE §B.11.
+
+**The code names neither the ERP product nor the customer** (since 3.6.48). Package `com.erpbarcode.scanner`, `App…` for the app's own types, "the ERP" in identifiers and comments — never NAV, Navision, a NAV object number or Prima. The exceptions are values the ERP itself publishes (OData field names, the SOAP namespaces `urn:microsoft-dynamics-*`) and the display name *Prima Barcode* (also the DataWedge profile name). Everything specific to the NAV side lives in TECHNICAL_GUIDE §B.18, `NAV/` and the bundled company configurations.
 
 **Operator-facing text built outside a composable** — anything a ViewModel or `ExtSystemODataClient` hands to the UI, including every `ExtSystemResult.Failure.message` — resolves through `Context.inAppLanguage()` (`i18n/AppLanguage.kt`), never the bare application context: below API 33 that context keeps the device's language, not the app's, and the MC3300 is on API 27. Text that depends on a count is a `<plurals>` resource; Croatian has three forms and Slovenian four.
 

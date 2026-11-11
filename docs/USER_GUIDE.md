@@ -341,6 +341,7 @@ Tap **UPLOAD** from any document list (or the in-screen upload button while scan
 - Depending on how your app is configured, upload either runs in the **background** (you can keep working immediately while it sends) or shows a **blocking progress screen** until it finishes.
 - On success, the document is completely removed from your device — you're done with it.
 - If something goes wrong (server error, network issue, missing configuration), the document moves to the **Errors** tab instead, with the specific reason recorded — nothing is lost, and only the parts that failed need to be resent (anything that did succeed before the failure is not resent).
+- **If your device sends scan by scan** (the usual setting), a scan the central system refuses does not stop the others: the rest are sent, and the document waits in **Errors**, showing which scans were refused and why.
 - **If your device sends per document** (set by IT), a document goes in whole or not at all: either the central system takes every scan of it, or none, and the document waits in **Errors** with the reason. A document is never half sent.
 
 ---
@@ -353,6 +354,9 @@ Open the **Errors** tab (from a Document List, or the Dashboard) and tap a faile
 - Document details (type, source, destination, RC, line count, date).
 - The **full error message** returned by the central system — this is the most useful thing to relay to IT/support if the problem isn't obvious (e.g. "not signed in", "server rejected the request", a specific business-system validation message).
 - A **Retry Upload** button at the bottom to try again — useful once the underlying issue (network, server, sign-in) has been resolved.
+- **Refused scans**, if there are any: the scans the central system would not accept, each with its reason. Everything else on the document has been sent. A scan refused for what it contains is refused again on every retry, so once it has been dealt with another way, **Discard refused** deletes those scans from the device (they are never sent) and the document can finish.
+- **Scanned items that are no longer on the document**, if there are any: the office removed a line after you had scanned it. The document is not sent while they are there. Check the goods, then **Discard scans** removes them.
+- **Sent, line since removed**: scans that reached the central system before their line was removed there. Nothing on the device can undo them; tell the office if it matters.
 
 You can also **Clear Errors** in bulk from a document list's Errors tab or the Dashboard's Errors tab — this **removes the failed documents from your device without uploading them**. Only do this if you're sure the data doesn't need to reach the central system (e.g. it was a duplicate, or a test document).
 

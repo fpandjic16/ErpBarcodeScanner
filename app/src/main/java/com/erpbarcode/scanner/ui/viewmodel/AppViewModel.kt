@@ -300,7 +300,7 @@ class AppViewModel @Inject constructor(
      * Drops this operator's server access and closes their session, returning to the sign-in
      * screen. Their documents and recordings stay exactly where they are — signing out has never
      * deleted work and must not start now, since those rows are the only copy until the ERP has
-     * them. Their profile stays enrolled, so signing back in works offline.
+     * them. Their profile stays enrolled; signing back in still goes to the ERP, like every sign-in.
      */
     fun signOut() {
         profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }

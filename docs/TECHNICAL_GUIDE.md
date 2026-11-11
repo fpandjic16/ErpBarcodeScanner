@@ -2,7 +2,7 @@
 
 **Audience:** functional consultants configuring/supporting the app, and developers maintaining or extending it.
 
-This document supersedes the older `docs/ARCHITECTURE.md` (now a stub pointing here). It was generated from a full, current source-tree survey and is organized in two parts:
+This document supersedes the older `docs/ARCHITECTURE.md` (now a stub pointing here). It was generated from a full source-tree survey, last brought in line with the source at 3.6.65 (2026-11), and is organized in two parts:
 
 - **Part A — Consultant / Functional Reference**: business rules, document lifecycle, NAV/Business Central integration setup, configuration reference, common support scenarios. No code-reading required.
 - **Part B — Developer / Technical Reference**: architecture, database schema, repository/DAO/ViewModel APIs, networking internals, screen-by-screen implementation notes, extension points.
@@ -20,9 +20,9 @@ Prima Barcode is a native Android app (repository and Gradle project `ErpBarcode
 The functional loop:
 
 1. **Reference data sync** — pull Locations + derive Responsibility Centers from the ERP.
-2. **Download** — pull document lines for one or more document types from a single shared ERP table ("Barcode App Entry"), filtered by document type code + date range + destination/source/RC.
+2. **Download** — pull document lines for one document type from a single shared ERP table ("Barcode App Entry"), filtered by document type code + date range + destination/source/RC. A stock count is the exception: the operator first picks one inventory journal batch from a list the ERP publishes (§B.6.4), and that batch is the document.
 3. **Scan** — record barcode scans locally against document lines. A scan that doesn't match any line's barcode is rejected outright with a "Barcode not found" error — it is never recorded. The one exception is a stock count (`INVENTORY`), where it is asked about and can be added (§A.3).
-4. **Upload** — push each individual recorded scan as its own row to a second shared ERP table ("Barcode App Recordings"); on success the local document is fully removed; on failure it's flagged with the exact server error for retry.
+4. **Upload** — send every recorded scan to a second shared ERP table ("Barcode App Recordings"), either one request per scan or one request per document (a setting, §A.5.4). A scan the ERP accepts is marked sent; once nothing of a document is left unsent, the local document is removed. A failure is recorded with the server's own error text, against the row it belongs to, and the document stays for a retry.
 
 ## A.2 The Document Lifecycle (functional view)
 
@@ -34,7 +34,7 @@ Every document is always in exactly one of these states, computed automatically 
 | **In Progress** | Some scanning has happened, not yet complete | Automatically entered the moment any scan/edit occurs on a Downloaded or Upload-Failed document; also the state a Completed document regresses to if a later scan/edit breaks its "everything exact" condition |
 | **Completed** | Every line is exactly at its expected quantity | Computed on download/merge only — a document is *never* pushed into Completed by an in-app scan action directly; scanning to exact match keeps it "recomputed as Completed" on the next merge, but functionally the app treats "every line exact" as effectively complete in the UI regardless |
 | **Pending Upload** | Upload in progress (background-sync mode only) | Set immediately when a background upload starts, before the network call resolves |
-| **Upload Failed: \<reason\>** | The last upload attempt failed | Set when any row's POST to the ERP fails; the reason is the literal server/config error text |
+| **Upload Failed: \<reason\>** | The last upload attempt left something unsent | A refused row, a lost connection, a failed per-document call, a missing address, or scans whose line the ERP has since removed (§B.6.5). The reason is the server's or the configuration's own text, or a count of refused rows with the detail per row on the error screen |
 
 **Key business rule: recordings are never silently deleted.** A re-download can refresh a document's header/lines from the ERP, but it will never discard a user's recorded scans, even if the ERP no longer lists that document, or the document's lines have changed. `DocumentRepositoryImpl.mergeDocument()` always refreshes header/lines while re-summing docState from whatever recordings already exist locally (see §B.4.1).
 
@@ -70,10 +70,10 @@ All of this lives under **Settings → External System Configuration** (`ExtSyst
 
 | Field | Purpose | Example |
 |---|---|---|
-| Server base URL | Root used only for the "Test connection" NTLM probe | `http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/` |
+| Server base URL | The address every sign-in is checked against (`testConnection`), and the first part of the installation identity a profile's data is bound to (§B.7). No document traffic goes to it | `http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/` |
 | Domain | Windows/NTLM domain used when the user types a bare username at login (added 2026-08). A domain typed into the username overrides this, and `.\user` ignores it entirely — see §B.6.2 for the full resolution order | `PRIMA` |
 | Session duration | How long a signed-in session's credentials stay valid before requiring re-entry (8h / 24h / 48h / 7 days) | 168h |
-| Document lines URL | The **"Barcode App Entry"** OData endpoint — shared by all 5 document types | `.../Company('Prima Commerce d.o.o.')/BarcodeAppEntries` |
+| Document lines URL | The **"Barcode App Entry"** OData endpoint — shared by every document type | `.../Company('Prima Commerce d.o.o.')/BarcodeAppEntries` |
 | Per-document-type: enabled switch | Whether that document type is offered in the app at all | — |
 | Per-document-type: Document Type Code | The exact `Document_Type` filter value the ERP expects for that type (read-only in this screen; comes from imported/loaded config, not typed here). Retail and warehouse deliberately share codes — see the `Retail_Location` note in §A.5.3 | `SHIPMENT` (warehouse *and* retail shipment), `RECEIPT` (warehouse *and* retail receipt), `TRANSPORT` |
 | Per-document-type: Filter by | Whether that type's "download" and "My Location" filtering scope by **Location** (source code) or by **Responsibility Center** | `LOCATION` (default) |
@@ -97,11 +97,11 @@ None of these three actions saves anything by themselves — the screen's own **
 
 ### A.5.3 The "Barcode App Entry" table (download)
 
-One flat OData row per document **line** (header fields repeated on every row of the same document). All 5 document types share this single table/endpoint, discriminated purely by an OData filter on `Document_Type`.
+One flat OData row per document **line** (header fields repeated on every row of the same document). Every document type shares this single table/endpoint, discriminated purely by an OData filter on `Document_Type`.
 
 | NAV field | Meaning |
 |---|---|
-| `Document_Type` | Which of the 5 document types this row belongs to (filtered by, not stored per-row after grouping) |
+| `Document_Type` | Which document type this row belongs to (filtered by, not stored per-row after grouping) |
 | `Document_No` | Document number — the grouping key |
 | `Line_No` | Line number (rows with `Line_No <= 0` are treated as the header row and excluded from lines) |
 | `Source_No` | Source location code |
@@ -168,11 +168,16 @@ These map 1:1 to the User Guide's Settings section but framed for support/consul
 | "NTLM not enabled" / "credentials rejected" on Test Connection | Distinguishes ERP-side NTLM misconfiguration (phase 0 — no challenge issued at all) from genuinely wrong credentials (phase 2 + 401) | `NtlmAuthenticator.phaseReached`, surfaced in the Test Connection result dialog's message |
 | A document with real progress "disappeared" from Orders | Nothing but a successful upload removes it. Downloads never delete a document holding recordings | Check the RECORDINGS section on the main menu, and the Errors tab |
 | An operator cannot see work they left yesterday | They are signed in as a different profile, or typed a name that normalises differently | The RECORDINGS section is per operator; check the name on the sign-in screen |
-| Every document type answers "choose a location first", e.g. after an update or for a new operator | The device has no locations yet (`SharedDatabase` starts empty), or the operator has nothing selected (`lastLocationCode` / `lastRcCode` are personal and start blank), or the selected code is no longer on the list. A location-scoped type needs a location, a centre-scoped one (Complaint) a responsibility centre | Refresh on `LocationRcPickScreen`, then pick a location (its centre comes with it). The context strip on the main menu shows `—` while nothing is selected |
+| Every document type answers "choose a location first", e.g. after an update or for a new operator | The device has no locations yet (`SharedDatabase` starts empty), or the operator has nothing selected (`lastLocationCode` / `lastRcCode` are personal and start blank), or the selected code is no longer on the list. A location-scoped type needs a location, a centre-scoped one (the two complaint types) a responsibility centre | Refresh on `LocationRcPickScreen`, then pick a location (its centre comes with it). The context strip on the main menu shows `—` while nothing is selected |
 | "Could not sign in" and the server is down | Expected. The ERP checks the password on every sign-in and there is no local fallback | Restore the connection. Nothing on the device is lost meanwhile, but nobody can open the app |
 | Sign-in succeeds against a URL that is not really NAV | It cannot any more: a 2xx with `NtlmAuthenticator.phaseReached == 0` is refused, because OkHttp only invokes the authenticator on a 401 and an endpoint that never challenges never checks the password | Enable Windows Authentication on the OData endpoint |
 | Barcode with `|` scans as garbage | Printed with Code 39 symbology, which cannot encode `|` | Reprint the label as Code 128 |
 | A scan is rejected as "Barcode not found" even though the item is on the document | The scanned value doesn't byte-for-byte match that line's `Barcode` field (wrong symbology, stray whitespace, wrong `\|UOM\|QTY` suffix) | Compare the raw scanned value against the line's `Barcode` field; reprint the label if needed |
+| A stock count offers no batches | The inventory batches URL is blank, page 50208 is not published as `BarcodeInventoryBatches`, the batch was not sent to the devices (*Send to barcode devices* on the journal), it is already finished, or it belongs to another location or centre than the one selected | External System Configuration → Inventory batches URL; in NAV, the journal batch's `Barcode Location Code` and its sync record (§B.18) |
+| "Per document" upload fails for every document | Codeunit 50117 is not published as `BarcodeAppUpload`, or the document upload URL has the wrong SOAP port, instance or company. The bundled files only guess the port | `UploadErrorScreen` shows the SOAP fault or HTTP status; switch Upload back to *Per scan* until the address is confirmed |
+| The operator was signed out right after saving the configuration | The saved configuration names another ERP installation (server, port, instance or company). A session never outlives its installation (§B.7); the app asked first | Sign in again. Work left on the previous installation reappears when the device is pointed back at it |
+| An operator's documents and unsent scans are gone after an address was changed | They are filed under the installation they were made on, not lost | Restore the previous addresses (or load that company's configuration), sign in, upload, then switch |
+| The sign-in screen no longer shows "External system setup" | By design since 3.6.52: that door is open only while no server address is saved | Change the configuration from Settings after signing in; if nobody can sign in because the saved address is wrong, clear the app's data |
 
 ### New application id (3.6.48)
 
@@ -188,7 +193,7 @@ Nothing carries over: databases (`user_<hash>.db`, `shared.db`), credentials and
 
 Each operator gets their own database file. Documents, lines and recordings are scoped by which file a query runs in — not by a predicate — so two operators on one device cannot see or send each other's work, and both may hold the same NAV document independently, each with their own scans. The ERP refuses nothing, so those two copies add up there, which is the point when they are splitting one job between them.
 
-Sign-in is required at every app launch and is a real sign-in, with a password. What that password is checked against depends on whether the ERP can be reached:
+Sign-in is required at every app launch and is a real sign-in, with a password.
 
 **Every sign-in goes to the ERP. There is no local fallback.** `testConnection` must both return 2xx *and* show `NtlmAuthenticator.phaseReached > 0`; a success enrols the profile (name only — no secret is stored) and opens its database. Anything else fails, including an unreachable server and a blank `serverBaseUrl`, which reports `R.string.signin_needs_server` and is answered by the sign-in screen's own door to the external-system setup.
 
@@ -196,11 +201,11 @@ An earlier version unlocked offline against a stored PBKDF2 digest, so an enroll
 
 Identity still must not come from the credentials: `ExtSystemCredentialStore.get()` wipes those the moment their TTL lapses, and scoping data to an identity that self-destructs on a timer would hide an operator's own unsent scans from them. So enrolment in `UserProfileStore` has no expiry even though it is no longer a secret — what it reaches does not expire either, and an operator must be able to find their own work after their credential has lapsed.
 
-Identity is `UserProfileStore.normalise()` — the bare username, upper case, domain stripped, at most 50 characters. `alice`, `PRIMA\alice` and `alice@prima.hr` are one operator. Before this, `User.id` was the raw typed string, so one person could have had three identities and, under per-profile storage, three separate databases. The database filename is a SHA-256 prefix of that key, never the name itself.
+Identity is `UserProfileStore.normalise()` — the bare username, upper case, domain stripped, at most 50 characters. `alice`, `PRIMA\alice` and `alice@prima.hr` are one operator. Before this, `User.id` was the raw typed string, so one person could have had three identities and, under per-profile storage, three separate databases. The database filename is a SHA-256 prefix of that key, never the name itself. Since 3.6.53 what names the database is that identity **together with the ERP installation** (`UserProfile.key`, §B.7), so the same person on another server or company is a separate profile with its own, initially empty, file.
 
 `RecordingEntity.userId` is stamped at the moment a scan is written and travels to NAV as `Source_User_ID`. It can no longer be empty: nothing is reachable before sign-in, which is why the gate exists at all — a scan's author cannot be filled in afterwards.
 
-Locations and responsibility centres stay device-wide in `SharedDatabase`, along with `ExtSystemConfig`, the disabled document types, the per-type filter modes and the debugger flag. Everything else in `AppSettings` is per profile.
+Locations and responsibility centres are kept once per ERP installation in `SharedDatabase` (one file per installation since 3.6.53, §B.7) and shared by its operators. `ExtSystemConfig`, the disabled document types, the per-type filter modes and the debugger flag belong to the device. Everything else in `AppSettings` is per operator.
 
 ---
 
@@ -211,39 +216,63 @@ Locations and responsibility centres stay device-wide in `SharedDatabase`, along
 | Layer | Technology |
 |---|---|
 | UI | Jetpack Compose + Material 3 |
-| Navigation | Compose Navigation |
-| Networking | Ktor Client (OkHttp engine) + a hand-rolled NTLMv2 `okhttp3.Authenticator` — Ktor's own auth plugin and ContentNegotiation are **not** used; JSON is hand-built/parsed with Gson |
-| Local DB | Room (KSP-generated DAOs) |
+| Navigation | Compose Navigation: one `NavHost`, its routes written as `NavGraphBuilder` extensions, one file per group of screens (§B.11) |
+| Networking | Ktor Client (OkHttp engine) + a hand-rolled NTLMv2 `okhttp3.Authenticator` — Ktor's own auth plugin and ContentNegotiation are **not** used; JSON is hand-built/parsed with Gson, and the one SOAP envelope by `DocumentUploadSoap` |
+| Local DB | Room (KSP-generated DAOs): one work database per profile, one reference database per ERP installation (§B.2) |
 | DI | Hilt/Dagger |
-| Barcode | ML Kit (camera path) + Zebra DataWedge (hardware wedge, Intent-based) |
-| Camera | CameraX |
-| Secure storage | `androidx.security:security-crypto` (`EncryptedSharedPreferences`, AES-256-GCM, Android Keystore-backed) for NAV credentials only |
+| Barcode | Zebra DataWedge (hardware scanner, intent output only); ML Kit + CameraX only on a device without a scanner (§B.9) |
+| Secure storage | `SecureStore`: AES-256-GCM with a key in the Android Keystore, no library (§B.7). `security-crypto` was dropped in 3.6.28 |
 | Logging | Timber |
 
 ```
 app/src/main/java/com/erpbarcode/scanner/
-├── MainActivity.kt               # NavHost, app shell, all settings state hoisting
+├── BarcodeApplication.kt         # @HiltAndroidApp: logging, the default language before sign-in
+├── MainActivity.kt               # onCreate, theme, the settings that follow the operator, nav bar, DataWedge
+├── navigation/                   # the app shell (§B.11)
+│   ├── AppNavHost.kt             # BarcodeApp: collects state, sign-in gate, builds the Shell, NavHost, overlay dialogs
+│   ├── AppShell.kt               # AppShellState (remembered) and Shell (one composition's values and actions)
+│   ├── ShellData.kt              # what the menu and lists show: the scope rule, type summaries, counters (tested)
+│   ├── SignInGate.kt             # the signed-out screens: sign-in, first setup, app info
+│   ├── MainMenuRoute.kt          # ┐
+│   ├── DocumentRoutes.kt         # │ the routes, each file an extension of NavGraphBuilder
+│   ├── DashboardRoutes.kt        # │ taking the Shell
+│   ├── RecordingRoutes.kt        # │
+│   ├── SettingsRoutes.kt         # ┘
+│   ├── Routes.kt                 # every route pattern, and the builders for those with arguments
+│   └── AppDialogs.kt             # processing, download error, debugger, upload errors, server change, blocked switch
 ├── data/
-│   ├── auth/                     # AppSettings(Store), ExtSystemConfig(Store), credential store
-│   ├── barcode/                  # BarcodeAnalyzer (ML Kit), DataWedgeManager (Zebra wedge)
-│   ├── db/                       # Room entities, DAOs, AppDatabase, Mappers
+│   ├── auth/                     # AppSettings(Store), ExtSystemConfig(Store), ExtSystemCredentialStore,
+│   │                             # UserProfileStore, SecureStore, LoginQrPayload
+│   ├── barcode/                  # BarcodeAnalyzer (ML Kit), DataWedgeManager (Zebra profile + broadcasts)
+│   ├── db/                       # entities, DAOs, Mappers; AppDatabase + DatabaseProvider (per profile),
+│   │                             # SharedDatabase + SharedDatabaseProvider (per installation)
 │   ├── export/                   # DatabaseExporter (raw DB → JSON dump)
-│   ├── extsystem/                # ExtSystemODataClient, NtlmAuthenticator, DTOs
-│   ├── model/                    # Domain models (Models.kt, Filter.kt, Status.kt)
-│   └── repository/               # DocumentRepository (the only repository in the app)
-├── di/DatabaseModule.kt          # the only Hilt module
+│   ├── extsystem/                # ExtSystemODataClient, NtlmAuthenticator, DocumentUploadSoap, ODataFilter, DTOs
+│   ├── haptic/                   # HapticEngine
+│   ├── model/                    # Models.kt, Filter.kt, Status.kt
+│   ├── repository/               # DocumentRepository (the only repository in the app)
+│   └── sound/                    # SoundEngine
+├── di/DatabaseModule.kt          # the only Hilt module: binds the repository, provides no database (§B.8)
+├── i18n/AppLanguage.kt           # Context.inAppLanguage()
 └── ui/
-    ├── theme/                    # Color.kt, Type.kt, Shape.kt, Theme.kt, Language.kt
-    ├── component/                # Reusable composables
-    ├── screen/                   # Full screens
-    └── viewmodel/                # AppViewModel, RecordingViewModel
+    ├── theme/                    # Color.kt (every colour token), Type.kt, Shape.kt, Theme.kt, Language.kt
+    ├── component/                # AppTopBar, ScanBar, ScanField, CameraPreview, DocumentStatsDashboard, ...
+    ├── screen/                   # full screens, and the files split off the large ones (§B.10)
+    └── viewmodel/                # AppViewModel + ConfigController, UploadCoordinator, DownloadCoordinator;
+                                  # RecordingViewModel, RecordingsTreeViewModel
 ```
 
-There is deliberately **no separate "SyncRepository"** — NAV networking (download/upload/test-connection) is orchestrated directly in `AppViewModel`, which calls `ExtSystemODataClient` and `DocumentRepository`/DAOs itself.
+Unit tests are in `app/src/test/java/com/erpbarcode/scanner/` (§B.15, *Tests*). Outside the app: `tools/` (the sign-in QR generators), `NAV/` (C/AL exports, §B.18), `docs/`, and `app/schemas/` (exported Room schemas, committed).
+
+**Size, as of 3.6.65:** 94 Kotlin files and about 16,800 lines in `main`, about 470 in unit tests. The 2026-11 splits (§B.13) changed nothing in behaviour and brought the five largest files down: `MainActivity.kt` 1,132 → 250, `RecordingScreen.kt` 1,043 → 552, `AppViewModel.kt` 1,018 → 581, `SettingsScreen.kt` 959 → 512, `ExtSystemConfigScreen.kt` 793 → 462. The largest now are `DownloadFilterScreen.kt` (659), `DocumentRepository.kt` (642) and `LocationRcPickScreen.kt` (619).
+
+There is deliberately **no separate "SyncRepository"**. ERP networking is started by `AppViewModel`, which keeps the coroutine scope, the exposed state and the guard against changing operator mid-transfer, and since 3.6.37 hands the work itself to `UploadCoordinator`, `DownloadCoordinator` and `ConfigController` (§B.11.2). Those call `ExtSystemODataClient` and `DocumentRepository`.
+
+**Naming (3.6.48).** The code names neither the ERP product nor the customer: package `com.erpbarcode.scanner`, `App…` for the app's own types, "the ERP" in comments. What remains are values the ERP itself publishes (OData field names, the SOAP namespaces `urn:microsoft-dynamics-*`) and the display name *Prima Barcode*. Everything specific to the NAV side lives in §B.18, `NAV/` and the bundled company configurations.
 
 ## B.2 Database Schema (Room)
 
-The schema version is `DB_VERSION` in `AppDatabase.kt` (20 as of 2026-11), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
+The schema version is `DB_VERSION` in `AppDatabase.kt` (21 since 3.6.28), referenced by the `@Database` annotation and shown in the app info; change it there and nowhere else. `SharedDatabase` (locations and responsibility centres) has its own version, 1.
 
 Two databases, and which one a table lives in is the whole of the per-user isolation.
 
@@ -255,7 +284,7 @@ Two databases, and which one a table lives in is the whole of the per-user isola
 
 **Upgrading a device therefore starts with no locations and no responsibility centres.** `MIGRATION_18_19` drops those two tables from `AppDatabase` and `SharedDatabase` is created empty; `upsertLocations` has exactly one caller, `realDownloadLocations`, and nothing calls it automatically. The operator gets them back through **Refresh** on `LocationRcPickScreen`, which is deliberate — nothing downloads behind their back.
 
-That empty state used to make the document filter look broken, because the two modes failed in opposite directions: with nothing selected, a missing centre passed **everything** while a missing location passed **nothing**. Both modes now require their selection (see `filteredDocs` in `MainActivity`):
+That empty state used to make the document filter look broken, because the two modes failed in opposite directions: with nothing selected, a missing centre passed **everything** while a missing location passed **nothing**. Both modes now require their selection (`Document.isInScope` in `navigation/ShellData.kt`, unit-tested):
 
 ```kotlin
 DocTypeFilterMode.LOCATION              -> location != null && doc.sourceCode == location.code
@@ -264,7 +293,7 @@ DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null && doc.rcCode == rc.code
 
 and a type whose selection is missing cannot be opened at all (§B.11.4), so nothing selected now reads the same for every type: the main menu says to pick a location or centre.
 
-The *selected* location is a separate thing from the *list*: `lastLocationCode` / `lastRcCode` are personal settings and moved to `app_settings_<profile id>` with the split, so they start blank for every operator. Nothing repairs a blank pair on its own — `LaunchedEffect(rcs, rcCode)` only acts when `rcCode` is non-blank, and the location effect only when `rc != null`. Each operator picks once, on `LocationRcPickScreen`.
+The *selected* location is a separate thing from the *list*: `lastLocationCode` / `lastRcCode` are personal settings and moved to `app_settings_<operator id>` with the split, so they start blank for every operator; since 3.6.53 they are remembered per installation (`lastLocationCode@<identity>`), so each company a device is used for keeps its own. Nothing repairs a blank pair on its own — `LaunchedEffect(rcs, rcCode)` only acts when `rcCode` is non-blank, and the location effect only when `rc != null`. Each operator picks once, on `LocationRcPickScreen`.
 
 `DatabaseProvider` keeps opened databases open rather than closing on switch. A background upload outlives the screen that started it, so a switch can land while rows are still being written; closing underneath that throws and loses the write, and those rows are the only copy of a shift's work until the ERP has them. **Never hold a DAO or a database in a field** — `DocumentRepositoryImpl` resolves `provider.current()` at each use, binds it once per transaction with a local `val db`, and passes that into its private helpers so no transaction can straddle two files.
 
@@ -297,7 +326,7 @@ PK: `(documentNo, type, lineNo)`. FK `(documentNo, type) → documentHeader`, `O
 | addedOnDevice | INTEGER NOT NULL DEFAULT 0 | added v20→v21: a stock count's line created on the device (`Line.isAddedOnDevice`). Such lines still get a negative `lineNo`, but are recognised by this field, not by the sign |
 
 ### `recordings` (`RecordingEntity`)
-PK: `(documentNo, type, documentLine, recordingLineNo)`. FK `(documentNo, type) → documentHeader`, `ON DELETE CASCADE`. Indices: `(documentNo, type)`, `(documentLine)`. `documentLine` always references a real `DocumentLineEntity.lineNo` — every recording is tied to a line.
+PK: `(documentNo, type, documentLine, recordingLineNo)`. FK `(documentNo, type) → documentHeader`, `ON DELETE CASCADE`. Indices: `(documentNo, type)`, `(documentLine)`. `documentLine` normally names a `DocumentLineEntity.lineNo`, but there is **no foreign key from a recording to its line**, on purpose: lines are replaced on every download and recordings must survive that. A recording whose line the ERP has since removed is an *orphan* (§B.4.1).
 
 | Column | Type | Notes |
 |---|---|---|
@@ -308,6 +337,9 @@ PK: `(documentNo, type, documentLine, recordingLineNo)`. FK `(documentNo, type) 
 | userId | TEXT NOT NULL | |
 | destinationCode, sourceCode, unitOfMeasureCode | TEXT NOT NULL | |
 | rcCode | TEXT NOT NULL DEFAULT '' | added v14→v15, backfilled from parent header |
+| recordingGuid | TEXT NOT NULL | added v16→v17, backfilled with a generated v4 GUID per row. Minted once when the scan is stored, sent unchanged on every attempt (§A.5.4) |
+| sentAt | TEXT NULL | added v17→v18. ISO-8601 time the ERP accepted the row; null while queued. Rows are marked, not deleted, until the whole document goes |
+| lastError | TEXT NULL | added v17→v18. The last refusal's message; null if never tried or never refused |
 
 Note: a nullable `format` TEXT column existed between v12 and v16 (barcode symbology, never actually populated by any code path) and was **dropped in v15→v16** along with the corresponding `DocumentRepository.getUploadableDocs`/upload-DTO field, after confirming zero write sites during a 2026-08 codebase audit.
 
@@ -324,12 +356,19 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 
 | Migration | Change | Why the "recreate" pattern (if used) |
 |---|---|---|
+| `MIGRATION_7_8` | Rebuilds `documentHeader` (`downloadedAt` → `creationDateTime`, new nullable `documentDate`) and `recordings` (drops `uploaded` and its index) | SQLite on Android 8.1 has neither `RENAME COLUMN` nor `DROP COLUMN`. Safe only because Room switches foreign keys off during a migration |
+| `MIGRATION_8_9` | Creates `locations` and `responsibility_centers` | New tables, nothing to carry over |
+| `MIGRATION_9_10` | `ADD COLUMN unitOfMeasureCode TEXT NOT NULL DEFAULT ''` on `documentLine` and `recordings` | Additive; blank means "no unit stated", which is true of older rows |
 | `MIGRATION_10_11` | `ALTER TABLE documentLine ADD COLUMN scanningQty REAL NOT NULL DEFAULT 1.0` | Plain additive column — no rebuild needed |
 | `MIGRATION_11_12` | Rebuilds `recordings`: converts `creationDateTime` INTEGER (epoch millis) → TEXT (ISO-8601, via SQLite `strftime`); adds `format` column | SQLite `ALTER TABLE` cannot change a column's type — requires create-new/copy/drop/rename + recreate indices |
 | `MIGRATION_12_13` | Rebuilds `documentHeader`, dropping an obsolete pre-v13 column | SQLite `ALTER TABLE` (at the time) could not `DROP COLUMN` — same recreate pattern |
 | `MIGRATION_13_14` | `ALTER TABLE documentHeader ADD COLUMN isSourceRetail INTEGER NOT NULL DEFAULT 0` | Additive — no rebuild |
 | `MIGRATION_14_15` | `ALTER TABLE recordings ADD COLUMN rcCode TEXT NOT NULL DEFAULT ''`, then `UPDATE recordings SET rcCode = (correlated subquery against documentHeader.rcCode)` | Additive column + backfill — no rebuild |
 | `MIGRATION_15_16` | Rebuilds `recordings`, dropping the now-unused `format` column | Column drop — recreate pattern again |
+| `MIGRATION_16_17` | `ALTER TABLE recordings ADD COLUMN recordingGuid`, then a v4 GUID generated in SQL for every existing row | Additive + backfill: queued rows from an older install are the ones most likely to be retried |
+| `MIGRATION_17_18` | `ALTER TABLE recordings ADD COLUMN sentAt TEXT` and `lastError TEXT` | Additive, no backfill: null is the right state for everything already queued |
+| `MIGRATION_18_19` | Drops `locations` and `responsibility_centers` (moved to `SharedDatabase`) | Kept so the chain is complete; per-profile files are created at 19 or later |
+| `MIGRATION_19_20` | Deletes the rows of the retired `COMPLAINT` type; no schema change | An unknown type key would read back as a warehouse shipment (§B.5) |
 | `MIGRATION_20_21` | `ALTER TABLE documentLine ADD COLUMN addedOnDevice INTEGER NOT NULL DEFAULT 0`, then `UPDATE documentLine SET addedOnDevice = 1 WHERE lineNo < 0` | Additive column + backfill; every negative line number was a device-added line. `21.json` is generated by the build |
 
 **General rule**: SQLite's native `ALTER TABLE` only supports `ADD COLUMN`, `RENAME COLUMN`, `RENAME TABLE`. Any migration that needs to change a column's type or drop a column must: `CREATE TABLE x_new (...)` with the desired final shape → `INSERT INTO x_new SELECT ... FROM x` (explicit column list, applying any needed transform) → `DROP TABLE x` → `ALTER TABLE x_new RENAME TO x` → manually recreate indices (they don't survive `DROP TABLE`).
@@ -357,17 +396,33 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 - `deleteByKey(documentNo, type, lineNo)` (suspend) — removes one line; used for a line added on the device once its last scan is gone
 
 ### `RecordingDao`
+*Queued* means `sentAt IS NULL`; an *orphan* is a row whose `documentLine` matches no line of its document.
+
+Reading:
 - `observeByDoc(documentNo, type): Flow<List<RecordingEntity>>` — `ORDER BY documentLine, recordingLineNo`
 - `observeAll(): Flow<List<RecordingEntity>>`
-- `getNextRecordingLineNo(documentNo, type, documentLine): Int` (suspend) — `COALESCE(MAX(recordingLineNo),0)+1`, scoped per `(documentNo, type, documentLine)` triple (each line has its own independent sequence)
-- `getByDoc(documentNo, type): List<RecordingEntity>` (suspend)
-- `insert(recording)` (suspend, `@Insert` — plain insert, fails on PK conflict by design; recordings are append-only)
-- `deleteByPk(documentNo, type, documentLine, recordingLineNo)` (suspend)
-- `deleteAllForLine(documentNo, type, lineNo)` (suspend)
-- `deleteAllForDoc(documentNo, type)` (suspend)
-- `getAll(): List<RecordingEntity>` (suspend) — used by `DatabaseExporter`
+- `getByDoc(documentNo, type)` / `getAll()` (suspend) — `getAll` is for `DatabaseExporter` and the profile footprint
+- `getNextRecordingLineNo(documentNo, type, documentLine): Int` — `COALESCE(MAX(recordingLineNo),0)+1`; each line has its own sequence
+- `getQueuedByDoc(documentNo, type)` — line-attached and not yet accepted: what an upload sends
+- `getOrphansByDoc(documentNo, type)` — queued rows with no line: what blocks an upload
+- `getQueuedForLineNewestFirst(documentNo, type, lineNo)` — what a manual reduction consumes
+- `getSentQuantityForLine(documentNo, type, lineNo): Double` — the floor a manual edit may not go under
+
+Writing:
+- `insert(recording)` — plain `@Insert`, fails on a key conflict by design: recordings are append-only
+- `markSent(...)` — stamps `sentAt`, clears `lastError`
+- `recordFailure(..., error)` — stores the refusal against the row
+- `updateQueuedQuantity(...)` — trims a queued row a reduction only partly needs; `sentAt IS NULL` is in the `WHERE`
+
+Deleting (every one except the first two is limited to queued rows in its `WHERE` clause):
+- `deleteByPk(...)` — used only to move a row to another line (delete + insert, the line is part of the key)
+- `deleteAllForDoc(documentNo, type)`
+- `deleteQueuedByPk(...)`, `deleteQueuedForDoc(...)` — the recordings tree's single delete and its 5-second hold
+- `deleteFailedByDoc(...)`, `deleteOrphansByDoc(...)` — the two discards on `UploadErrorScreen`
 
 ### `LocationDao`
+On `SharedDatabase`, not `AppDatabase`: reached through `SharedDatabaseProvider.forServer(identity).locationDao()`.
+
 - `observeLocations(): Flow<List<LocationEntity>>` — `ORDER BY name ASC`
 - `observeRcs(): Flow<List<ResponsibilityCenterEntity>>` — `ORDER BY name ASC`
 - `upsertLocations(locations)` / `upsertRcs(rcs)` (suspend, `@Upsert`)
@@ -375,22 +430,27 @@ Not a Room entity — a plain data class `{ document: DocumentHeaderEntity, line
 
 ## B.4 `DocumentRepository` — Full Function Reference
 
-`@Singleton class DocumentRepositoryImpl @Inject constructor(private val db: AppDatabase)` — talks directly to `db.documentHeaderDao()` / `db.documentLineDao()` / `db.recordingDao()`; no field-level DAO injection.
+`@Singleton class DocumentRepositoryImpl @Inject constructor(private val provider: DatabaseProvider)`. It holds no database and no DAO: `db` is a getter over `provider.current()`, every transactional method binds it once (`val db = provider.current(); db.withTransaction { … }`) and passes that into its private helpers, and the two `observe…` flows `flatMapLatest` over `provider.database`, so a change of operator reaches the screens instead of leaving them on the previous operator's file.
 
 | Function | Behavior |
 |---|---|
 | `observeAll(): Flow<List<Document>>` | Combines all headers + lines + recordings, assembles domain `Document`s via `assembleDocuments` (in-memory groupBy, avoids N+1 queries) |
 | `observeDocument(documentNo, type): Flow<Document?>` | Same, scoped to one document |
+| `observeRecordings(documentNo, type): Flow<List<RecordingEntity>>` | The individual scans `observeDocument` sums away; the recordings tree reads this |
 | `replaceDownloadedDocuments(type, docs, pruneMissing = true)` (suspend, transactional) | Deletes headers of `type` not present in `docs` **only if they have zero recordings**, and only when `pruneMissing` (false for a download of one picked inventory batch, which says nothing about the others); calls `mergeDocument` for every doc in `docs` |
-| `mergeDocument(doc, type)` (private, suspend) | Refreshes header + fully replaces lines from the download, recomputes docState from whatever recordings already exist locally — see §B.4.1 for the exact code path |
-| `computeStateAfterMerge(lines, recordings)` (private) | `Downloaded` if no recordings; else `Completed` if every line's summed recordings exactly equal `expected`; else `InProgress`. Never returns `PendingUpload`/`UploadFailed` — those are only set via `updateDocState` from outside, and any subsequent merge will silently overwrite them |
+| `mergeDocument(db, doc, type)` (private, suspend) | Refreshes the header, replaces the ERP's lines while keeping lines added on the device, moves scans onto the ERP's line where it now sends that barcode, re-attaches orphans by barcode, then recomputes the state — see §B.4.1 |
+| `computeStateAfterMerge(lines, recordings)` (private) | `Downloaded` if no recordings; `InProgress` if there are recordings but no lines (an empty `all {}` is vacuously true and used to read as Completed); else `Completed` if every line's summed recordings equal `expected`; else `InProgress`. Never returns `PendingUpload`/`UploadFailed` — those are set from outside via `updateDocState`, and any later merge overwrites them |
 | `recordScan(documentNo, type, lineNo, barcodeNo, userId, quantity)` (suspend, transactional) | Looks up line+header, generates next `recordingLineNo`, **inserts** a new recording (always additive, never updates existing rows), calls `advanceToInProgressIfNeeded` + `regressFromCompletedIfNeeded` |
 | `recordScanNotOnDocument(documentNo, type, barcodeNo, unitOfMeasureCode, userId, quantity)` (suspend, transactional) | Stock count only (§A.3). Finds the device-added line for the barcode or creates one (`lineNo` = lowest existing, capped at 0, minus 1), then calls `recordScan` in the same transaction, so a second scan arriving before the screen has seen the line still lands on it |
 | `setLineScanned(documentNo, type, lineNo, scanned, userId): SetQuantityResult` (suspend, transactional) | Moves only the **queued** part of a line, and as a delta. Refuses with `BelowSent(sent)` if `scanned` is under what the ERP already holds. Otherwise: up appends one row like a scan would; down consumes queued rows newest-first and stops, trimming the last one it only partly needs. Runs all three state helpers (including `regressToDownloadedIfNeeded`, since zeroing a line could empty the doc entirely) |
 | `updateDocState(documentNo, type, state)` (suspend) | Direct state write — used by the upload flow for `PendingUpload`/`UploadFailed` |
 | `deleteDocument(documentNo, type)` (suspend) | Deletes header, cascades lines+recordings — used on upload success |
 | `getQueuedRecordings(documentNo, type)` / `getOrphanedRecordings(...)` (suspend) | What the upload flow enumerates: line-attached rows still `sentAt IS NULL`, and the orphans that block the document before a single row goes out |
-| `markRecordingSent(documentNo, type, documentLine, recordingLineNo)` (suspend) | Stamps `sentAt` the instant a row's POST succeeds. Replaced a delete — rows are kept until the whole document goes, so a partly-sent document still shows everything the operator scanned |
+| `hasAnyRecordings(documentNo, type)` (suspend) | Tells a freshly downloaded document (leave it) from one whose rows have all been accepted (remove it) when nothing is queued |
+| `markRecordingSent(documentNo, type, documentLine, recordingLineNo)` (suspend) | Stamps `sentAt` the instant a row is accepted. Replaced a delete — rows are kept until the whole document goes, so a partly-sent document still shows everything the operator scanned |
+| `recordRecordingFailure(..., error)` (suspend) | Stores the refusal against the row, for `UploadErrorScreen` |
+| `discardOrphanedScans(documentNo, type)` / `discardFailedScans(documentNo, type)` (suspend, transactional) | The two explicit discards on `UploadErrorScreen`: scans whose line is gone, and queued rows the ERP refused. Both recompute the state |
+| `recoverStalePendingUploads()` (suspend, transactional) | At start-up: a `PendingUpload` left by a background upload whose process died goes back to `InProgress` (rows remain) or `Downloaded` (none). Never deletes |
 | `deleteQueuedRecording(documentNo, type, documentLine, recordingLineNo)` (suspend, transactional) | Single-row delete from the recordings tree, `sentAt IS NULL` only; recomputes state |
 | `clearAll()` (suspend) | Deletes all headers, cascades everything. "All" means all in *this* file, so it is the signed-in operator's wipe and nobody else's — behind both "Clear cache" and "Delete all documents" |
 | `deleteDocumentRecordings(documentNo, type)` (suspend, transactional) | Deletes a document's **queued** recordings and recomputes state from what remains — the 5s-hold action on the recordings tree |
@@ -411,19 +471,22 @@ Both of those replaced one destructive overwrite. `setLineScanned` used to delet
 - `recordScan` — never deletes anything, purely additive.
 - `replaceDownloadedDocuments` explicitly checks `hasRecordings` before deleting a header no longer present in a fresh download; `mergeDocument` itself never touches the `recordings` table at all, only `documentHeader`/`documentLine`.
 
-### B.4.1 `mergeDocument` — exact algorithm
+### B.4.1 `mergeDocument` — what a re-download does to a document
 
-```kotlin
-private suspend fun mergeDocument(doc: Document, type: String) {
-    val recordings = db.recordingDao().getByDoc(doc.documentNo, type)
-    val state = computeStateAfterMerge(doc.lines, recordings)
-    db.documentHeaderDao().upsert(doc.toEntity().copy(docState = state.toDbString()))
-    db.documentLineDao().deleteAllForDoc(doc.documentNo, type)
-    db.documentLineDao().upsertAll(doc.lines.map { it.toEntity(type) })
-}
-```
+Runs inside `replaceDownloadedDocuments`' transaction, once per downloaded document:
 
-That's the whole function — it never touches the `recordings` table. Recordings are keyed by `(documentNo, type, documentLine, recordingLineNo)`, and `documentLine` is a line number that's stable across re-downloads of the same document, so existing recordings simply keep applying to whichever line has that number after the lines table is replaced. `computeStateAfterMerge` re-sums those existing recordings against the *freshly downloaded* `expected` quantities to decide `Downloaded`/`Completed`/`InProgress` — this is what makes a re-download safe even if the ERP changed a line's expected quantity: the doc's state is always recomputed, never carried over.
+1. **Header** — upserted first (lines have a foreign key to it); its `docState` is corrected in step 6.
+2. **Lines added on the device are set aside.** They are not the ERP's to replace. Each is either *replaced by the ERP* (the download now carries a line with its barcode) or *kept*.
+3. **Lines** — all of the document's lines are deleted and written again: the ERP's lines plus the kept device lines.
+4. **Scans on a replaced device line move to the ERP's line**, sent ones included. Left behind, a sent scan would show as an orphan and the ERP's line would look unscanned.
+5. **Orphans are re-attached by barcode** (`reattachOrphansByBarcode`): a queued scan whose line number no longer exists moves to the line that now carries its barcode — this is the ERP renumbering a line rather than removing the item. Several lines with that barcode resolve to the lowest line number. What matches nothing stays an orphan.
+6. **State** (`refreshStateFromRecordings`) — device lines left without a scan are dropped, then `computeStateAfterMerge` runs over the recordings as they now stand.
+
+Moving a scan is delete + insert, because `documentLine` is part of the primary key; the row keeps its `recordingGuid`, `sentAt` and `lastError`, so it is the same scan to the ERP and an accepted one stays accepted.
+
+**What never happens:** a merge deletes no recording. Anything left without a line surfaces as `Document.orphanedScans` (computed in `Mappers.toDomain` by comparing recordings with line rows), blocks the upload of that document, and is removed only by the operator, on `UploadErrorScreen`.
+
+An earlier version only replaced header and lines and relied on line numbers being stable across downloads. They are not: NAV renumbers lines when a document is edited, and a stock count gains lines the device created first.
 
 ## B.5 Domain Models
 
@@ -465,7 +528,7 @@ fun of(scanned: Double, expected: Double) = when {
     else                -> OVER
 }
 ```
-Plus `.color`/`.bgColor` UI extension properties (the English `.label` was removed in 2026-10; screens use their own `localizedLabel()`), and `Document.scanStatus()` (aggregate — see §A.4).
+Plus three colour extension properties: `.color` (the fill: bars, dots, tints), `.inkColor` (the same state as text or under white text, darker so it reaches 4.5:1) and `.bgColor` (the soft tint behind chips) — §B.14. The label is `LineStatus.localizedLabel()`, one `@Composable` in `ui/screen/LineStatusLabel.kt` (three screens each had a copy until 3.6.27). And `Document.scanStatus()`, the aggregate (§A.4).
 
 ### `DocTypeFilterMode`
 `{ LOCATION, RESPONSIBILITY_CENTER }` — governs whether a document type's download/dashboard filtering scopes by source location code or RC code. Stored per-type in `AppSettings.docTypeFilters`.
@@ -485,7 +548,7 @@ data class DownloadFilter(
 )
 ```
 
-Other `Models.kt` types: `User`, `Location`, `ResponsibilityCenter`, `Item(no, name)`, `Line` (computed `status`, `hasSentQuantity`, and `isAddedOnDevice`, true for a negative `lineNo`), `InventoryBatch` (one entry of the inventory batch list: `documentNo`, journal template and batch, date, line count), `Document` (computed `linesExact`, `linesTotal`, `scannedQty`, `expectedQty`, `hasProgress`, `totalScans`, `partlySent`), `ScanRecord` + `LineScans` (the recordings tree's UI models — see `RecordingsTreeScreen`), `Double.formatQty()` extension.
+Other `Models.kt` types: `User`, `Location`, `ResponsibilityCenter`, `Item(no, name)`, `Line` (computed `status` and `hasSentQuantity`; `isAddedOnDevice` is a stored field since schema 21, no longer read off a negative `lineNo`), `InventoryBatch` (one entry of the inventory batch list: `documentNo`, journal template and batch, description, date, line count), `Document` (computed `linesExact`, `linesTotal`, `scannedQty`, `expectedQty`, `hasProgress`, `totalScans`, `partlySent`), `ScanRecord` + `LineScans` (the recordings tree's UI models — see `RecordingsTreeScreen`), `Double.formatQty()` extension.
 
 ### Supporting: `DatabaseExporter`
 `data/export/DatabaseExporter.kt` — `suspend fun exportTo(uri: Uri)`, reads all headers/lines/recordings via DAOs, wraps as `{exportedAt, documentHeaders, documentLines, recordings}`, Gson-pretty-prints to the given `Uri`. Debug/support tool, invoked from `SettingsScreen`'s "Export data".
@@ -508,6 +571,7 @@ sealed class ExtSystemResult<out T> {
 |---|---|
 | `testConnection(baseUrl)` (suspend) | `GET baseUrl`; resets `ntlmAuth.resetPhase()` first; on failure inspects `phaseReached` to distinguish "NTLM not enabled" (phase 0) vs "handshake completed, credentials rejected" (phase 2 + 401) vs a generic HTTP error (body, truncated 300 chars) |
 | `uploadRecording(url, row: ErpRecordingRow)` (suspend) | `POST url`, `Content-Type: application/json`, body = `gson.toJson(row)`. On 401: the localized `ext_error_http_401`. On any other non-2xx: `Failure("HTTP ${status}: $body".take(300), status)` — NAV's own text is the most precise thing there is. On thrown exception: `Failure(describe(e), code=-1)` |
+| `uploadDocument(url, rows: List<ErpRecordingRow>)` (suspend) | One SOAP `POST` carrying every row of one document (`DocumentUploadSoap.envelope`, `SOAPAction` header, `text/xml; charset=utf-8`). 2xx means the ERP holds all of them; otherwise none from this call. On 401: `ext_error_http_401`. On any other non-2xx: the fault's `faultstring` (`DocumentUploadSoap.faultMessage`), which is the ERP's own error text, or failing that `"HTTP <status>: <body>"` cut to 300 characters. On a thrown exception: `Failure(describe(e), code=-1)` |
 | `downloadRaw(url)` (suspend) | `GET url`; follows OData `@odata.nextLink` pagination, merging every page's `value` array into one combined JSON array before returning |
 | `close()` | Closes/clears the underlying client |
 | `companion.parseDomainUser(raw)` | Splits `DOMAIN\user` or `user@domain`; falls back to `("", raw)` |
@@ -540,69 +604,91 @@ The typed value winning means a bad configured domain can be corrected at the lo
 
 `parseDomainUser` maps `.` to an empty domain rather than returning it verbatim, so the fallback decision in `buildClient` can't be driven off "is the parsed domain blank" — blank would then mean both "no domain given" and "no domain wanted". It keys off whether the typed username contains a separator at all (`\` or `@`) instead: a name written with one states its own domain and is taken at its word, even when what it states is none.
 
-**Credential TTL** (`ExtSystemCredentialStore`, `EncryptedSharedPreferences` file `ext_system_credentials`, AES-256-GCM/Keystore): one slot **per profile** — `save(profileId, username, password, ttlHours)` stores `<profileId>.expiry = now + ttlHours*3_600_000L`; `get(profileId)` checks `now > expiry` on every read and, if expired, clears that profile's slot and returns `null` (lazy expiry, not a background timer). `isValid(profileId) = get(profileId) != null`.
+**Credential TTL** (`ExtSystemCredentialStore`, a `SecureStore` file — §B.7): one slot **per profile**, filed under the profile key (operator + installation). `save(key, username, password, ttlHours)` stores the expiry as `now + ttlHours*3_600_000L`; `get(key)` checks `now > expiry` on every read and, if expired, clears that profile's slot and returns `null` (lazy expiry, not a background timer). `isValid(key) = get(key) != null`.
 
 Keying by profile is what makes the TTL mean what it reads like: an operator signing in daily stays signed in, one who appears weekly is asked again, and neither affects the other. It used to be a single slot with fixed keys, so whoever signed in last overwrote everyone before them and the TTL measured the last sign-in *on the device* rather than by that person.
 
 ### B.6.3 DTOs — `data/extsystem/ExtSystemPayload.kt`
 
-**`ErpRecordingRow`** (upload) — see field table in §A.5.4. `recordingGuid` is read straight off the stored `RecordingEntity`; it is generated once in `DocumentRepository.recordScan` when the scan is recorded and never regenerated, so every attempt for a row sends the same value. `setLineScanned` also mints one, but only when a manual edit raises a line — that added quantity is a genuinely new recording. Lowering a line mints nothing: it deletes or trims existing queued rows, and a trimmed row keeps its GUID. Sent rows are never touched either way, so a GUID the ERP already holds is never reused, altered or dropped.
+**`ErpRecordingRow`** (upload) — see field table in §A.5.4. Built by `RecordingEntity.toErpRecording(documentTypeCode, retailLocation)`; a line added on the device goes out as line 0 (`documentLine.coerceAtLeast(0)`). `recordingGuid` is read straight off the stored `RecordingEntity`; it is generated once in `DocumentRepository.recordScan` when the scan is recorded and never regenerated, so every attempt for a row sends the same value. `setLineScanned` also mints one, but only when a manual edit raises a line — that added quantity is a genuinely new recording. Lowering a line mints nothing: it deletes or trims existing queued rows, and a trimmed row keeps its GUID. Sent rows are never touched either way, so a GUID the ERP already holds is never reused, altered or dropped.
 
 **`ErpDocumentLineRow`** (download) — see field table in §A.5.3. Rows with `lineNo <= 0` are excluded from `lines` (treated as the header row). `documentDate` is parsed as `Instant.parse("${it}T00:00:00Z")`.
 
 **`ErpLocationRow`**: `Code`→code, `Name`→name, `Responsibility_Center`→rcCode.
 
+**`ErpInventoryBatchRow`** (3.6.27) — one row of `BarcodeInventoryBatches`: `Journal_Template_Name`, `Name` (the batch), `Description`, `Barcode_Document_No`, `Barcode_Location_Code`, `Barcode_Resp_Center`, `Barcode_Posting_Date`, `Barcode_Line_Count`. Every field has a default, so one the ERP leaves out does not become null.
+
 **`ErpResponsibilityCenterRow`**: `Code`, `Name`, `Short?` — defined but **not currently used**; RCs are derived client-side from distinct `ErpLocationRow.rcCode` values rather than fetched from a dedicated endpoint.
 
-**`ODataList<T>`**: `{ "value": List<T> }` generic OData envelope, used for all three GET response types.
+**`ODataList<T>`**: `{ "value": List<T> }` generic OData envelope, used for every GET response.
 
 ### B.6.4 Full download flow
 
-1. `AppViewModel.realDownloadDocuments(filter, docType, onComplete)` — reloads `config`/`creds`, aborts with a specific message if not signed in / not configured / URL blank.
+The work is in `DownloadCoordinator` (`ui/viewmodel/`), a plain `@Inject` class with suspend functions that take the configuration and the credentials and launch nothing. `AppViewModel` keeps the public entry points, wraps each call in `duringErpWork` (§B.11.2) and hands the result to the callback.
+
+**Documents** — `AppViewModel.realDownloadDocuments(filter, docType, onComplete)` → `DownloadCoordinator.downloadDocuments(filter, docType, config, creds)`:
+
+1. Not signed in, not configured, or a blank document lines URL: returns one failure with the specific message (`ext_error_*`, in the app's language).
 2. `extSystemClient.configure(config, creds)`.
-3. For each `DocumentType` in scope (one, or all 5 if `docType == null`):
+3. For each `DocumentType` in scope (the one given, or every type if `docType == null`):
    - `typeCode = config.docTypeCodeFor(type)`.
-   - `buildODataFilterString(filter, typeCode, type)`: `Document_Type eq '<typeCode>'` (always, if non-blank) + `Retail_Location eq true/false` (whenever `type.retailLocation` is non-null, i.e. everything except transport sheets — see §A.5.3) + `Document_Date ge/le` (if set) + `Destination_No eq` (if set) + `Source_No eq` (if set) + `Responsibility_Center eq` (if set) + `Document_No eq` (if set — the picked inventory batch) — joined with `" and "`.
-   - `appendODataFilter`: appends `?$filter=<urlencoded>` (or `&$filter=` if `?` already present); `URLEncoder.encode(..., "UTF-8")` with a `+`→`%20` post-fix.
+   - `buildODataFilterString(filter, typeCode, type)`: `Document_Type eq '<typeCode>'` (if non-blank) + `Retail_Location eq true/false` (whenever `type.retailLocation` is non-null — see §A.5.3) + `Document_Date ge/le` (if set) + `Destination_No eq` + `Source_No eq` + `Responsibility_Center eq` + `Document_No eq` (if set — the picked inventory batch), joined with `" and "`. **Every string value goes through `odataLiteral`** (`ODataFilter.kt`, unit-tested), which doubles a single quote; a code or number containing one used to break the request.
+   - `appendODataFilter`: appends `?$filter=<urlencoded>` (or `&$filter=` if `?` is already present); `URLEncoder.encode(..., "UTF-8")` with a `+`→`%20` post-fix.
    - `downloadRaw(finalUrl)` — paginated GET.
    - Parses as `ODataList<ErpDocumentLineRow>`, groups by `documentNo`, builds `Document`+`Line`s, `state=Downloaded`.
    - `repository.replaceDownloadedDocuments(type, documents, pruneMissing = filter.documentNo.isBlank())`.
-   - On failure: increments `failures`, appends the message, **continues to the next doc type** (doesn't abort the whole batch).
-4. `onComplete(failures, errorMessages)`.
+   - On failure: counts it, keeps the message, **continues with the next type**.
+4. Returns `(failures, errorMessages)`.
 
-**Inventory batch list:** `AppViewModel.loadInventoryBatches(filter, onResult)`, called by `DownloadFilterScreen` for a stock count in place of the date range. Same checks and same lines URL, filtered by type and scope, plus `$select=Document_No,Line_No,Document_Date,Journal_Template_Name,Journal_Batch_Name`. Parsed as `NavInventoryBatchRow`, grouped by `Document_No` into `InventoryBatch` (template, batch, date, line count) and sorted by template, batch and number. The operator's pick becomes `DownloadFilter.documentNo`. Signed out, the screen's sign-in sheet loads the list instead of downloading (§B.18, Inventory).
+**Inventory batch list** — `AppViewModel.loadInventoryBatches(filter, onResult)` → `DownloadCoordinator.loadInventoryBatches`, called by `DownloadFilterScreen` for a stock count in place of the date range. Since 3.6.27 it reads the ERP's own list, `config.inventoryBatchesUrl` (`BarcodeInventoryBatches`, page 50208): one row per batch that has been sent to the devices and is not finished, with its location, centre, date and number of lines worked out on the ERP side. The request filters by `Barcode_Location_Code` or `Barcode_Resp_Center`, whichever the type is scoped by. Rows become `InventoryBatch` (document no., template, batch, description, date, line count), sorted by template, batch and number; an ERP date of `0001-01-01` is read as no date. **A blank URL is an error (`ext_error_inventory_batches_url_missing`), not a fallback**: the earlier way — every Barcode App Entry of the location, grouped on the device — meant thousands of rows to list a handful of batches, and was removed. The operator's pick becomes `DownloadFilter.documentNo`; the screen has a refresh button for the list. Signed out, the screen's sign-in sheet loads the list instead of downloading (§B.18, Inventory).
 
-Locations: `realDownloadLocations()` — single `GET config.locationsUrl` → `ODataList<ErpLocationRow>` → derives distinct non-blank `rcCode`s → `locationDao.clearRcs()+upsertRcs()` then `clearLocations()+upsertLocations()`. No `$filter` applied.
+**Locations** — `AppViewModel.downloadLocations` → `DownloadCoordinator.downloadLocations(config, creds)`: one `GET config.locationsUrl` → `ODataList<ErpLocationRow>` → distinct non-blank `rcCode`s → `clearRcs()+upsertRcs()` then `clearLocations()+upsertLocations()`, written to `sharedDatabaseProvider.forServer(config.serverIdentity)` — the installation that was asked, even if the configuration has moved on while the answer was on its way. No `$filter`.
+
+`buildDownloadUrls(filter, docType, config)` builds the same addresses without calling them, for the debugger's "these will be called" dialog (§B.11.5).
 
 ### B.6.5 Full upload flow
 
-Entry points: `uploadToExtSystem` (blocking) and `uploadInBackground` (marks every doc `PendingUpload` immediately, then runs async) — both funnel into private `runUpload(docs: List<Document>): Int`.
-
-**Per document mode** (3.6.27). `runUpload` takes the document's queued rows as usual and hands them all to `ExtSystemODataClient.uploadDocument`, which posts one SOAP envelope built by `DocumentUploadSoap` (unit-tested): body `UploadDocument` in `urn:microsoft-dynamics-schemas/codeunit/BarcodeAppUpload`, parameter `recordings`, one `Recording` element per row in `urn:microsoft-dynamics-nav/xmlports/x50008`, with `SOAPAction: "…BarcodeAppUpload:UploadDocument"`. The GUID goes in braces, the quantity as a plain decimal, the scan time cut to milliseconds (.NET reads at most seven fractional digits), `RetailLocation` only when the type has it. HTTP 200 marks every row sent and deletes the document; anything else records the same reason (the fault's `faultstring`, which is NAV's own error text) against every row and sets `UploadFailed`. On the NAV side see §B.18, *Upload in one call*.
-
-The sketch below is **Per scan**:
+Entry points in `AppViewModel`: `uploadToExtSystem` (blocking, behind the "Uploading…" dialog) and `uploadInBackground` (marks every document `PendingUpload` at once, then runs async). Both end in `UploadCoordinator.runUpload(docs, config, creds): Int`, which returns how many documents failed. On screen there is one path too: every upload button calls `Shell.upload` (§B.11).
 
 ```
-for each doc in docs:
-    rows = repository.getRecordings(doc.documentNo, doc.type.key)
-    if rows is empty: continue                             // nothing to send, and the "else"
-                                                           // branch below would delete the doc
-    for each row in rows (sequential):
-        result = extSystemClient.uploadRecording(url, row.toNavRecording(docTypeCode, retailLocation))
-        if success: repository.deleteRecording(...)        // deleted immediately, one at a time
-        if failure: failureMessage = result.message; break  // remaining rows NOT attempted this pass
-    if failureMessage != null:
-        repository.updateDocState(doc, UploadFailed(failureMessage)); failures++
-    else:
-        repository.deleteDocument(doc)                      // whole doc removed, cascade
-return failures
+not configured, not signed in, or the mode's URL blank:
+    every doc -> UploadFailed(<what is missing>); return docs.size
+
+for each doc:
+    if it has orphans (scans whose line the ERP removed):
+        UploadFailed("needs review: N scans"); failures++; continue      // nothing is sent
+    rows = repository.getQueuedRecordings(doc)                           // line-attached, sentAt IS NULL
+    if rows is empty:
+        if the doc has any recordings at all: deleteDocument(doc)        // everything was already accepted
+        continue                                                         // a fresh download is left alone
+
+    PER_DOCUMENT:
+        result = extSystemClient.uploadDocument(documentUploadUrl, rows as ErpRecordingRow)
+        success -> markRecordingSent(each row); deleteDocument(doc)
+        failure -> recordRecordingFailure(each row, the one reason); UploadFailed(reason); failures++
+
+    PER_SCAN:
+        for each row, in order:
+            result = extSystemClient.uploadRecording(recordingSyncUrl, row)
+            success -> markRecordingSent(row)                            // marked, not deleted
+            failure -> recordRecordingFailure(row, reason)
+                       if result.code <= 0: stop this document           // no response at all: server or network gone
+                       else: carry on with the next row                  // the server objected to this row only
+        nothing failed -> deleteDocument(doc)
+        otherwise      -> UploadFailed(the connection error, or "N of M rows refused"); failures++
 ```
 
-**No automatic retry** anywhere in this path for any failure class (400/404/500/network) — a failed document simply sits in `UploadFailed(reason)` until the user taps Retry (which re-reads whatever `getRecordings` still returns, i.e. only rows that weren't already deleted by a prior partial success).
+**Per scan** (the default, `RecordingUploadMode.PER_SCAN`): one OData `POST` per recording. A refused row no longer blocks the rows behind it; only a failure with no HTTP response (`Failure.code` at its `-1` default) ends the document's pass, because every further row would spend a connect timeout to learn the same thing. A partly-sent document keeps all its rows, the sent ones marked, so it still shows everything the operator scanned.
+
+**Per document** (3.6.27, `PER_DOCUMENT`): the same rows in one SOAP call, built by `DocumentUploadSoap` (unit-tested): body `UploadDocument` in `urn:microsoft-dynamics-schemas/codeunit/BarcodeAppUpload`, parameter `recordings`, one `Recording` element per row in `urn:microsoft-dynamics-nav/xmlports/x50008`, with `SOAPAction: "…BarcodeAppUpload:UploadDocument"`. The GUID goes in braces, the quantity as a plain decimal, the scan time cut to milliseconds (.NET reads at most seven fractional digits), `RetailLocation` only when the type has it. The ERP inserts the rows in the call's own transaction: all of the document or none of it, which is the point — a document can no longer be half in the ERP. A row whose GUID the ERP already holds is skipped rather than refused, so sending again after a lost response is harmless. On the NAV side see §B.18, *Upload in one call*. NAV 2018 has no OData `$batch` for writes, hence SOAP.
+
+**Orphans block the whole document, in both modes.** All or nothing per document, not "send the good rows and flag the rest": a partly posted document while the operator is still deciding about the remainder leaves nobody able to say afterwards what had gone through.
+
+**No automatic retry** anywhere, for any failure class. A failed document sits in `UploadFailed(reason)` until the operator taps Retry on `UploadErrorScreen`, which sends what is still queued — refused rows included, since a refusal for a row's own content repeats identically, the screen also offers to discard them. A `PendingUpload` left by a background upload whose process died is reset at the next start (`recoverStalePendingUploads`, §B.4).
 
 ### B.6.6 Config file reference
 
-**`app/src/main/assets/ext_system_defaults_*.json`** (bundled, **two files per company** — `_test` and `_prod`; as of 2026-09: `_commerce`, `_mebel`, `_pohistvo`, `_mobilis` in both flavours) — discovered dynamically at runtime rather than referenced by a fixed name, so adding a company or an environment is just adding a file. The grouping comes from each file's `environment` field, **not** from its name: a filename is a label, and a label that disagrees with the contents is exactly the failure this is meant to prevent. **Test** runs on `http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/`, **production** on `http://192.168.100.113:7048/NAVBARCODE/ODataV4/`. Each endpoint URL is `{serverBaseUrl}Company('{company}')/{service}`, with the services `BarcodeAppEntries`, `LocationList` and `BarcodeAppRecordings`.
+**`app/src/main/assets/ext_system_defaults_*.json`** (bundled, **two files per company** — `_test` and `_prod`; as of 2026-09: `_commerce`, `_mebel`, `_pohistvo`, `_mobilis` in both flavours) — discovered dynamically at runtime rather than referenced by a fixed name, so adding a company or an environment is just adding a file. The grouping comes from each file's `environment` field, **not** from its name: a filename is a label, and a label that disagrees with the contents is exactly the failure this is meant to prevent. **Test** runs on `http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/`, **production** on `http://192.168.100.113:7048/NAVBARCODE/ODataV4/`. Each endpoint URL is `{serverBaseUrl}Company('{company}')/{service}`, with the services `BarcodeAppEntries`, `LocationList`, `BarcodeAppRecordings` and `BarcodeInventoryBatches`. The SOAP address has another shape and another port: `http://{host}:{soap port}/{instance}/WS/{company}/Codeunit/BarcodeAppUpload`; the bundled files assume the SOAP port is the OData port minus one, which is NAV's default pairing and has to be checked per server.
 
 Two things about these files that are assumptions rather than facts, and are worth checking against NAV before a device goes live:
 
@@ -613,6 +699,7 @@ Two things about these files that are assumptions rather than facts, and are wor
 ```json
 {
   "companyName": "Prima Commerce d.o.o.",
+  "environment": "TEST",
   "serverBaseUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/",
   "credentialTtlHours": 168,
   "loginQrKey": "<base64, 32 bytes>",
@@ -620,21 +707,28 @@ Two things about these files that are assumptions rather than facts, and are wor
   "documentLinesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeAppEntries",
   "documentTypeCodes": {
     "WAREHOUSE_SHIPMENT": "SHIPMENT", "WAREHOUSE_RECEIPT": "RECEIPT",
-    "RETAIL_SHIPMENT": "SHIPMENT", "RETAIL_RECEIPT": "RECEIPT", "TRANSPORT_SHEET": "TRANSPORT"
+    "RETAIL_SHIPMENT": "SHIPMENT", "RETAIL_RECEIPT": "RECEIPT", "TRANSPORT_SHEET": "TRANSPORT",
+    "COMPLAINT_SHIPMENT": "REKOTPR", "COMPLAINT_RECEIPT": "REKZAPR", "INVENTORY": "INVENTORY"
   },
   "locationsUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/LocationList",
-  "recordingSyncUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeAppRecordings"
+  "recordingSyncUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeAppRecordings",
+  "inventoryBatchesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Commerce%20d.o.o.')/BarcodeInventoryBatches",
+  "uploadMode": "PER_SCAN",
+  "documentUploadUrl": "http://192.168.100.87:8047/NAV_TEST_HR/WS/Prima%20Commerce%20d.o.o./Codeunit/BarcodeAppUpload",
+  "docTypeFilters": { "WAREHOUSE_SHIPMENT": "LOCATION", "COMPLAINT_SHIPMENT": "RESPONSIBILITY_CENTER", "…": "…" },
+  "debuggerActive": false
 }
 ```
+`uploadMode` is `PER_SCAN` in every bundled file until codeunit 50117 is in the ERP and its address confirmed; a file without the field leaves the device's mode alone.
 `companyName` and `environment` are read by `AppViewModel.listExtSystemDefaultsCompanies()` to label and group the "Load built-in defaults" picker shown in `ExtSystemConfigScreen`/`SettingsScreen`; `companyName` is not part of `ExtSystemConfig`, `environment` is. A file missing either is skipped rather than guessed at, and so is an `environment` value this build does not recognise. `domain` (added 2026-08) feeds `ExtSystemConfig.domain` — see §B.6.1/§B.6.2's domain-parsing note. `loginQrKey` (added 2026-09) is the AES-256 key for encrypted sign-in QR codes — see §B.10; distributing it here is what lets it be rotated without a new APK. It is the one field never written to an exported copy. `documentTypeCodes` keys use the enum's `.name` (matched via `dto.documentTypeCodes?.get(type.name)`).
 
 **`prima_config.json`** (repo root) — an all-blank template of the identical shape (predates the per-company split); not read by any app code, purely a distributable seed for generating a deployment-specific defaults file.
 
-**`AppViewModel.parseExtSystemConfigJson(json)`** — deserializes into a private nullable-mirror DTO, applies defaults (`credentialTtlHours ?: 24`, others `.orEmpty()`), never persists directly. `loginQrKey` is the one exception to `.orEmpty()`: absent or blank means *keep the device's current key*, not *clear it* — otherwise importing an exported file (which carries no key) would silently disable QR sign-in on a device that had a working one. A file that does carry a key still overwrites it, which is how rotation works. `loadExtSystemDefaults(fileName)` reads the given bundled asset then delegates here.
+**`ConfigController.parseExtSystemConfigJson(json)`** (reached through `AppViewModel` under the same name, as are the functions below; split out in 3.6.37) — deserializes into a private nullable-mirror DTO, applies defaults (`credentialTtlHours ?: 24`, others `.orEmpty()`), never persists directly. `loginQrKey` is the one exception to `.orEmpty()`: absent or blank means *keep the device's current key*, not *clear it* — otherwise importing an exported file (which carries no key) would silently disable QR sign-in on a device that had a working one. A file that does carry a key still overwrites it, which is how rotation works. `loadExtSystemDefaults(fileName)` reads the given bundled asset then delegates here.
 
 `exportConfigurationJson()` backs "export as file": it builds an `ExtSystemDefaultsDto` from the live `ExtSystemConfig` and `AppSettingsStore.get()`, and serializes it pretty-printed via a separate `exportGson`. `loginQrKey` is passed as `null` and Gson omits nulls, so the field is *absent* rather than empty — which is exactly what the import reads as "leave the device's key alone". It then checks the live key is not in the output and refuses to return anything if it is, so a renamed field or a value that happens to carry it fails the export (the caller's save-failed toast) rather than leaking. Every document type is written out explicitly, present or not, so the file shows the whole shape of what it controls.
 
-**A configuration file is a `DeviceConfiguration`, not just an `ExtSystemConfig`.** Alongside the eight ERP fields it carries the device half of `AppSettings` — `enabledDocTypes`, `docTypeFilters`, `debuggerActive` — keyed in the file by `DocumentType.name` to match `documentTypeCodes`, and stored by `DocumentType.key`; a name nothing matches is dropped rather than carried, so a typo cannot invent a document type. Files list the types switched **on** (`enabledDocTypes`). A file from before the complaint split lists those switched off (`disabledDocTypes`); it is still read, but against `DOC_TYPES_BEFORE_COMPLAINT_SPLIT`, so it cannot switch on a type it never mentioned, and it is never written. The bundled files carry neither, so loading built-in defaults leaves the device's choice of types alone. A type the file has no `documentTypeCodes` entry for keeps the device's code. The personal half (text size, language, haptics, working location) is deliberately absent: it belongs to a person, and a deployment file that reset it on every load would undo the reason those settings are per-operator.
+**A configuration file is a `DeviceConfiguration`, not just an `ExtSystemConfig`.** Alongside the ERP fields it carries the device half of `AppSettings` — `enabledDocTypes`, `docTypeFilters`, `debuggerActive` — keyed in the file by `DocumentType.name` to match `documentTypeCodes`, and stored by `DocumentType.key`; a name nothing matches is dropped rather than carried, so a typo cannot invent a document type. Files list the types switched **on** (`enabledDocTypes`). A file from before the complaint split lists those switched off (`disabledDocTypes`); it is still read, but against `DOC_TYPES_BEFORE_COMPLAINT_SPLIT`, so it cannot switch on a type it never mentioned, and it is never written. The bundled files carry neither, so loading built-in defaults leaves the device's choice of types alone. A type the file has no `documentTypeCodes` entry for keeps the device's code. The personal half (text size, language, haptics, working location) is deliberately absent: it belongs to a person, and a deployment file that reset it on every load would undo the reason those settings are per-operator.
 
 Every field of the DTO is nullable and **absent means "leave this as it is"** — the same rule the QR key has always had, now extended to the device settings. A configuration written before these fields existed must not silently switch every document type back on.
 
@@ -664,7 +758,7 @@ Replaces androidx.security's `EncryptedSharedPreferences`, which Google deprecat
 
 **Why.** (1) Security: with one file per operator, anyone who could change the server could point the device at one that accepts every password, sign in under an enrolled name and open that person's documents and unsent scans. Now that name on that server is a different, empty profile. The setup door closed in 3.6.52 stops this before sign-in; the binding stops a signed-in operator doing it from Settings. (2) Correctness: a device moved between companies used to keep one database, so company A's unsent scans were uploaded to company B (and booked there whenever B had a document with the same number), and B's download merged with or pruned A's documents.
 
-**A session never outlives its installation.** `AppViewModel.saveExtSystemConfig` returns `Saved`, `SavedAndSignedOut` or `RefusedTransferRunning`: when the configuration being saved has another `serverIdentity` and somebody is signed in, it signs them out (refusing while a transfer is in flight, as sign-out itself does). `BarcodeApp.requestConfigSave` asks first with `ServerChangeDialog`, which adds a warning when the operator has unsent scans, since those stay with the installation they were made for and reappear when the device is pointed back at it. Both ways of saving a configuration while signed in go through it: the External System Configuration screen (which stays open while the question is asked) and the Settings exit-save. `testExtSystemConnection` keeps the tested credentials only when the server tested is the one the session belongs to.
+**A session never outlives its installation.** `AppViewModel.saveExtSystemConfig` returns `Saved`, `SavedAndSignedOut` or `RefusedTransferRunning`: when the configuration being saved has another `serverIdentity` and somebody is signed in, it signs them out (refusing while a transfer is in flight, as sign-out itself does). `Shell.requestConfigSave` (`navigation/AppShell.kt`) asks first with `ServerChangeDialog`, which adds a warning when the operator has unsent scans, since those stay with the installation they were made for and reappear when the device is pointed back at it. Both ways of saving a configuration while signed in go through it: the External System Configuration screen (which stays open while the question is asked) and the Settings exit-save. `testExtSystemConnection` keeps the tested credentials only when the server tested is the one the session belongs to.
 
 **On screen.** The sign-in screen lists the operators enrolled on the configured installation (`profilesOn`). **Operators** lists every profile on every installation, each row naming its company and environment, and removes them one at a time; an operator's personal settings go with their last profile.
 
@@ -735,7 +829,7 @@ Holds the NAV password in the clear, because NTLM computes its response from the
 
 **The setup door is for first setup only (3.6.52).** `onOpenConfig` is passed only while `ExtSystemConfig.serverBaseUrl` is blank, and the configuration screen behind it renders only then. The server decides whether a password is good, so changing it before signing in let anyone holding a configured device point it at a server that accepts everything and sign in as any enrolled operator, opening that person's database. Once an address is saved, the configuration changes only after signing in (Settings → Server & endpoints). A device with a wrong saved address, or whose server moved, is reset by clearing the app's data or reinstalling. The second half is the binding of each profile's data to its installation, below.
 
-`BarcodeApp` (`navigation/AppNavHost.kt`) early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
+`BarcodeApp` (`navigation/AppNavHost.kt`) composes `SignInGate` (`navigation/SignInGate.kt`, since 3.6.59) and returns whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
 
 That gate had a chicken and egg in it. Signing in asks the server whether the password is good (`testConnection`), and a device out of the box has no `serverBaseUrl` to ask; with no server there is nothing to ask and the sign-in simply fails. A fresh install could not be configured, and so could not be signed into either.
 
@@ -743,7 +837,7 @@ So `SignInScreen` takes an `onOpenConfig` callback and shows a button for it, an
 
 **QR sign-in lives on this screen too, not only in `LoginSheet`.** A DataWedge receiver is registered for as long as the gate is up (nothing else composes while it is, so no second receiver can double-deliver), plus a camera button gated on `FEATURE_CAMERA_ANY` for the MC3300 configurations that ship without one. Both call the same `parseLoginQr(raw, loginQrKey)` and fill the two fields; the operator still taps to submit, exactly as in the sheet. This is not decoration — before the gate existed the way into the app *was* `LoginSheet`, so putting a typed-only screen in front of it took the scanner away from the one moment a warehouse operator most wants it. A bad code reports inline (`login_qr_invalid`) rather than through the `error` dialog, because a mis-pull of the trigger is routine and a dialog would be in the way of the next attempt.
 
-It stays open even on a device that already has operators enrolled. The same screen is reachable by anyone who can sign in anyway, the devices sit in a controlled area, and gating it behind sign-in would lock the device out of repair exactly when the configuration is what broke.
+**It closes once a server is saved** (first paragraph of this section). Until 3.6.52 it stayed open on a configured device, on the argument that the devices sit in a controlled area and that a broken configuration has to stay repairable. That argument lost to the other one: whoever can change the server before signing in decides who it lets in. The price is that a device whose saved address is wrong is repaired by clearing the app's data, not from this screen.
 
 **A second, read-only door: "O aplikaciji".** `SignInScreen` takes `onOpenAppInfo` and the gate renders `AppInfoScreen` while `appInfoAtSignIn` is true. It shows what support asks first — build, Android, SDK, database version, ERP environment and company — and is open to anyone at the gate because nothing in it is personal or secret. The question usually comes from someone who *cannot* sign in. `AppInfoScreen` catches the system back button itself (`BackHandler`): it is drawn in place of the gate rather than as a route, so an uncaught back would close the app.
 
@@ -751,24 +845,24 @@ It stays open even on a device that already has operators enrolled. The same scr
 1. `LoginSheet` (`ui/screen/LoginSheet.kt`) — reusable full-screen `Dialog` (`DialogProperties(usePlatformDefaultWidth = false)`, resized to `MATCH_PARENT` via `DialogWindowProvider`; changed from a `ModalBottomSheet` in 2026-08), reused by `ExtSystemConfigScreen` (Test connection), `LocationRcPickScreen` (refresh without credentials), `DownloadFilterScreen` (auto-opens if `!hasCredentials`), and the main-menu sign-in entry point.
 2. Optional `onTestConnection` callback (2026-08): when provided, submit first verifies the typed credentials against the NAV server (same check as `ExtSystemConfigScreen`'s own "Test connection") before calling `onSubmit` — shows an inline spinner and error text on failure rather than blindly accepting whatever was typed. Left `null` for flows that already do their own testing.
 3. `AppViewModel.saveCredentials(username, password)` → `extSystemCredentialStore.save(...)`, refreshes the `_credentials` `StateFlow`. **Returns `CredentialSave.WrongOperator` and stores nothing** when `UserProfileStore.normalise(username)` is not the signed-in profile's id: the sheet is reachable from inside a session, so someone handed an already-signed-in device could type their own ERP account into it and have it filed under the other person's profile — every row uploaded afterwards then travelled on the wrong session while still carrying the signed-in operator's name. `testExtSystemConnection` turns that refusal into a `Failure` (`R.string.signin_wrong_operator`), so all five `LoginSheet` call sites surface it inline. Testing with an account other than your own therefore means signing in as that account first. The third outcome, `CredentialSave.NoProfile`, is **not** a refusal and is not reported as one — it is the pre-sign-in configuration screen (see §"The gate" below) testing that the server answers at all, with nobody yet to file the answer under.
-4. `AppViewModel.signOut()` → `extSystemCredentialStore.clear()`, resets `_credentials` to null.
-5. `credentials: StateFlow<ExtSystemCredentials?>` is observed in `MainActivity` to derive the current `User` display name (parsed client-side from the username string — no live ERP profile lookup), shown via an avatar/initials button on `MainMenuScreen` that opens `UserInfoScreen` (2026-08).
+4. `AppViewModel.signOut()` → clears the signed-in profile's credential slot, sets `credentials` and `currentProfile` to null and releases the database (`DatabaseProvider.release()`). Documents and recordings stay where they are, and the profile stays enrolled; signing back in still needs the ERP.
+5. `BarcodeApp` builds the `User` shown on the main menu from `currentProfile` (operator id and display name), **not** from `credentials`: the credential is wiped when its TTL lapses, and an identity derived from it would hide an operator's own unsent scans from them. `credentials` only supplies the typed user name while it is valid. The avatar/initials button on `MainMenuScreen` opens `UserInfoScreen`, or the sign-in sheet when the session has lapsed.
 
 ## B.8 Hilt DI
 
-Only one module: `di/DatabaseModule.kt`.
+Only one module, `di/DatabaseModule.kt`, and it binds one thing:
 ```kotlin
 @Module @InstallIn(SingletonComponent::class)
 abstract class DatabaseModule {
     @Binds @Singleton
     abstract fun bindDocumentRepository(impl: DocumentRepositoryImpl): DocumentRepository
-    companion object {
-        @Provides @Singleton fun provideDatabase(...): AppDatabase = ...
-        @Provides @Singleton fun provideLocationDao(db): LocationDao = db.locationDao()
-    }
 }
 ```
-Other DAOs (`DocumentHeaderDao`, `DocumentLineDao`, `RecordingDao`) are **not** separately provided — consumers inject the whole `AppDatabase` and call `db.documentHeaderDao()` etc. directly. No dedicated network/auth module — `ExtSystemODataClient`, `AppSettingsStore`, `ExtSystemConfigStore`, `ExtSystemCredentialStore`, `DatabaseExporter` are plain `@Singleton @Inject constructor(...)` classes. `DataWedgeManager` is a plain Kotlin `object` (no DI). Entry points: `BarcodeApplication` (`@HiltAndroidApp`), `MainActivity` (`@AndroidEntryPoint`), `AppViewModel`/`RecordingViewModel` (`@HiltViewModel`).
+**No database is provided by Dagger**, and that is the point of the file's long comment. The work database is one file per profile and changes at runtime, so it comes from `DatabaseProvider`; the reference data is one file per ERP installation and comes from `SharedDatabaseProvider` (3.6.53). A `@Singleton AppDatabase` would pin the first operator's file for the life of the process. The same comment carries the rule for every file either provider opens: **no `fallbackToDestructiveMigration`, ever** — these files hold scans that exist nowhere else.
+
+Everything else is a plain `@Inject constructor(...)` class: `@Singleton` for `DatabaseProvider`, `SharedDatabaseProvider`, `ExtSystemODataClient`, the stores (`AppSettingsStore`, `ExtSystemConfigStore`, `ExtSystemCredentialStore`, `UserProfileStore`) and `DatabaseExporter`; unscoped for `ConfigController`, `UploadCoordinator` and `DownloadCoordinator`, which hold no state of their own. `DataWedgeManager`, `ScanMatcher` and `DocumentUploadSoap` are Kotlin `object`s (no DI). Entry points: `BarcodeApplication` (`@HiltAndroidApp`), `MainActivity` (`@AndroidEntryPoint`), `AppViewModel` / `RecordingViewModel` / `RecordingsTreeViewModel` (`@HiltViewModel`).
+
+**Nothing injects a DAO or a database.** Consumers take a provider and resolve `current()` (or `forServer(identity)`) at each use; see §B.2 for why a captured reference is a silent bug.
 
 ## B.9 Barcode Scanning Subsystem
 
@@ -812,24 +906,38 @@ val barcode = rawInput                                     // ALWAYS the full ra
 val pipeParts = rawInput.split("|")
 val parsedQty = if (pipeParts.size == 3) pipeParts[2].toDoubleOrNull() else null
 val parsedUom = if (parsedQty != null) pipeParts[1] else null
-val matchedLine = doc.lines.find { it.barcodeNo == barcode }
+val matchedLine = ScanMatcher.match(doc.lines, barcode, labelBarcode, doc.type.isStockCount, scannedSoFar)
 ```
+**Which line** is decided by `ScanMatcher.match` (`ui/screen/ScanMatcher.kt`, 3.6.27; no Compose, unit-tested), not by the first line with that barcode. Several lines can carry one barcode — the same item twice on a shipment, or once per package of a set. They are filled **in line order**: the first one still short of its expected quantity takes the scan, and once all are full the last one takes the surplus, so an over-scan shows where it belongs and not on a line the operator has finished. Lines added on the device come after the ERP's own. `scannedSoFar` includes scans this screen has sent that the database has not handed back yet, so a fast run of scans does not all land on the first line. The ERP groups scans by barcode and item anyway; this is about what the operator sees.
+
 - Trigger: **exactly 3 pipe-separated parts**, last part parses as `Double`. Anything else falls through to ordinary handling.
 - **Matched line**: `qty = parsedQty ?: matchedLine.scanningQty`; calls `onScan(lineNo, barcode, qty)` (→ `RecordingViewModel.recordScan`), immediately. On a stock count a `BARCODE|UOM|QTY` label that matches no line exactly lands on the line whose barcode is the part before the first `|`, with the printed quantity: NAV sends plain barcodes for an inventory, because a quantity label on the shelf prints whatever it holds. If `warnOnOver` is on and the new total pushes the line into Over, an over-scan warning dialog shows, except on a line added on the device and on a stock count's line expecting 0 or less (`warnsOnOver`), where every scan would raise it (informational only — the scan is already recorded). If `parsedUom != null && parsedUom != matchedLine.unitOfMeasureCode` → UoM mismatch dialog (also informational only).
-- **Unmatched**: nothing is recorded. `barcodeNotFoundError` is set (shows the "Barcode not found" dialog), the scan bar flashes red for 600ms (Slate → `#7A1A1A` → back), and an error haptic fires. On a stock count `notOnDocumentScan` is set instead and the "Not on the batch" dialog asks; **Count it** calls `onScanNotOnDocument` → `RecordingViewModel.recordScanNotOnDocument` (§A.3). A line added on the device never raises the over-scan warning.
+- **Unmatched**: nothing is recorded. `barcodeNotFoundError` is set (shows the "Barcode not found" dialog), the scan bar flashes red for 600ms (Slate → `AppSignal.DangerDeep` → back), and an error haptic fires. On a stock count `notOnDocumentScan` is set instead and the "Not on the batch" dialog asks; **Count it** calls `onScanNotOnDocument` → `RecordingViewModel.recordScanNotOnDocument` (§A.3). A line added on the device never raises the over-scan warning.
 
 **Fixed 2026-08**: the DataWedge receiver's callback is registered once via `DisposableEffect(Unit)` — since `handleScan` is a local function redefined on every recomposition, the receiver was pinned to the very first composition's `handleScan` (and therefore a stale `doc` snapshot) for the rest of the screen's lifetime, silently evaluating over-scan/UoM-mismatch checks against outdated data for every hardware scan after the first. Fixed via `rememberUpdatedState(::handleScan)` so the receiver always calls the current version.
 
 ## B.10 Screens (`ui/screen/`) — Reference
 
+**Helpers shared between screens** live in their own file as `internal`, not as a private copy per screen:
+
+| File | What it holds |
+|---|---|
+| `DocumentTypeLabel.kt` | `DocumentType.localizedDisplay()` — the one localized name of a document type (seven screens each had a copy) |
+| `LineStatusLabel.kt` | `LineStatus.localizedLabel()` (three screens each had a copy) |
+| `EnvironmentLabel.kt` | `ExtSystemEnvironment.labelRes` — Test / Production |
+| `ScanMatcher.kt` | Which line a scan lands on (§B.9.3). No Compose, unit-tested |
+| `ConfigLoadDialogs.kt` | `ConfigLoadFlow` (what to do → which system → which company) and `EnvironmentPickDialog`, used by both configuration screens |
+| `SettingsComponents.kt`, `ExtSystemConfigComponents.kt`, `ExtSystemConfigDialogs.kt` | The rows, cards, fields and dialogs the two configuration screens are built from |
+| `RecordingLineList.kt`, `RecordingLineEditor.kt`, `RecordingDialogs.kt` | The three parts split off `RecordingScreen.kt` |
+
 ### `MainMenuScreen.kt`
 `data class DocTypeSummary(type, count, statusMini: List<LineStatus>, blocked: Boolean = false)`. Home screen: `AppTopBar` → `DocumentStatsDashboard` (tap → Dashboard) → RC/Location pill row (either cell → Location/RC pick) → "DOCUMENTS" `LazyColumn` of type rows (icon, label, mini `StatusProgressBar`, count badge) → **"RECORDINGS"** section.
 
-A blocked type is *not* dimmed: it stays tappable and the tap raises the "choose a location first" dialog. Greying it out only told the operator "no" without telling them why. A type is blocked while what it is scoped by is not selected — a location, or for Complaint a responsibility centre (§B.11.4).
+A blocked type is *not* dimmed: it stays tappable and the tap raises the "choose a location first" dialog. Greying it out only told the operator "no" without telling them why. A type is blocked while what it is scoped by is not selected — a location, or for the two complaint types a responsibility centre (§B.11.4).
 
 The RECORDINGS entry is **one row under its own header**, not a list: title, the total number of scans behind it, and the number of documents as the trailing figure (greyed at zero), shaped like a document-type row because from the operator's side that is what it is. It opens `RecordingsListScreen`. It used to render the documents inline, which on a good shift is dozens of rows pushing the document types — what the menu exists for — off the top of the screen. The header (`main_recordings_section_header`) is what keeps it from reading as an eighth document type, and **both header and row stay visible at zero**, so the screen keeps one shape.
 
-Its source either way is `MainActivity`'s `recordedDocs`, built from **all** `documents` on `totalScans > 0` rather than from `filteredDocs` on a scanned-line count — both of those narrowings key off a line's scanned quantity, and an orphaned scan belongs to no line, so a document whose scans were all orphaned would vanish from the one list meant to hold everything scanned. It is also not filtered by `disabledDocTypes` or by the working location, and a document that uploads cleanly is deleted locally and so leaves the list. **That breadth is now load-bearing**: since the location filter admits no exceptions, this is the only place in the app that shows an operator work they started somewhere else, and narrowing it would leave unsent scans with nowhere to be seen.
+Its source either way is `ShellData.recordedDocs` (`navigation/ShellData.kt`), built from **all** `documents` on `totalScans > 0` rather than from `filteredDocs` on a scanned-line count — both of those narrowings key off a line's scanned quantity, and an orphaned scan belongs to no line, so a document whose scans were all orphaned would vanish from the one list meant to hold everything scanned. It is also not filtered by `disabledDocTypes` or by the working location, and a document that uploads cleanly is deleted locally and so leaves the list. **That breadth is now load-bearing**: since the location filter admits no exceptions, this is the only place in the app that shows an operator work they started somewhere else, and narrowing it would leave unsent scans with nowhere to be seen.
 
 ### `DocumentListScreen.kt`
 Two tabs — **Orders** (`Downloaded`/`InProgress`/`PendingUpload`/`UploadFailed`) and **Errors** (`UploadFailed`). Client-side filters: `DocumentFilter` only. It does **not** re-check location — the caller hands it `typeDocs`, already filtered by the type's `DocTypeFilterMode`, and the check that used to live here compared `sourceCode` unconditionally, so on a responsibility-centre-scoped type it cut by location as well. `locationCode` is still a parameter, for the subtitle. Dark `ScanField` (`handleDocScan`) reports a document it cannot find; there is no doc creation. Bottom bar varies per tab (Download+Upload / Clear-errors+Upload), and UPLOAD is dimmed and inert unless something is actually queued.
@@ -903,7 +1011,9 @@ Because it lives in the config, `LoginSheet` takes it as a parameter and all fiv
 **What this protects against.** The key is in the APK's bundled defaults and on every provisioned device, so this defeats someone photographing or glancing at a printed code — the realistic exposure for a code taped to a device or left on a desk — but not someone who unpacks the app or reads a device's settings. It is obfuscation-grade, not a reason to treat printed codes as safe. Stronger options were considered and deferred: a per-device keypair in Android Keystore (private key non-exportable, so unpacking the APK gains nothing — but it binds each code to one device, and these are per-user), and a short-lived token redeemed against NAV (the only variant that is genuinely revocable, but it needs a NAV-side change). Either remains open if the threat model tightens.
 
 ### `RecordingScreen.kt` — the core scanning workflow (most complex screen)
-Internal state machine, `RecordingView` enum: `OVERVIEW, ACTIVE_LINE, KEYPAD` — `OVERVIEW` is the line list, `ACTIVE_LINE` shows one line's detail with +1/-1 steppers, `KEYPAD` is manual quantity entry for the active line. `handleScan` — see §B.9.3. Registers the DataWedge broadcast receiver via `DisposableEffect`. `handleBack()` — per-view back navigation (KEYPAD/ACTIVE_LINE back to OVERVIEW, OVERVIEW back to the caller). Sub-composables: `OverviewContent`, `ItemQtyDetails` (ACTIVE_LINE), `ItemQtyExtraDetails` (KEYPAD — the name is a holdover from an earlier iteration where it was shared with a since-removed flow; it's an ordinary quantity-entry composable, nothing to do with extra lines), private `StatusChip` (status pill shown in the top bar).
+**Four files since 3.6.34–3.6.36**, all in `ui/screen/`: `RecordingScreen.kt` (state, scan handling, the highlight, the top bar; 552 lines, 1,043 before), `RecordingLineList.kt` (`OverviewContent`, `BigNumberLineRow`, `StatusChip`), `RecordingLineEditor.kt` (`ItemQtyDetails` with the steppers, `ItemQtyExtraDetails` with the keypad) and `RecordingDialogs.kt` (barcode not found, not on the batch, unit mismatch, over-scan, the sent-quantity floor). The pieces are `internal` and take what they need as parameters; the state stays in `RecordingScreen`.
+
+Internal state machine, `RecordingView` enum: `OVERVIEW, ACTIVE_LINE, KEYPAD` — `OVERVIEW` is the line list, `ACTIVE_LINE` shows one line's detail with +1/-1 steppers, `KEYPAD` is manual quantity entry for the active line. `handleScan` — see §B.9.3. Registers the DataWedge broadcast receiver via `DisposableEffect`. `handleBack()` — per-view back navigation (KEYPAD/ACTIVE_LINE back to OVERVIEW, OVERVIEW back to the caller). Sub-composables: `OverviewContent`, `ItemQtyDetails` (ACTIVE_LINE), `ItemQtyExtraDetails` (KEYPAD — the name is a holdover from an earlier iteration where it was shared with a since-removed flow; it's an ordinary quantity-entry composable, nothing to do with extra lines), `StatusChip` (status pill shown in the top bar).
 
 **Finding the line a scan landed on.** A tone and, on completion, a haptic were the whole acknowledgement of a scan; neither says *which* of thirty lines moved, and that line is routinely off screen. `handleScan` now records `highlightedLineNo` plus a `highlightTick` counter, and a `LaunchedEffect(highlightTick)` scrolls `overviewListState` to it and runs an `Animatable` from 1 to 0 over `HIGHLIGHT_HOLD_MS` (5 s) plus `HIGHLIGHT_FADE_MS` (700 ms). `BigNumberLineRow` reads that as `alpha = 0.10f + 0.32f * highlight`.
 
@@ -957,49 +1067,118 @@ Deletion, two levels:
 
 Orphans get their own branch at the bottom rather than being left out: the screen shows a total at the top, and omitting them would make it quietly disagree with itself. They are read-only here — discarding an orphan is the decision `UploadErrorScreen` asks for explicitly.
 
+### `UserInfoScreen.kt`
+Route `user_info`, behind the avatar on the main menu. Shows the signed-in operator, the working location and responsibility centre, and **Sign out**, which goes through `Shell.requestSignOut` and so waits for a running transfer (§B.11.2).
+
 ### `UploadErrorScreen.kt`
 Read-only failed-upload detail: header card, document-info card, full raw error-message card (`(document.state as DocState.UploadFailed).reason`), "Retry Upload" button.
 
 ## B.11 Navigation & App Shell
 
 ### `MainActivity.kt`
-`@AndroidEntryPoint class MainActivity : AppCompatActivity()`. `onCreate`: `enableEdgeToEdge()`, `hideNavBar()` (immersive nav-bar hiding, re-applied on `onWindowFocusChanged`), `DataWedgeManager.configure(this)`, then `setContent { ... }`.
+`@AndroidEntryPoint class MainActivity : AppCompatActivity()`, 250 lines. `onCreate`: `enableEdgeToEdge()`, `hideNavBar()` (immersive nav-bar hiding, re-applied on `onWindowFocusChanged` and whenever the keyboard shows), `DataWedgeManager.configure(this)`, then `setContent { ... }`.
 
 Inside `setContent`: obtains `AppViewModel` via `hiltViewModel()`, loads `initialSettings` once, holds every setting as its own `remember { mutableStateOf(...) }`, with `buildSettings()` reassembling `AppSettings` and every `on...Change` callback persisting via `appVm.saveSettings(...)`. Wraps everything in `AppTheme(textSizeOffset, uppercaseEnabled) { BarcodeApp(...) }`.
 
-**Split in 3.6.40–3.6.42** (no change in behaviour): the shell lives in `navigation/` — `AppNavHost.kt` (`BarcodeApp`), `Routes.kt` (every route pattern and the builders for the three with arguments) and `AppDialogs.kt` (processing, download error, debugger, upload errors, blocked change of operator). The same round split `RecordingScreen.kt` into four files and moved `AppViewModel`'s configuration files, upload loop and downloads into `ConfigController`, `UploadCoordinator` and `DownloadCoordinator` (§B.11.2). The state before is tagged `pre-split`.
+**The settings follow the operator.** The first read happens before anyone has signed in and returns the device's defaults; `LaunchedEffect(signedInProfile?.key)` replaces them with the profile's own on sign-in and on every change of operator, and sets the locale against the one actually on screen. It reads and never saves. `applySettings(s)` is the other direction: Settings' exit-save hands it the whole `AppSettings` at once (§B.11.6).
 
-### `BarcodeApp` composable (internal, in `navigation/AppNavHost.kt`) — the NavHost/app shell
-Creates `nav = rememberNavController()`; derives `user` from `appVm.credentials`; collects `locations`/`responsibilityCenters`/`documents`/`extSystemConfig` (all `StateFlow`, `collectAsState()`); auto-recovers stale RC/location selections; filters `documents` per document type via `DocTypeFilterMode`; builds `docTypes: List<DocTypeSummary>`; computes shift-wide counters:
-```kotlin
-val shiftScans  = filteredDocs.sumOf { d -> d.lines.count { it.scanned > 0 } }  // count of lines-with-progress, not total qty
-val errorDocs   = filteredDocs.filter { it.state is DocState.UploadFailed }
-val readyDocs   = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.EXACT }
-val partialDocs = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.PARTIAL }
-val overDocs    = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.OVER }
-```
-`ready`/`partial`/`over` are mutually exclusive by `scanStatus()` and deliberately exclude anything already `UploadFailed` (an over-scanned-and-failed doc counts only in `errorDocs`). Manages UI-only state (`selectedDocType`, `docFilter`, `overviewFilter`, dialogs, `processingMessage` blocking-progress state, debug-URL confirmation via `launchWithDebug(urls, onCancel, action)` gated by `debuggerActive` — see §B.11.5); `exportLauncher` (`CreateDocument("application/json")`) → `appVm.exportDatabase`.
+### The shell, file by file (`navigation/`)
 
-**NavHost routes** (`startDestination = "main"`):
+The shell was the body of `MainActivity` (1,132 lines) until 3.6.42, then one file of 975 lines, and since 3.6.64 it is these. No step changed behaviour; the states before are tagged `pre-split` and `pre-routes`.
 
-| Route | Screen | Notes |
+| File | Lines | What it holds |
 |---|---|---|
-| `main` | `MainMenuScreen` | `onTypeTap`→`docs`, `onDocumentOverview`→`dashboard?tab=1`, `onShowErrors`→`dashboard` |
-| `location_rc_pick` | `LocationRcPickScreen` | wired to `isRefreshingLocations`, `lastLocationSyncAt`, `downloadLocations()`, `saveCredentials()` |
-| `ext_system_config` | `ExtSystemConfigScreen` | save/discard/loadDefaults/testConnection/importJson delegate to `AppViewModel` |
-| `settings` | `SettingsScreen` | all settings + export/clearCache/deleteAllDocuments/insertSystemDefaults/signOut |
-| `docs` | `DocumentListScreen` | filtered by `selectedDocType` + location/RC per `DocTypeFilterMode`; upload branches on `backgroundSync` |
-| `dashboard?tab={tab}` (Int, default 0) | `DocumentOverviewScreen` | `initialTab` from nav arg |
-| `filter` | `DocumentFilterScreen` | edits `docFilter`, `showDocTypeFilter=false` |
-| `overview_filter` | `DocumentFilterScreen` | edits `overviewFilter`, locked source/RC from dashboard drill-down |
-| `download_filter` | `DownloadFilterScreen` | fixed source/RC per filter mode; URLs via `buildDownloadUrls`; downloads via `realDownloadDocuments`; for a stock count, the batch list via `loadInventoryBatches` |
-| `recording/{documentNo}/{type}` (String args) | `RecordingScreen` | route-scoped `RecordingViewModel` via `hiltViewModel()` |
-| `recordings_list` | `RecordingsListScreen` | the main menu's RECORDINGS row; hands `recordedDocs` straight through |
-| `profiles` | `ProfilesScreen` | Settings → Account → Operators; re-reads `profileStore.profiles()` on a refresh counter after each deletion |
-| `recordings/{documentNo}/{type}` (String args) | `RecordingsTreeScreen` | route-scoped `RecordingsTreeViewModel`; reached from `recordings_list` |
-| `upload_error/{documentNo}` (String arg) | `UploadErrorScreen` | retry delegates to `AppViewModel` |
+| `AppNavHost.kt` | 277 | `BarcodeApp`: collects what every screen needs, puts up the gate, builds the `Shell`, calls the five route functions, shows the overlay dialogs. **No route is written here** |
+| `AppShell.kt` | 268 | `AppShellState` (what is picked, which dialog is up; remembered once) and `Shell` (everything a route needs in one composition, and the shell's actions) |
+| `ShellData.kt` | 121 | `Document.isInScope` and `shellData(...)`: what the menu and the lists show. No Compose, no state; `ShellDataTest` |
+| `SignInGate.kt` | 118 | What shows while nobody is signed in: `SignInScreen`, the first-setup door, app info (§B.7) |
+| `MainMenuRoute.kt` | 46 | `main` |
+| `DocumentRoutes.kt` | 124 | `docs`, `filter`, `download_filter` |
+| `DashboardRoutes.kt` | 65 | `dashboard?tab={tab}`, `overview_filter` |
+| `RecordingRoutes.kt` | 126 | `recordings_list`, `recording/…`, `recordings/…`, `upload_error/…` |
+| `SettingsRoutes.kt` | 163 | `profiles`, `user_info`, `location_rc_pick`, `ext_system_config`, `settings` |
+| `Routes.kt` | 35 | Every route pattern, and the builders for the three with arguments |
+| `AppDialogs.kt` | 169 | Processing, download error, debugger, upload errors, change of server, blocked change of operator |
 
-**App-level overlay dialogs** (outside/after the NavHost): blocking "processing" `Dialog` (spinner + message), download-error `AlertDialog`, debug-URL confirmation `AlertDialog` ("Proceed"/"Cancel"), sync-error `AlertDialog` ("See errors" → `dashboard` / "Dismiss").
+### `BarcodeApp` (`AppNavHost.kt`), in the order it runs
+
+1. `nav = rememberNavController()`, `appVm = hiltViewModel()`.
+2. Collects `credentials` and `currentProfile`; builds the `User` from the **profile** (§B.7, login flow).
+3. Collects `locations` and `responsibilityCenters` (those of the configured installation) and resolves the selected `location` and `rc` from their codes: null when nothing is selected, and equally null when the selected code is no longer on the list. Two `LaunchedEffect`s repair a stale selection (a centre no longer on the list → the first one; a location that does not belong to the centre → the centre's first).
+4. Collects `documents` and `extSystemConfig`; `data = shellData(documents, location, rc, docTypeFilters, disabledDocTypes)`.
+5. `state = remember { AppShellState() }` and `exportLauncher` (`CreateDocument("application/json")` → `appVm.exportDatabase`).
+6. **The gate**: with no profile, `SignInGate(...)` and `return`. An early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even through a back stack the previous operator left.
+7. Collects `erpWorkInFlight` and builds `Shell(...)`.
+8. `SwitchBlockedDialog` and `ServerChangeDialog`, when the state asks for them (§B.7).
+9. `LaunchedEffect(profile?.key) { nav.popBackStack(Routes.MAIN, inclusive = false) }` — the nav controller is remembered above the gate, so without this the next operator would land where the last one left off, usually on a document they have no copy of.
+10. `NavHost(nav, startDestination = Routes.MAIN) { mainMenuRoute(shell); documentRoutes(shell); dashboardRoutes(shell); recordingRoutes(shell); settingsRoutes(shell) }`.
+11. The overlay dialogs: processing, download error, debugger, the two sign-in sheets, upload errors.
+
+### `ShellData` — what the lists show
+
+```kotlin
+internal fun Document.isInScope(docTypeFilters, location, rc): Boolean =
+    when (docTypeFilters[type.key] ?: type.defaultFilterMode) {
+        DocTypeFilterMode.LOCATION              -> location != null && sourceCode == location.code
+        DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null && rcCode == rc.code
+    }
+
+internal fun shellData(documents, location, rc, docTypeFilters, disabledDocTypes): ShellData
+```
+`ShellData` carries `filteredDocs` (the documents in scope), `docTypes` (one `DocTypeSummary` per type that is switched on, with its count, mini status bar and `blocked` flag), `recordedDocs` (every document carrying a scan, newest first, **built from all documents, not from the filtered ones** — the RECORDINGS list is the only place that shows work started somewhere else), and the shift's counters:
+
+```kotlin
+shiftScans  = filteredDocs.sumOf { d -> d.lines.count { it.scanned > 0 } }  // lines with progress, not total quantity
+errorDocs   = filteredDocs.filter { it.state is DocState.UploadFailed }
+readyDocs   = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.EXACT }
+partialDocs = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.PARTIAL }
+overDocs    = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.OVER }
+```
+`ready`/`partial`/`over` are mutually exclusive by `scanStatus()` and deliberately leave out anything already `UploadFailed` (an over-scanned-and-failed document counts only in `errorDocs`). These rules decide what an operator sees and, more to the point, what they do not, which is why they were taken out of the composable in 3.6.55 and given tests.
+
+### `AppShellState` and `Shell`
+
+**`AppShellState`** is the shell's own state, remembered once above the gate: the selected document type, the two filters, the dashboard's locked source and centre, and every flag and payload of the shell's dialogs (`processingMessage`, `debugUrls` with `pendingAction` / `pendingCancel`, the two sign-in sheets with `pendingUploadAction`, `showSwitchBlocked`, `pendingServerChange`). Until 3.6.57 these were some twenty separate `remember`ed variables inside `BarcodeApp`, which is what kept every route in one file: a route could reach them only from inside that function.
+
+**`Shell`** is everything a route needs from the shell as it stands in one composition: the state object, `nav`, `appVm`, `context`, `exportLauncher`; who is signed in and where they work (`activeProfile`, `user`, `location`, `rc`, the lists, `documents`, `extSystemConfig`, `data`, `erpWorkInFlight`); the settings in effect with their change callbacks; getters for `ShellData`'s lists; get/set properties delegating to the state for the parts routes read and write by name; and the shell's actions:
+
+| Action | What it does |
+|---|---|
+| `launchWithDebug(urls, onCancel, action)` | Runs `action` at once, or, with the debugger on, after showing the addresses and being let go (§B.11.5) |
+| `requireCredentials(action)` | Runs `action` now if the ERP session is valid, otherwise after the sign-in sheet |
+| `upload(docs, onBackgroundStarted, onBlockingDone)` | **The one upload path.** Sign-in if needed, the debugger's address, then background or blocking upload as the operator's setting says. The four screens that upload differ only in where they go afterwards, and pass exactly that. Before 3.6.58 each carried its own copy of the whole block |
+| `testSignIn(username, password, onResult)` | What every sign-in sheet's submit checks against the ERP |
+| `reportTestResult(result, cb)` | The configuration screen's test result, shared with the gate through `reportConnectionTest` |
+| `requestSignOut()` | Signs out, or shows "wait" while a transfer is running |
+| `requestConfigSave(config): Boolean` | Saves, or asks first when the configuration names another installation (§B.7) |
+
+**Why the routes read as they did.** A route file is `internal fun NavGraphBuilder.xRoutes(shell: Shell) { with(shell) { composable(…) { … } } }`. `Shell`'s property names are the ones the routes used when they were inside `BarcodeApp`, so under `with(shell)` each route was moved **as written**: `location`, `selectedDocType = type`, `launchWithDebug(urls) { … }` resolve to the shell's members. A reference to the shell itself is `shell::testSignIn`.
+
+**Mechanics, unchanged by the split.** `Shell` is a plain object built anew every time `BarcodeApp` recomposes, exactly as the local values it replaced were; the `NavHost`'s builder lambda runs again and the graph is rebuilt with routes that close over the new values. Only `AppShellState` outlives a composition. Nothing became cheaper or dearer; the gain is that each group of screens can be read, changed and reviewed alone.
+
+**Adding a route:** put its pattern in `Routes.kt`, write the `composable(...)` in the group's file (or a new `…Routes.kt` plus one call in the `NavHost`), and if it needs something the shell does not yet offer, add it to `Shell` and pass it in `BarcodeApp`.
+
+### NavHost routes (`startDestination = "main"`)
+
+| Route | File | Screen | Notes |
+|---|---|---|---|
+| `main` | `MainMenuRoute` | `MainMenuScreen` | `onTypeTap`→`docs`, `onDocumentOverview`→`dashboard?tab=1`, `onShowErrors`→`dashboard`; the avatar opens `user_info` or the sign-in sheet |
+| `docs` | `DocumentRoutes` | `DocumentListScreen` | `typeDocs` = documents of `selectedDocType` that are `isInScope`; upload through `Shell.upload`, then back to `main` |
+| `filter` | `DocumentRoutes` | `DocumentFilterScreen` | edits `docFilter`, `showDocTypeFilter=false` |
+| `download_filter` | `DocumentRoutes` | `DownloadFilterScreen` | fixed source/RC per filter mode; refuses to send with no scope selected; addresses via `buildDownloadUrls`; downloads via `realDownloadDocuments`; for a stock count, the batch list via `loadInventoryBatches` |
+| `dashboard?tab={tab}` (Int, default 0) | `DashboardRoutes` | `DocumentOverviewScreen` | `initialTab` from the argument; upload stays on the dashboard |
+| `overview_filter` | `DashboardRoutes` | `DocumentFilterScreen` | edits `overviewFilter`, locked source/RC from the dashboard drill-down |
+| `recordings_list` | `RecordingRoutes` | `RecordingsListScreen` | the main menu's RECORDINGS row; hands `recordedDocs` straight through |
+| `recording/{documentNo}/{type}` | `RecordingRoutes` | `RecordingScreen` | route-scoped `RecordingViewModel`; every scan is stamped with `activeProfile.id` |
+| `recordings/{documentNo}/{type}` | `RecordingRoutes` | `RecordingsTreeScreen` | route-scoped `RecordingsTreeViewModel`; reached from `recordings_list` |
+| `upload_error/{documentNo}` | `RecordingRoutes` | `UploadErrorScreen` | discard orphans, discard refused rows, retry through `Shell.upload` |
+| `profiles` | `SettingsRoutes` | `ProfilesScreen` | Settings → Account → Operators; re-reads `profileStore.profiles()` on a refresh counter after each deletion |
+| `user_info` | `SettingsRoutes` | `UserInfoScreen` | sign out through `requestSignOut` |
+| `location_rc_pick` | `SettingsRoutes` | `LocationRcPickScreen` | wired to `isRefreshingLocations`, `lastLocationSyncAt`, `downloadLocations()`, `saveCredentials()` |
+| `ext_system_config` | `SettingsRoutes` | `ExtSystemConfigScreen` | save through `requestConfigSave`; stays open while a change of installation is asked about |
+| `settings` | `SettingsRoutes` | `SettingsScreen` | all settings + export, clear cache, delete all documents, load configuration, sign out |
+
+**App-level overlay dialogs** (after the NavHost, all in `AppDialogs.kt` except the sheets): `ProcessingDialog` (spinner + message), `DownloadErrorDialog`, `DebugUrlsDialog` ("Proceed"/"Cancel"), the two `LoginSheet`s (one that resumes a waiting action, one from the main menu), `SyncErrorDialog` ("See errors" → `dashboard` / "Dismiss"). `ServerChangeDialog` and `SwitchBlockedDialog` sit above the NavHost.
 
 ### B.11.1 `RecordingViewModel` (`@HiltViewModel`)
 Route-scoped (one instance per `recording/{documentNo}/{type}` navigation entry). Wraps `DocumentRepository`, exposing `document: StateFlow<Document?>` (via `observeDocument`) plus thin suspend wrappers around the repository's scan-mutation functions (`recordScan`, `setLineScanned`) that `RecordingScreen` calls directly from its callbacks.
@@ -1007,19 +1186,19 @@ Route-scoped (one instance per `recording/{documentNo}/{type}` navigation entry)
 ### B.11.2 `AppViewModel` (`@HiltViewModel`)
 Since 3.6.37–3.6.39 three helpers carry the bulk, each an unscoped `@Inject` class the ViewModel delegates to under unchanged public names: **`ConfigController`** (parse, bundled defaults, export, list of bundled files), **`UploadCoordinator`** (`runUpload`, both modes; takes the config and credentials) and **`DownloadCoordinator`** (locations, inventory batches, documents and the `$filter` builder; suspend functions taking the config and credentials). The ViewModel keeps the coroutine scope, the exposed state and `duringErpWork`, the guard against changing operator mid-transfer, which now wraps each whole download call.
 
-Constructor deps: `Context`, `DocumentRepository`, `LocationDao`, `DatabaseExporter`, `ExtSystemConfigStore` (public `val`), `ExtSystemCredentialStore` (public `val`), `ExtSystemODataClient`, `AppSettingsStore`, private `Gson`. The orchestrator wiring repository + NAV networking together — there is no separate "SyncRepository" (see §B.1).
+Constructor deps: `Context`, `DocumentRepository`, `SharedDatabaseProvider`, `DatabaseExporter`, `ExtSystemConfigStore` (public `val`), `ExtSystemCredentialStore`, `ExtSystemODataClient`, `AppSettingsStore`, `UserProfileStore` (public `val profileStore`), `DatabaseProvider`, and the three helpers. The orchestrator wiring repository + ERP networking together — there is no separate "SyncRepository" (see §B.1). 581 lines; 1,018 before the helpers were split out.
 
 **Exposed state** (all `StateFlow`, all safe to `collectAsState()` from any composable):
+- `currentProfile: StateFlow<UserProfile?>` — who is signed in; null puts up the gate
 - `credentials: StateFlow<ExtSystemCredentials?>`
-- `locations: StateFlow<List<Location>>`
-- `responsibilityCenters: StateFlow<List<ResponsibilityCenter>>`
+- `locations: StateFlow<List<Location>>` and `responsibilityCenters: StateFlow<List<ResponsibilityCenter>>` — those of the **configured installation**: a `flatMapLatest` over `extSystemConfig` that re-subscribes to `SharedDatabaseProvider.forServer(identity)` when the installation changes (3.6.53)
 - `isRefreshingLocations: StateFlow<Boolean>`
 - `lastLocationSyncAt: StateFlow<Instant?>`
 - `documents: StateFlow<List<Document>>`
 - `extSystemConfig: StateFlow<ExtSystemConfig>` — converted from a plain getter to a real `StateFlow` in 2026-08 (see §B.13); all internal (non-composable) reads inside `AppViewModel` itself use `.value`, all composable reads go through `.collectAsState()`.
-- `erpWorkInFlight: StateFlow<Boolean>` — true while any ERP transfer is running, in either direction. Backed by a **count**, not a flag, because a background upload and a download can overlap and whichever finished first would lower a shared boolean while the other was still writing. Every ERP path goes through the private `duringErpWork { }` wrapper, which raises and lowers it in a `finally`. `MainActivity.requestSignOut()` blocks on it: changing operator swaps the database underneath a transfer that is still running, and a download in particular only resolves `provider.current()` *after* the server answers — by which point sign-out may already have released it, which throws inside a coroutine and takes the process down.
+- `erpWorkInFlight: StateFlow<Boolean>` — true while any ERP transfer is running, in either direction. Backed by a **count**, not a flag, because a background upload and a download can overlap and whichever finished first would lower a shared boolean while the other was still writing. Every ERP path goes through the private `duringErpWork { }` wrapper, which raises and lowers it in a `finally`. `Shell.requestSignOut()` blocks on it: changing operator swaps the database underneath a transfer that is still running, and a download in particular only resolves `provider.current()` *after* the server answers — by which point sign-out may already have released it, which throws inside a coroutine and takes the process down.
 
-**Key public functions**: `downloadLocations`, `buildDownloadUrls`, `getLocationsUrl`/`getRecordingSyncUrl`, `realDownloadDocuments`, `loadSettings`/`saveSettings`, `saveExtSystemConfig`, `saveCredentials` (returns `CredentialSave`; stores nothing unless the typed account is the signed-in operator’s — see §B.6.2), `signOut`, `testExtSystemConnection`, `parseExtSystemConfigJson` / `loadExtSystemDefaults` (both return `DeviceConfiguration`), `exportConfigurationJson`, `listExtSystemDefaultsCompanies` (scans bundled `ext_system_defaults_*.json` assets for the "Load built-in defaults" company picker — see §B.6.6), `uploadToExtSystem`/`uploadInBackground` (both call private `runUpload`), `exportDatabase`, `clearCache` (wipes the signed-in operator’s credentials, documents and recordings — nothing device-wide, nobody else’s), `deleteAllDocuments` (wipes only documents/recordings via `repository.clearAll()`), `clearDocumentRecordings`, `clearErrorDocs`.
+**Key public functions**: `signIn` (always against the ERP; enrols the profile and opens its database — §A.7), `signOut`, `saveCredentials` (returns `CredentialSave`; stores nothing unless the typed account is the signed-in operator’s — see §B.7), `savedCredentials` / `hasCredentials`, `testExtSystemConnection`; `saveExtSystemConfig` (returns `ConfigSave`: `Saved`, `SavedAndSignedOut` or `RefusedTransferRunning` — §B.7), `loadSettings` / `saveSettings`; `downloadLocations`, `loadInventoryBatches`, `realDownloadDocuments`, `buildDownloadUrls`, `getLocationsUrl` / `getRecordingSyncUrl` (the address of the upload mode in force, for the debugger); `uploadToExtSystem` / `uploadInBackground`; `parseExtSystemConfigJson` / `loadExtSystemDefaults` (both return `DeviceConfiguration`), `exportConfigurationJson`, `listExtSystemDefaultsCompanies` (§B.6.6); `profileFootprint` / `deleteProfile` (§B.10, `ProfilesScreen`); `exportDatabase`, `clearCache` (wipes the signed-in operator’s credentials, documents and recordings — nothing device-wide, nobody else’s), `deleteAllDocuments` (documents and recordings only, via `repository.clearAll()`), `discardOrphanedScans` / `discardFailedScans` (the two discards on `UploadErrorScreen`), `clearErrorDocs`.
 
 There is no manual/offline document-creation path — a scanned or typed document number that doesn't exist locally is simply reported as not found (see §A.3); `AppViewModel` has no `createDocument`-shaped function.
 
@@ -1064,7 +1243,7 @@ The startup pass is deliberately narrow — it only fills a gap, never overrides
 Nothing stored used to mean "leave it to the device locale", which needed a separate `savedLanguageOrNull()` to tell "never chose" from "chose English". With Croatian as the default that distinction is gone on purpose: these handhelds usually ship in English, and the app is meant to start in Croatian regardless. Adopting `autoStoreLocales` instead would also fix the original bug, but would put a second persistence mechanism alongside `AppSettings.language`; keeping the app's own store authoritative avoids the two disagreeing.
 
 ### B.11.4 `DocTypeFilterMode` — full effect trace
-Configured per document type in `ExtSystemConfigScreen` (persists **immediately**, not buffered like the rest of that screen — writes straight through `onDocTypeFiltersChange` → `appVm.saveSettings`). Consumed in `MainActivity.kt` for main-menu filtering and the `docs` route's `typeDocs`:
+Configured per document type in `ExtSystemConfigScreen` (persists **immediately**, not buffered like the rest of that screen — writes straight through `onDocTypeFiltersChange` → `appVm.saveSettings`). Consumed by `Document.isInScope` (`navigation/ShellData.kt`), which the main menu's lists and the `docs` route's `typeDocs` both call:
 ```kotlin
 when (docTypeFilters[doc.type.key] ?: doc.type.defaultFilterMode) {
     LOCATION -> location != null && doc.sourceCode == location.code
@@ -1078,27 +1257,27 @@ when (docTypeFilters[doc.type.key] ?: doc.type.defaultFilterMode) {
 The flag used to test the *list* instead (`locations.isEmpty()` / `rcs.isEmpty()`, and only when a locations URL was configured). Once any operator had refreshed locations, the next could open every list with nothing selected. Location-scoped types then showed nothing, and their download went out with no `Source_No` clause and fetched that type for every location: documents that landed on no list. A centre-scoped type showed every complaint in the company. The `download_filter` route repeats the check before sending anything and answers with the same text, as a second line behind the menu. The "My Location" tab of `DocumentOverviewScreen` follows the same rule: a blank code matches nothing. It used to match documents whose own code was blank.
 **No exemption for work already started.** This used to be OR'd with `doc.hasProgress`, so a document scanned into at one location bypassed the filter for good: move from CS165 to CS175 and CS165's documents were still listed, which made the filter meaningless as soon as a shift got going. The escape existed because in-progress work was otherwise unreachable from another location — the RECORDINGS section removed that reason, and `DocumentOverviewScreen`'s `atLocation` had never had the escape anyway, so dropping it made the rest of the app agree with the dashboard.
 
-Note the asymmetry that remains: LOCATION mode requires an explicit match (no location selected ⇒ nothing shows); RESPONSIBILITY_CENTER mode is permissive when nothing is selected (no RC selected ⇒ everything shows). Also drives which of Source/RC is fixed vs shown as a picker in `DownloadFilterScreen`, and gates `canCreateDoc` in the `docs` route.
+Both modes are strict: nothing selected shows nothing, for a location-scoped type and a centre-scoped one alike (`ShellDataTest` holds this). The mode also drives which of Source/RC is fixed and which is a picker in `DownloadFilterScreen`.
 
 ### B.11.5 Debug mode (`debuggerActive`)
-Central gate, `MainActivity.launchWithDebug(urls, onCancel = {}, action)`:
+Central gate, `Shell.launchWithDebug(urls, onCancel = {}, action)` (`navigation/AppShell.kt`):
 ```kotlin
 if (debuggerActive && urls.isNotEmpty()) {
-    debugUrls = urls; pendingAction = action; pendingCancel = onCancel; showDebugDialog = true
+    state.debugUrls = urls; state.pendingAction = action; state.pendingCancel = onCancel; state.showDebugDialog = true
 } else action()
 ```
-Wired at every network entry point: locations refresh, ext-system test-connection, all upload call sites (doc list, dashboard, recording screen, upload-error retry), and document download (`DownloadFilterScreen.onConfirm`, URLs formatted `"$type: $url"` per doc type).
+Wired at every network entry point: locations refresh, ext-system test-connection, every upload (document list, dashboard, recording screen and upload-error retry all go through `Shell.upload`), and document download (`DownloadFilterScreen.onConfirm`, URLs formatted `"$type: $url"` per doc type).
 
 ### B.11.6 Settings' buffered-edit pattern, precisely
 Both `SettingsScreen` and `ExtSystemConfigScreen` share the identical shape:
 - All fields are local `remember { mutableStateOf(initial.X) }` — no persistence during editing.
 - `BackHandler` and the top-bar back button both call `attemptExit()`.
 - `attemptExit()`: `if (buildX() != initial [|| pendingExtSystemConfig != null for Settings]) showExitDialog = true else onDiscard()` — structural (data class) equality check.
-- Exit dialog "Yes" → `onSave(buildX())` [+ `pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }` for Settings] → in `MainActivity`, Settings' `onSave` is wired to `applySettings` (bulk-copies every field back into `MainActivity`'s top-level `remember` state, triggers locale change if needed, then `appVm.saveSettings`) followed by `nav.popBackStack()`.
+- Exit dialog "Yes" → `onSave(buildX())` [+ `pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }` for Settings] → the `settings` route calls `onSettingsSaved`, which is `MainActivity.applySettings` (bulk-copies every field back into `MainActivity`'s top-level `remember` state, triggers locale change if needed, then `appVm.saveSettings`) followed by `nav.popBackStack()`.
 - Exit dialog "No" → `onDiscard()` = `nav.popBackStack()`, nothing written.
 - No changes at all → back-navigates silently, no dialog.
 
-**"Insert system defaults" persistence timing** — the three load/download/import actions only ever set local `pendingExtSystemConfig`; the row label appends `" (pending)"` while non-null. It is **only** actually saved when Settings' own exit-save flow commits (`pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }` → `AppViewModel.saveExtSystemConfig` → persists to `ExtSystemConfigStore` + updates the `extSystemConfig` StateFlow). Discarding the screen drops it with zero persistence.
+**"Insert system defaults" persistence timing** — the three load/download/import actions only ever set local `pendingExtSystemConfig`; the row label appends `" (pending)"` while non-null. It is **only** actually saved when Settings' own exit-save flow commits (`pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }` → `Shell.requestConfigSave`, which asks first if the configuration names another installation → `AppViewModel.saveExtSystemConfig` → persists to `ExtSystemConfigStore` + updates the `extSystemConfig` StateFlow). Discarding the screen drops it with zero persistence.
 
 ## B.12 Network Security Config
 `app/src/main/res/xml/network_security_config.xml` sets `<base-config cleartextTrafficPermitted="true" />` (referenced from the manifest) — required because the ERP is served over plain `http://` on the local LAN. **Do not remove this** unless the ERP endpoint is moved behind TLS.
@@ -1137,6 +1316,28 @@ A systematic sweep for orphaned files/functions/fields found and removed:
 - `Document.isSourceRetail` was flagged as write-only (set on every merge, never read) but deliberately **kept**, not removed — see §B.17.
 - This document (`TECHNICAL_GUIDE.md`) and `USER_GUIDE.md` were both corrected in the same pass — see the entry above for what had drifted.
 - Follow-up: 31 unused string resource keys removed from all 4 locale files (see §B.16) after a full audit, not just the sampled subset first found during the sweep.
+
+### 2026-11 — analysis follow-ups, restructuring, renaming (3.6.27 – 3.6.65)
+
+A system analysis of the app and its NAV side (`docs/Analiza_sustava_PrimaBarcode.docx`, 3.6.26) produced a list of follow-ups; they and the restructuring that came after are below. Every step that only moved code is its own commit and changed no behaviour, and each stage has a git tag for the state before it.
+
+| Version | What changed | Where |
+|---|---|---|
+| 3.6.27 | A whole document in one call (`PER_DOCUMENT`, SOAP to codeunit 50117) beside one call per scan; inventory batches from their own service (page 50208), no fallback, with refresh; "no environment chosen" asked on save; `ScanMatcher` fills lines that share a barcode in order; `odataLiteral` on every `$filter` value; `LineStatus.localizedLabel()` shared | §B.6.4, §B.6.5, §A.5.2, §B.9.3 |
+| 3.6.28 | `documentLine.addedOnDevice` (schema 21); `SecureStore` replaces `security-crypto`, nothing migrated, everyone signs in once | §B.2, §B.7 |
+| 3.6.29 – 3.6.31 | Touch targets 48 dp; every colour a token; each status colour in a fill and an ink shade. Tag `pre-design-tokens`, one commit each | §B.14 |
+| 3.6.34 – 3.6.36 | `RecordingScreen.kt` into four files | §B.10 |
+| 3.6.37 – 3.6.39 | `AppViewModel` hands configuration files, uploads and downloads to `ConfigController`, `UploadCoordinator`, `DownloadCoordinator` | §B.11.2 |
+| 3.6.40 – 3.6.42 | The app shell out of `MainActivity` into `navigation/` (dialogs, route names, `BarcodeApp`). Tag `pre-split` covers 3.6.34 – 3.6.42 | §B.11 |
+| 3.6.44 – 3.6.46 | One "load configuration" flow for both configuration screens; `SettingsScreen` and `ExtSystemConfigScreen` built from component files | §B.10 |
+| 3.6.48 – 3.6.51 | Package and application id `com.erpbarcode.scanner`; `App…` names; no NAV or Prima in the code. Tag `pre-rename` | §A.7, §B.1 |
+| 3.6.52 | The setup door at sign-in is for first setup only; Gradle project `ErpBarcodeScanner` | §B.7 |
+| 3.6.53 – 3.6.57 | A profile is an operator **on one ERP installation**: database, saved sign-in, locations and last location per installation; a session ends when the installation changes. The identity was tightened in three passes (every endpoint; parsed the way the HTTP client parses; one accepted reading per field). Tag `pre-server-binding` | §B.7 |
+| 3.6.55, 3.6.58 – 3.6.64 | The routes: `ShellData` (tested), `AppShellState` + `Shell`, one upload path, `SignInGate`, five route files; `AppNavHost.kt` 975 → 277 lines. Tag `pre-routes` | §B.11 |
+| 3.6.65 | Three names the rename had missed (`toErpRecording`, two locals in `mergeDocument`); two comments that described old behaviour | — |
+
+The NAV side of the same follow-ups (one sync record per document, COMMIT per 500, manual count override, XMLport 50008, codeunit 50117, page 50208) is `../PRIMA NAV/BARKOD-UNAPREDJENJA.txt`, described in §B.18, *Follow-ups*.
+
 
 ## B.14 Design System / Theme
 
@@ -1188,7 +1389,22 @@ A systematic sweep for orphaned files/functions/fields found and removed:
 - Notable dependency facts:
   - **Ktor's `ktor-client-content-negotiation`, `ktor-serialization-kotlinx-json`, and `ktor-client-auth` are declared but unused** — confirmed via source grep (no `ContentNegotiation` plugin install, no `io.ktor...auth` imports anywhere). All JSON is Gson; all auth is the hand-rolled `NtlmAuthenticator`. Don't assume Ktor's request/response bodies are JSON-typed anywhere — they're always raw strings hand-parsed with Gson.
   - ML Kit `barcode-scanning:17.3.0` has an in-source comment flagging an unaligned `.so` — update when a newer release fixes it.
-  - `androidx.security:security-crypto:1.1.0-alpha06` — still on an alpha release; watch for a stable release when upgrading.
+  - `androidx.security:security-crypto` is **gone** since 3.6.28; `SecureStore` uses the platform's own `javax.crypto` and Keystore (§B.7).
+
+### Tests
+
+Unit tests (`./gradlew test`, plain JUnit 4, no Android runtime) cover the logic that was deliberately written free of Compose and Android so that it could be tested:
+
+| Test | What it holds |
+|---|---|
+| `ScanMatcherTest` | Which line a scan lands on: lines sharing a barcode filled in order, surplus on the last, quantity labels on a stock count, lines added on the device after the ERP's |
+| `DocumentUploadSoapTest` | The SOAP envelope: namespaces, GUID in braces, time cut to milliseconds, XML escaping, `RetailLocation` only when present; the fault text read back |
+| `ODataFilterTest` | `odataLiteral`: quoting and the doubled single quote |
+| `ServerIdentityTest` | The installation identity: what makes two configurations the same installation and what does not (host, port, scheme, instance, company, the SOAP field's port exemption, every ambiguous address read as itself) |
+| `ShellDataTest` | The scope rule in both modes with nothing selected, blocked types, the unfiltered RECORDINGS list including documents whose scans are all orphaned, the shift's counters |
+
+There are no instrumented tests beyond the template's (`ExampleInstrumentedTest`), and nothing tests the repository's merge and state rules, the upload loop or the migrations — those need Room on a device or Robolectric, which the project does not have yet. That is the largest gap (§B.17).
+
 
 ### `settings.gradle.kts`
 Single module `:app`. Repositories: `google()`, `mavenCentral()`, `gradlePluginPortal()`. `rootProject.name = "ErpBarcodeScanner"` (`PrimaBarcode` until 3.6.52).
@@ -1209,7 +1425,7 @@ This exists for KSP's sake (2026-09). Only KSP 2.3.1+ registers its generated so
 Two things to keep straight when touching versions here: the classpath version is a **literal because the version catalog is not visible inside a `buildscript` block**, and it must stay equal to `kotlin` in the catalog, which pins the Compose compiler plugin. And KSP is *not* on this classpath — it is resolved through the `plugins` DSL alias, deliberately, since requesting a version for a plugin already on the buildscript classpath is an error.
 
 ### `gradle/libs.versions.toml`
-Only Compose/AndroidX/test/Hilt libraries and the 4 Gradle plugins are catalog aliases (`agp=9.2.1`, `hilt=2.60.1`, `kotlin=2.3.21`, `ksp=2.3.12`, `composeBom=2026.02.01`, etc.). Room/Ktor/CameraX/ML Kit/Gson/Timber/security-crypto/appcompat are plain string coordinates directly in `app/build.gradle.kts`, not catalog entries — keep this in mind when bumping versions.
+Only Compose/AndroidX/test/Hilt libraries and the 4 Gradle plugins are catalog aliases (`agp=9.2.1`, `hilt=2.60.1`, `kotlin=2.3.21`, `ksp=2.3.12`, `composeBom=2026.02.01`, etc.). Room/Ktor/CameraX/ML Kit/Gson/Timber/appcompat are plain string coordinates directly in `app/build.gradle.kts`, not catalog entries — keep this in mind when bumping versions.
 
 Note the KSP version format changed with the 2.3 line: older releases encoded the Kotlin version (`2.2.10-2.0.2`), current ones are plain KSP versions (`2.3.12`) covering a whole Kotlin minor. KSP 2.3.12 embeds the 2.3.20 compiler while the project builds with 2.3.21; that gap is deliberate on KSP's side, but if KSP ever complains about the compiler version, dropping `kotlin` to `2.3.20` (in both places above) is the fix.
 
@@ -1224,14 +1440,17 @@ A 2026-08 localization audit found every screen had been using `stringResource()
 
 Separately, a full audit (2026-08, same pass) checked every one of the then-247 keys in `res/values/strings.xml` (+ `values-hr`/`values-sl`/`values-mk`, kept in sync, see §B.11.3) against `R.string.*`/`@string/*` usage across all Kotlin source, the manifest, and `res/xml/`. 31 had zero references anywhere — remnants of earlier iterations of the login/settings/multiplier flows, an unused `doc_state_new/active/done/failed` status vocabulary, all 5 `doctype_*_desc` keys, and a handful of others (`btn_save`, `cd_settings`, `doc_qty_scanned`, `settings_change`, etc. — surprising ones were re-verified individually before removal, not just trusted from the automated sweep). All 31 were removed from all 4 locale files, leaving 216. If you're removing a key yourself later, confirm via grep for the exact key first — new UI could always reuse one of these names.
 
+As of 3.6.65 each of the four locale files has 354 entries (strings and plurals), kept in step. Text that depends on a count is a `<plurals>` resource: Croatian has three forms and Slovenian four. Text built outside a composable goes through `Context.inAppLanguage()` (§B.6.1).
+
 ## B.17 Extension Points & Notes for Future Developers
 
-- **Adding a new document type**: add an enum value to `DocumentType` (Models.kt) with a `key`/`display`, plus `retailLocation` if it shares a `Document_Type` code with another type and `defaultFilterMode` if location isn't the right scope; add it to the four bundled `ext_system_defaults_*.json` — `documentTypeCodes` **and** `docTypeFilters`, both keyed by the enum name; add a localized name in all four `strings.xml`. It will automatically appear in `MainMenuScreen`'s type list and all downstream screens, since they iterate `DocumentType.entries` — but note the compiler will also stop you in seven exhaustive `when` blocks that must each get a branch: six duplicated `localizedDisplay()` helpers (one per screen) and `MainMenuScreen`'s icon mapping. That the compiler catches every one of them is the reason the duplication is survivable.
+- **Adding a new document type**: add an enum value to `DocumentType` (Models.kt) with a `key`/`display`, plus `retailLocation` if it shares a `Document_Type` code with another type and `defaultFilterMode` if location isn't the right scope; add it to every bundled `ext_system_defaults_*.json` — `documentTypeCodes` **and** `docTypeFilters`, both keyed by the enum name; add a localized name in all four `strings.xml`. It then appears on the main menu and every downstream screen, since they iterate `DocumentType.entries`. The compiler stops you in two exhaustive `when` blocks: `DocumentType.localizedDisplay()` in `DocumentTypeLabel.kt` (one place since the seven per-screen copies were merged) and `MainMenuScreen`'s icon mapping. A new type starts switched off on every device (§B.7, `AppSettingsStore`).
 - **`COMPLAINT_SHIPMENT` and `COMPLAINT_RECEIPT`** (2026-11, codes `REKOTPR` and `REKZAPR`) replaced the single `COMPLAINT` type. Both are scoped by responsibility centre and carry their own code, so neither filters on `Retail_Location`. Because no old complaint document could be told apart as shipment or receipt, and none were being scanned yet, `MIGRATION_19_20` deletes the `COMPLAINT` rows. `ExtSystemConfigStore` falls back to the two codes when a device has none stored (the code field is read-only), so a device configured before the split needs no reload. The NAV side is `PRICO-2026-43`, §B.18.
 - **`COMPLAINT` (since replaced) and `INVENTORY`** (2026-09) were added this way. Both carry their own `Document_Type` code, so neither filters on `Retail_Location`. `INVENTORY` counts against quantities NAV supplies (`Qty. (Calculated)`), with two differences flagged by `DocumentType.isStockCount`: the download picks one inventory journal batch first (§B.6), and an item NAV didn't send is added on the device rather than rejected (§A.3).
-- **Adding a new AppSettings field**: add to the `AppSettings` data class + `AppSettingsStore` serialization, add local `remember` state + callback wiring in `MainActivity.kt`, and a control in `SettingsScreen.kt`. Remember the buffered-edit pattern — don't persist directly from the toggle, let it flow through `buildSettings()`/exit-save.
-- **The upload payload is intentionally flat and per-row**, not batched — if ERP-side batching is ever desired, `AppViewModel.runUpload`'s row loop is the place to change, but note the per-row-immediate-delete behavior is what makes partial-failure retries safe; batching would need an equivalent all-or-nothing safety guarantee.
-- **`ErpResponsibilityCenterRow` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `AppViewModel.realDownloadLocations` (or a new `realDownloadResponsibilityCenters`).
+- **Adding a new AppSettings field**: add it to the `AppSettings` data class and `AppSettingsStore` (personal or device half), add the `remember` state, `buildSettings()`, `applySettings()` and the operator-change effect in `MainActivity.kt`, pass it through `BarcodeApp` into `Shell` (`AppNavHost.kt`, `AppShell.kt`) and into the snapshot the `settings` route builds (`SettingsRoutes.kt`), and add a control in `SettingsScreen.kt`. That is six places for one field, and the compiler catches only some of them; a single settings holder passed down whole would make it two. Remember the buffered-edit pattern — don't persist directly from the toggle, let it flow through `buildSettings()`/exit-save.
+- **The upload is one loop in one place**: `UploadCoordinator.runUpload`, both modes. Per scan keeps partial progress safe by marking rows sent; per document relies on the ERP's transaction and on the GUID skip for a repeat. A third mode belongs beside those two, with the same question answered first: what does the device know after a lost response?
+- **Tests that are missing** (§B.15): `DocumentRepository` (merge, re-attachment, the state machine, the sent-quantity floor), `UploadCoordinator` (both modes against a fake client) and the migration chain. They need Room in a test — Robolectric, or instrumented tests on a device — and are the best next investment, because those are the paths where a mistake loses or duplicates a shift's work.
+- **`ErpResponsibilityCenterRow` DTO** is defined but unused (RCs are derived from Location rows) — if the ERP ever exposes a genuine RC list with richer fields (e.g. using the `short` field), this DTO is ready to wire into `DownloadCoordinator.downloadLocations` (or a new function beside it).
 - **`Document.isSourceRetail`** (`documentHeader.isSourceRetail`) — written on every download/merge from NAV's `Retail_Location` flag, and since 2026-09 it is what an uploaded recording sends back in `Retail_Location` (§A.5.4). Note the two sides use different sources on purpose: the *download filter* comes from `DocumentType.retailLocation` (the bucket being fetched), the *upload value* from `isSourceRetail` (what NAV said about that specific document). They agree whenever NAV populates the field. The one case where they don't is a document downloaded before `Retail_Location` was exposed on the OData page — `isSourceRetail` was stored `false` then, including for retail documents, and re-downloading is what refreshes it.
 
 ## B.18 The NAV side — C/AL objects in `NAV/`
