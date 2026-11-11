@@ -7,7 +7,7 @@ import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
 import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
-import com.erpbarcode.scanner.data.extsystem.toNavRecording
+import com.erpbarcode.scanner.data.extsystem.toErpRecording
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.repository.DocumentRepository
@@ -58,8 +58,7 @@ class UploadCoordinator @Inject constructor(
         for (doc in docs) {
             // Checked before a single row goes out. A document holding scans whose line the ERP has
             // since removed would otherwise send a Document_Line_No that no longer exists there,
-            // and because the send loop breaks on the first failure, that one row would block
-            // every legitimate recording behind it on every retry.
+            // for a quantity nobody has decided what to do with.
             //
             // All-or-nothing per document, not "send the good rows and flag the rest": a
             // partially posted document while the operator is still deciding about the remainder
@@ -104,7 +103,7 @@ class UploadCoordinator @Inject constructor(
                 // of them are. Every row carries the same outcome, so the error screen shows the
                 // one reason against each of them.
                 val result = extSystemClient.uploadDocument(
-                    url, rows.map { it.toNavRecording(docTypeCode, retailLocation) },
+                    url, rows.map { it.toErpRecording(docTypeCode, retailLocation) },
                 )
                 when (result) {
                     is ExtSystemResult.Success -> {
@@ -132,7 +131,7 @@ class UploadCoordinator @Inject constructor(
 
             for (row in rows) {
                 val result = extSystemClient.uploadRecording(
-                    url, row.toNavRecording(docTypeCode, retailLocation),
+                    url, row.toErpRecording(docTypeCode, retailLocation),
                 )
                 when (result) {
                     // Marked, not deleted. The row stays until the whole document goes, so the

@@ -42,7 +42,7 @@ data class ErpRecordingRow(
 // "not on the document, find the item by its Barcode". Its own number means something only on
 // this one device, so two devices could send the same number for different items.
 
-fun RecordingEntity.toNavRecording(
+fun RecordingEntity.toErpRecording(
     documentTypeCode: String,
     retailLocation: Boolean?,
 ): ErpRecordingRow = ErpRecordingRow(

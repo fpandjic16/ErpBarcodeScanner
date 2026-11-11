@@ -26,7 +26,6 @@ import com.erpbarcode.scanner.data.db.toDomain
 import com.erpbarcode.scanner.data.export.DatabaseExporter
 import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
 import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
-import com.erpbarcode.scanner.data.extsystem.toNavRecording
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.Document

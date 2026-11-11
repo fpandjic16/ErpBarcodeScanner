@@ -184,17 +184,17 @@ class DocumentRepositoryImpl @Inject constructor(
         // then on its scans belong on the ERP's line, sent ones included. The re-attachment below
         // only moves queued scans, so a sent one left behind would show as an orphan and leave
         // the ERP's line looking unscanned.
-        val navLineNoByBarcode = doc.lines.sortedBy { it.lineNo }
+        val erpLineNoByBarcode = doc.lines.sortedBy { it.lineNo }
             .groupBy { it.barcodeNo }
             .mapValues { (_, sameBarcode) -> sameBarcode.first().lineNo }
-        val (replacedByNav, addedOnDevice) = db.documentLineDao().getByDoc(doc.documentNo, type)
+        val (replacedByErp, addedOnDevice) = db.documentLineDao().getByDoc(doc.documentNo, type)
             .filter { it.addedOnDevice }
-            .partition { it.barcodeNo in navLineNoByBarcode }
+            .partition { it.barcodeNo in erpLineNoByBarcode }
         db.documentLineDao().deleteAllForDoc(doc.documentNo, type)
         db.documentLineDao().upsertAll(doc.lines.map { it.toEntity(type) } + addedOnDevice)
         val recordings = db.recordingDao().getByDoc(doc.documentNo, type)
-        for (line in replacedByNav) {
-            val target = navLineNoByBarcode.getValue(line.barcodeNo)
+        for (line in replacedByErp) {
+            val target = erpLineNoByBarcode.getValue(line.barcodeNo)
             for (rec in recordings.filter { it.documentLine == line.lineNo }) {
                 db.recordingDao().deleteByPk(doc.documentNo, type, rec.documentLine, rec.recordingLineNo)
                 val nextNo = db.recordingDao().getNextRecordingLineNo(doc.documentNo, type, target)
@@ -223,8 +223,9 @@ class DocumentRepositoryImpl @Inject constructor(
      * updated because `documentLine` is part of the primary key — `sentAt` and `lastError` ride
      * along with it, so a row already accepted stays accepted.
      *
-     * Several lines sharing a barcode resolves to the lowest line number, matching what
-     * `RecordingScreen.handleScan` already does when a scan could land on more than one line.
+     * Several lines sharing a barcode resolves to the lowest line number. A scan made on the
+     * recording screen is spread across such lines in order (`ScanMatcher`); here there is no
+     * telling which of them a scan was meant for, and the ERP groups scans by barcode anyway.
      */
     private suspend fun reattachOrphansByBarcode(db: AppDatabase, documentNo: String, type: String) {
         val orphans = db.recordingDao().getOrphansByDoc(documentNo, type)
