@@ -182,32 +182,15 @@ fun SettingsScreen(
             state = listState,
         ) {
             // ── Appearance ────────────────────────────────────────────────────
-            item { SectionHeader(stringResource(R.string.settings_sec_appearance)) }
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_appearance)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.TextFields)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_text_size),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_text_size_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                    }
+                    SettingsRowHeader(
+                        icon = Icons.Outlined.TextFields,
+                        label = stringResource(R.string.settings_text_size),
+                        description = stringResource(R.string.settings_text_size_desc),
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -215,27 +198,15 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         TextSize.entries.forEach { size ->
-                            val selected = size == textSize
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) PrimaPalette.Slate else PrimaPalette.CreamAlt)
-                                    .clickable { textSize = size }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    size.localizedLabel(),
-                                    style = monoLabel.copy(
-                                        color = if (selected) Color.White else PrimaPalette.Ink2,
-                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                                    ),
-                                )
-                            }
+                            SettingsChoiceChip(
+                                label = size.localizedLabel(),
+                                selected = size == textSize,
+                                onClick = { textSize = size },
+                            )
                         }
                     }
                     SettingsDivider()
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.Outlined.TextFormat,
                         label = stringResource(R.string.settings_uppercase),
                         description = stringResource(R.string.settings_uppercase_desc),
@@ -254,19 +225,11 @@ fun SettingsScreen(
                         ) {
                             SettingsIcon(Icons.Outlined.Language)
                             Spacer(Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    stringResource(R.string.settings_language),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = PrimaPalette.Ink,
-                                        fontWeight = FontWeight.Normal,
-                                    ),
-                                )
-                                Text(
-                                    stringResource(R.string.settings_language_desc),
-                                    style = monoLabel.copy(color = PrimaPalette.Ink3),
-                                )
-                            }
+                            SettingsRowText(
+                                label = stringResource(R.string.settings_language),
+                                description = stringResource(R.string.settings_language_desc),
+                                modifier = Modifier.weight(1f),
+                            )
                             Text(
                                 language.label,
                                 style = monoLabel.copy(color = PrimaPalette.Ink3, fontWeight = FontWeight.Medium),
@@ -291,32 +254,15 @@ fun SettingsScreen(
             }
 
             // ── Scanning ──────────────────────────────────────────────────────
-            item { SectionHeader(stringResource(R.string.settings_sec_scanning)) }
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_scanning)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.Timer)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_debounce),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_debounce_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                    }
+                    SettingsRowHeader(
+                        icon = Icons.Outlined.Timer,
+                        label = stringResource(R.string.settings_debounce),
+                        description = stringResource(R.string.settings_debounce_desc),
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -324,28 +270,17 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         listOf(200, 300, 500, 1000, 2000).forEach { ms ->
-                            val selected = ms == debounceTime
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) PrimaPalette.Slate else PrimaPalette.CreamAlt)
-                                    .clickable { debounceTime = ms }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    if (ms >= 1000) "${ms / 1000}s" else "${ms}ms",
-                                    style = monoLabel.copy(
-                                        color = if (selected) Color.White else PrimaPalette.Ink2,
-                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                                    ),
-                                )
-                            }
+                            SettingsChoiceChip(
+                                label = if (ms >= 1000) "${ms / 1000}s" else "${ms}ms",
+                                selected = ms == debounceTime,
+                                onClick = { debounceTime = ms },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(vertical = 8.dp),
+                            )
                         }
                     }
                     SettingsDivider()
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.Outlined.Vibration,
                         label = stringResource(R.string.settings_haptic),
                         description = stringResource(R.string.settings_haptic_desc),
@@ -353,7 +288,7 @@ fun SettingsScreen(
                         onCheckedChange = { hapticEnabled = it },
                     )
                     SettingsDivider()
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.AutoMirrored.Outlined.VolumeUp,
                         label = stringResource(R.string.settings_sound),
                         description = stringResource(R.string.settings_sound_desc),
@@ -361,7 +296,7 @@ fun SettingsScreen(
                         onCheckedChange = { soundEnabled = it },
                     )
                     SettingsDivider()
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.Outlined.Warning,
                         label = stringResource(R.string.settings_warn_over),
                         description = stringResource(R.string.settings_warn_over_desc),
@@ -372,11 +307,11 @@ fun SettingsScreen(
             }
 
             // ── Sync ──────────────────────────────────────────────────────────
-            item { SectionHeader(stringResource(R.string.settings_sec_sync)) }
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_sync)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.Outlined.Sync,
                         label = stringResource(R.string.settings_background_sync),
                         description = stringResource(R.string.settings_background_sync_desc),
@@ -386,49 +321,26 @@ fun SettingsScreen(
                 }
             }
 
-            // ── External System Configuration ─────────────────────────────────────────────────────
-            item { SectionHeader(stringResource(R.string.settings_sec_ext_config)) }
+            // ── External System Configuration ─────────────────────────────────
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_ext_config)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onOpenExtSystemConfig)
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.Dns)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_server_endpoints),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_server_endpoints_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                        Icon(
-                            Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaPalette.Ink4,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Dns,
+                        label = stringResource(R.string.settings_server_endpoints),
+                        description = stringResource(R.string.settings_server_endpoints_desc),
+                        onClick = onOpenExtSystemConfig,
+                    )
                 }
             }
 
             // ── Debug ─────────────────────────────────────────────────────────
-            item { SectionHeader(stringResource(R.string.settings_sec_debug)) }
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_debug)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-                    ToggleRow(
+                    SettingsToggleRow(
                         icon = Icons.Outlined.BugReport,
                         label = stringResource(R.string.settings_debugger_active),
                         description = stringResource(R.string.settings_debugger_active_desc),
@@ -436,141 +348,43 @@ fun SettingsScreen(
                         onCheckedChange = { debuggerActive = it },
                     )
                     SettingsDivider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onExport)
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.FileDownload)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_export),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_export_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                        Icon(
-                            Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaPalette.Ink4,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    SettingsNavRow(
+                        icon = Icons.Outlined.FileDownload,
+                        label = stringResource(R.string.settings_export),
+                        description = stringResource(R.string.settings_export_desc),
+                        onClick = onExport,
+                    )
                     SettingsDivider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showInsertSystemDefaultsDialog = true }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.SettingsSuggest)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_insert_defaults_dialog_title) +
-                                    if (pendingExtSystemConfig != null) " " + stringResource(R.string.settings_insert_defaults_pending) else "",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_insert_defaults_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                        Icon(
-                            Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaPalette.Ink4,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    SettingsNavRow(
+                        icon = Icons.Outlined.SettingsSuggest,
+                        label = stringResource(R.string.settings_insert_defaults_dialog_title) +
+                            if (pendingExtSystemConfig != null) " " + stringResource(R.string.settings_insert_defaults_pending) else "",
+                        description = stringResource(R.string.settings_insert_defaults_desc),
+                        onClick = { showInsertSystemDefaultsDialog = true },
+                    )
                     SettingsDivider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showClearCacheDialog = true }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(PrimaSignal.DangerBg),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = SignOutRed, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_clear_cache),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = SignOutRed,
-                                    fontWeight = FontWeight.Medium,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_clear_cache_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                    }
+                    SettingsDangerRow(
+                        label = stringResource(R.string.settings_clear_cache),
+                        description = stringResource(R.string.settings_clear_cache_desc),
+                        onClick = { showClearCacheDialog = true },
+                    )
                     SettingsDivider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDeleteAllDocumentsDialog = true }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(PrimaSignal.DangerBg),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = SignOutRed, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_delete_all),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = SignOutRed,
-                                    fontWeight = FontWeight.Medium,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_delete_all_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                    }
+                    SettingsDangerRow(
+                        label = stringResource(R.string.settings_delete_all),
+                        description = stringResource(R.string.settings_delete_all_desc),
+                        onClick = { showDeleteAllDocumentsDialog = true },
+                    )
                 }
             }
 
-            // ── Account ──────────────────────────────────────────────────────
-            // System info
-            item { SectionHeader(stringResource(R.string.settings_sec_system_info)) }
+            // ── System info ───────────────────────────────────────────────────
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_system_info)) }
 
             // The same block the sign-in screen shows on its own screen — see AppInfo.kt.
             item { AppInfoCard(environment, companyName) }
 
-            item { SectionHeader(stringResource(R.string.settings_sec_account)) }
+            // ── Account ───────────────────────────────────────────────────────
+            item { SettingsSectionHeader(stringResource(R.string.settings_sec_account)) }
 
             item {
                 Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
@@ -612,35 +426,12 @@ fun SettingsScreen(
                     }
                     SettingsDivider()
                     // Sits in Account because that section is already about who uses this device.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onOpenProfiles)
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SettingsIcon(Icons.Outlined.Group)
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_profiles),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = PrimaPalette.Ink,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                            Text(
-                                stringResource(R.string.settings_profiles_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3),
-                            )
-                        }
-                        Icon(
-                            Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = PrimaPalette.Ink4,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Group,
+                        label = stringResource(R.string.settings_profiles),
+                        description = stringResource(R.string.settings_profiles_desc),
+                        onClick = onOpenProfiles,
+                    )
                     SettingsDivider()
                     Row(
                         modifier = Modifier
@@ -653,13 +444,13 @@ fun SettingsScreen(
                         Icon(
                             Icons.AutoMirrored.Outlined.Logout,
                             contentDescription = null,
-                            tint = SignOutRed,
+                            tint = PrimaSignal.Danger,
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
                             stringResource(R.string.settings_sign_out),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = SignOutRed,
+                                color = PrimaSignal.Danger,
                                 fontWeight = FontWeight.Medium,
                             ),
                         )
@@ -682,36 +473,20 @@ fun SettingsScreen(
     }
 
     if (showClearCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearCacheDialog = false },
-            title = { Text(stringResource(R.string.dialog_clear_cache_title)) },
-            text = { Text(stringResource(R.string.dialog_clear_cache_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { showClearCacheDialog = false; onClearCache() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = SignOutRed),
-                ) { Text(stringResource(R.string.btn_clear)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+        SettingsConfirmDialog(
+            title = stringResource(R.string.dialog_clear_cache_title),
+            text = stringResource(R.string.dialog_clear_cache_text),
+            onConfirm = { showClearCacheDialog = false; onClearCache() },
+            onDismiss = { showClearCacheDialog = false },
         )
     }
 
     if (showDeleteAllDocumentsDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAllDocumentsDialog = false },
-            title = { Text(stringResource(R.string.settings_delete_all_title)) },
-            text = { Text(stringResource(R.string.settings_delete_all_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { showDeleteAllDocumentsDialog = false; onDeleteAllDocuments() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = SignOutRed),
-                ) { Text(stringResource(R.string.btn_clear)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAllDocumentsDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+        SettingsConfirmDialog(
+            title = stringResource(R.string.settings_delete_all_title),
+            text = stringResource(R.string.settings_delete_all_text),
+            onConfirm = { showDeleteAllDocumentsDialog = false; onDeleteAllDocuments() },
+            onDismiss = { showDeleteAllDocumentsDialog = false },
         )
     }
 
@@ -735,101 +510,3 @@ fun SettingsScreen(
         )
     }
 }
-
-private val SignOutRed = PrimaSignal.Danger
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        title.uppercased,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
-        style = monoLabel.copy(color = PrimaPalette.Ink3),
-    )
-}
-
-@Composable
-internal fun SettingsIcon(icon: ImageVector) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(PrimaPalette.CreamAlt),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = PrimaPalette.Slate, modifier = Modifier.size(20.dp))
-    }
-}
-
-@Composable
-internal fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 74.dp),
-        color = PrimaLine.Divider,
-    )
-}
-
-@Composable
-private fun ToggleRow(
-    icon: ImageVector,
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    comingSoon: Boolean = false,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (comingSoon) 0.45f else 1f)
-            .then(if (!comingSoon) Modifier.clickable { onCheckedChange(!checked) } else Modifier)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsIcon(icon)
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = PrimaPalette.Ink,
-                        fontWeight = FontWeight.Normal,
-                    ),
-                )
-                if (comingSoon) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(PrimaPalette.CreamAlt)
-                            .padding(horizontal = 5.dp, vertical = 2.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.settings_coming_soon),
-                            style = monoLabel.copy(
-                                color = PrimaPalette.Ink3,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                        )
-                    }
-                }
-            }
-            Text(description, style = monoLabel.copy(color = PrimaPalette.Ink3))
-        }
-        Spacer(Modifier.width(12.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = !comingSoon,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = PrimaPalette.Slate,
-                checkedThumbColor = Color.White,
-            ),
-        )
-    }
-}
-
