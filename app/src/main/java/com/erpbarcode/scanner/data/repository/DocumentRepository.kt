@@ -72,7 +72,19 @@ interface DocumentRepository {
         userId: String,
     ): SetQuantityResult
     suspend fun updateDocState(documentNo: String, type: String, state: DocState)
-    suspend fun deleteDocument(documentNo: String, type: String)
+    /**
+     * Removes a document once the ERP holds everything scanned on it, and says whether it did.
+     *
+     * False, and the document stays, while a single scan on it is unsent: one still queued, or
+     * one left without a line. The state is then recomputed from the recordings. There is no
+     * unconditional delete, so no caller can remove unsent work.
+     */
+    suspend fun deleteDocumentIfNothingUnsent(documentNo: String, type: String): Boolean
+    /**
+     * The same rule for every document at once: those without an unsent scan are removed, and the
+     * number of documents that had to stay is returned.
+     */
+    suspend fun deleteDocumentsWithNothingUnsent(): Int
     suspend fun getQueuedRecordings(documentNo: String, type: String): List<RecordingEntity>
     suspend fun getOrphanedRecordings(documentNo: String, type: String): List<RecordingEntity>
     suspend fun hasAnyRecordings(documentNo: String, type: String): Boolean
@@ -86,7 +98,6 @@ interface DocumentRepository {
     )
     suspend fun discardOrphanedScans(documentNo: String, type: String)
     suspend fun discardFailedScans(documentNo: String, type: String)
-    suspend fun clearAll()
     suspend fun deleteQueuedRecording(documentNo: String, type: String, documentLine: Int, recordingLineNo: Int)
     suspend fun deleteDocumentRecordings(documentNo: String, type: String)
     suspend fun recoverStalePendingUploads()
@@ -435,8 +446,35 @@ class DocumentRepositoryImpl @Inject constructor(
         db.documentHeaderDao().updateState(documentNo, type, state.toDbString())
     }
 
-    override suspend fun deleteDocument(documentNo: String, type: String) {
-        db.documentHeaderDao().deleteByKey(documentNo, type)
+    /**
+     * The check and the delete are one transaction. They used to be apart, with the delete
+     * unconditional: a scan written between the upload reading its rows and the document being
+     * removed went with the document, never having left the device.
+     *
+     * A document that stays is one the operator scanned on while it was being sent. Its sent rows
+     * are marked and the new one is queued, so the next upload sends only that. Its state is
+     * rebuilt here because a background upload leaves it as PendingUpload, which a scan does not
+     * change and which no screen offers a way out of.
+     */
+    override suspend fun deleteDocumentIfNothingUnsent(documentNo: String, type: String): Boolean {
+        val db = provider.current()
+        return db.withTransaction {
+            if (db.recordingDao().countUnsentByDoc(documentNo, type) > 0) {
+                refreshStateFromRecordings(db, documentNo, type)
+                false
+            } else {
+                db.documentHeaderDao().deleteByKey(documentNo, type)
+                true
+            }
+        }
+    }
+
+    override suspend fun deleteDocumentsWithNothingUnsent(): Int {
+        val db = provider.current()
+        return db.withTransaction {
+            db.documentHeaderDao().deleteAllWithoutUnsentScans()
+            db.documentHeaderDao().count()
+        }
     }
 
     /** What still has to go: attached to a real line, and not yet accepted by the ERP. */
@@ -508,10 +546,6 @@ class DocumentRepositoryImpl @Inject constructor(
             // The document may now be back to untouched, or merely no longer blocked.
             refreshStateFromRecordings(db, documentNo, type)
         }
-    }
-
-    override suspend fun clearAll() {
-        db.documentHeaderDao().deleteAll()
     }
 
     /** Removes a single scan the operator judged wrong. Refuses silently if it has already gone. */

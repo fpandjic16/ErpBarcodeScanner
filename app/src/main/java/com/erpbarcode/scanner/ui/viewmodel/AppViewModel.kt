@@ -530,18 +530,24 @@ class AppViewModel @Inject constructor(
      * with it, leaving an installation that had to be set up again from the bundled defaults. What
      * goes now is what the person pressing it owns — their documents, their recordings, their
      * credentials. The device's setup is administration, not cache, and has its own screen.
+     *
+     * A document holding a scan that has not been sent is not cache either, and stays: it goes
+     * once the scan is sent, or once the operator deletes the scan. [onDone] is told how many
+     * documents stayed for that reason.
      */
-    fun clearCache() {
+    fun clearCache(onDone: (keptDocuments: Int) -> Unit = {}) {
         viewModelScope.launch {
-            repository.clearAll()
+            val kept = repository.deleteDocumentsWithNothingUnsent()
             profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }
             _credentials.value = null
+            onDone(kept)
         }
     }
 
-    fun deleteAllDocuments() {
+    /** Removes every document without an unsent scan; [onDone] is told how many had to stay. */
+    fun deleteAllDocuments(onDone: (keptDocuments: Int) -> Unit = {}) {
         viewModelScope.launch {
-            repository.clearAll()
+            onDone(repository.deleteDocumentsWithNothingUnsent())
         }
     }
 

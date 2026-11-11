@@ -70,8 +70,9 @@ fun SettingsScreen(
     exportConfiguration: () -> String? = { null },
     listExtSystemDefaultsCompanies: () -> List<ExtSystemDefaultsCompany> = { emptyList() },
     onExport: () -> Unit = {},
-    onClearCache: () -> Unit = {},
-    onDeleteAllDocuments: () -> Unit = {},
+    /** Both deletes keep a document that holds an unsent scan, and report how many stayed. */
+    onClearCache: (onDone: (keptDocuments: Int) -> Unit) -> Unit = {},
+    onDeleteAllDocuments: (onDone: (keptDocuments: Int) -> Unit) -> Unit = {},
     onChangeLocation: () -> Unit,
     onOpenExtSystemConfig: () -> Unit = {},
     onOpenProfiles: () -> Unit = {},
@@ -113,6 +114,8 @@ fun SettingsScreen(
 
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showDeleteAllDocumentsDialog by remember { mutableStateOf(false) }
+    // How many documents a delete had to leave behind, while that is being said.
+    var keptDocuments by remember { mutableStateOf<Int?>(null) }
     var showInsertSystemDefaultsDialog by remember { mutableStateOf(false) }
     var pendingExtSystemConfig by remember { mutableStateOf<ExtSystemConfig?>(null) }
 
@@ -476,7 +479,7 @@ fun SettingsScreen(
         SettingsConfirmDialog(
             title = stringResource(R.string.dialog_clear_cache_title),
             text = stringResource(R.string.dialog_clear_cache_text),
-            onConfirm = { showClearCacheDialog = false; onClearCache() },
+            onConfirm = { showClearCacheDialog = false; onClearCache { kept -> if (kept > 0) keptDocuments = kept } },
             onDismiss = { showClearCacheDialog = false },
         )
     }
@@ -485,8 +488,26 @@ fun SettingsScreen(
         SettingsConfirmDialog(
             title = stringResource(R.string.settings_delete_all_title),
             text = stringResource(R.string.settings_delete_all_text),
-            onConfirm = { showDeleteAllDocumentsDialog = false; onDeleteAllDocuments() },
+            onConfirm = { showDeleteAllDocumentsDialog = false; onDeleteAllDocuments { kept -> if (kept > 0) keptDocuments = kept } },
             onDismiss = { showDeleteAllDocumentsDialog = false },
+        )
+    }
+
+    // Said rather than left to be noticed: the operator asked for everything to go, and a
+    // document still in the list afterwards would otherwise look like a delete that failed.
+    keptDocuments?.let { kept ->
+        AlertDialog(
+            onDismissRequest = { keptDocuments = null },
+            title = { Text(stringResource(R.string.settings_documents_kept_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    context.resources.getQuantityString(R.plurals.settings_documents_kept, kept, kept) +
+                        "\n\n" + stringResource(R.string.settings_documents_kept_hint)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { keptDocuments = null }) { Text(stringResource(R.string.btn_ok)) }
+            },
         )
     }
 

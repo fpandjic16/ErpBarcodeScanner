@@ -115,7 +115,7 @@
     <string name="settings_export">Извези податоци</string>
     <string name="settings_export_desc">Извези ги сите табели во JSON датотека на уредот</string>
     <string name="settings_clear_cache">Исчисти кеш</string>
-    <string name="settings_clear_cache_desc">Избриши ги своите акредитиви, документи и снимања</string>
+    <string name="settings_clear_cache_desc">Избриши ја зачуваната најава и документите без неиспратени скенирања</string>
     <string name="settings_app_version">Верзија на апликацијата</string>
     <string name="settings_android">Android</string>
     <string name="settings_sdk">SDK</string>
@@ -124,7 +124,7 @@
     <string name="settings_sign_out">Одјави се од надворешниот систем</string>
     <string name="settings_coming_soon">НАСКОРО</string>
     <string name="dialog_clear_cache_title">Да се исчисти кешот?</string>
-    <string name="dialog_clear_cache_text">Ова трајно ќе ги избрише вашите зачувани акредитиви, документи и снимања. Другите оператори и поставувањето на уредот остануваат недопрени. Ова дејство не може да се врати.</string>
+    <string name="dialog_clear_cache_text">Ова ја брише вашата зачувана најава и сите преземени документи што немаат неиспратени скенирања. Документите со неиспратени скенирања остануваат на уредот. Другите оператори и поставувањето на уредот остануваат недопрени. Ова дејство не може да се врати.</string>
     <!-- Login -->
     <string name="login_title">Најава во надворешен систем</string>
     <string name="login_username">Корисничко име</string>
@@ -234,8 +234,8 @@
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Да се зачуваат поставките пред напуштање?</string>
     <string name="settings_insert_defaults_dialog_title">Внеси стандардни поставки на системот</string>
-    <string name="settings_delete_all_title">Да се избришат сите документи и снимања?</string>
-    <string name="settings_delete_all_text">Ова трајно ги брише сите преземени документи, ставки и снимања — вклучувајќи ги несинхронизираните скенирања. Ова дејство не може да се врати.</string>
+    <string name="settings_delete_all_title">Да се избришат преземените документи?</string>
+    <string name="settings_delete_all_text">Ова трајно ги брише сите преземени документи, нивните ставки и испратените записи. Документите со неиспратени скенирања остануваат на уредот: испратете ги или прво избришете им ги скенирањата во ЗАПИСИ. Ова дејство не може да се врати.</string>
     <string name="export_saved">Извозот е зачуван</string>
     <string name="debug_request_urls_title">Дебагирање — URL на барања</string>
     <string name="sync_errors_title">Синхронизацијата заврши со грешки</string>
@@ -275,8 +275,8 @@
     <string name="ext_config_filter_rc">Центар на одговорност</string>
     <string name="settings_insert_defaults_pending">(на чекање)</string>
     <string name="settings_insert_defaults_desc">Вчитајте, преземете или увезете стандардни поставки на надворешниот систем. Се применува при зачувување.</string>
-    <string name="settings_delete_all">Избриши ги сите документи и записи</string>
-    <string name="settings_delete_all_desc">Трајно ги брише сите преземени документи, ставки и записи. Поставките и најавата остануваат недопрени.</string>
+    <string name="settings_delete_all">Избриши ги преземените документи</string>
+    <string name="settings_delete_all_desc">Ги брише сите преземени документи што немаат неиспратени скенирања. Поставките и најавата остануваат недопрени.</string>
     <string name="settings_background_sync_desc">Испраќањето се одвива во заднина, па можете да продолжите да работите додека документите се испраќаат.</string>
     <string name="login_scan_qr">Скенирај QR код</string>
     <string name="login_qr_invalid">Тој QR код не содржи податоци за најава.</string>
@@ -387,4 +387,10 @@
     <string name="server_change_unsent">Имате неиспратени скенирања. Не може да се испратат во новиот систем: испратете ги пред промената или подоцна вратете се на овој систем.</string>
     <string name="server_change_confirm">Смени и одјави ме</string>
     <string name="server_changed_toast">Системот е сменет. Најавете се повторно.</string>
+    <string name="settings_documents_kept_title">Некои документи не се избришани</string>
+    <string name="settings_documents_kept_hint">Испратете ги или избришете им ги скенирањата во ЗАПИСИ, па ќе може да се избришат.</string>
+    <plurals name="settings_documents_kept">
+        <item quantity="one">%d документ не е избришан бидејќи има неиспратени скенирања.</item>
+        <item quantity="other">%d документи не се избришани бидејќи имаат неиспратени скенирања.</item>
+    </plurals>
 </resources>

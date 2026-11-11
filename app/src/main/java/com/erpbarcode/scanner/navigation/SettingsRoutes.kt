@@ -148,8 +148,8 @@ internal fun NavGraphBuilder.settingsRoutes(shell: Shell) {
                     val ts = exportTimestampFmt.format(Instant.now())
                     exportLauncher.launch("barcode_export_${ts}.json")
                 },
-                onClearCache = { appVm.clearCache() },
-                onDeleteAllDocuments = { appVm.deleteAllDocuments() },
+                onClearCache = { onDone -> appVm.clearCache(onDone) },
+                onDeleteAllDocuments = { onDone -> appVm.deleteAllDocuments(onDone) },
                 onChangeLocation = { nav.navigate(Routes.LOCATION_RC_PICK) },
                 onOpenExtSystemConfig = { nav.navigate(Routes.EXT_SYSTEM_CONFIG) },
                 onOpenProfiles = { nav.navigate(Routes.PROFILES) },

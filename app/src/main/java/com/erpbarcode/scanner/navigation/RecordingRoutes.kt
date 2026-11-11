@@ -62,6 +62,8 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                             },
                         )
                     },
+                    // The shell's blocking dialog is up: an upload or a download is running.
+                    scanLocked = processingMessage != null,
                     hapticEnabled = hapticEnabled,
                     soundEnabled = soundEnabled,
                     debounceTime = debounceTime,

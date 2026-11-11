@@ -21,6 +21,13 @@ interface RecordingDao {
     suspend fun getByDoc(documentNo: String, type: String): List<RecordingEntity>
 
     /**
+     * How many of a document's scans the ERP does not hold: those queued for the next upload and
+     * those left without a line. While this is above zero, nothing may remove the document.
+     */
+    @Query("SELECT COUNT(*) FROM recordings WHERE documentNo = :documentNo AND type = :type AND sentAt IS NULL")
+    suspend fun countUnsentByDoc(documentNo: String, type: String): Int
+
+    /**
      * Recordings whose `documentLine` no longer matches any line of the document.
      *
      * They appear when the ERP drops a line the operator had already scanned: `mergeDocument`

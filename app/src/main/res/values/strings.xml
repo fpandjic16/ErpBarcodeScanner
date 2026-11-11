@@ -115,7 +115,7 @@
     <string name="settings_export">Export data</string>
     <string name="settings_export_desc">Dump all tables to a JSON file on device</string>
     <string name="settings_clear_cache">Clear cache</string>
-    <string name="settings_clear_cache_desc">Delete your credentials, documents, and recordings</string>
+    <string name="settings_clear_cache_desc">Delete your saved sign-in and the documents that hold no unsent scans</string>
     <string name="settings_app_version">App version</string>
     <string name="settings_android">Android</string>
     <string name="settings_sdk">SDK</string>
@@ -124,7 +124,7 @@
     <string name="settings_sign_out">Sign out of External System</string>
     <string name="settings_coming_soon">SOON</string>
     <string name="dialog_clear_cache_title">Clear cache?</string>
-    <string name="dialog_clear_cache_text">This will permanently delete your stored credentials, documents, and recordings. Other operators and the device setup are not affected. This cannot be undone.</string>
+    <string name="dialog_clear_cache_text">This deletes your saved sign-in and every downloaded document that holds no unsent scans. Documents with scans that have not been sent stay on the device. Other operators and the device setup are not affected. This cannot be undone.</string>
     <!-- Login -->
     <string name="login_title">Sign in to External System</string>
     <string name="login_username">Username</string>
@@ -234,8 +234,8 @@
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Save your settings before leaving?</string>
     <string name="settings_insert_defaults_dialog_title">Insert system defaults</string>
-    <string name="settings_delete_all_title">Delete all documents and recordings?</string>
-    <string name="settings_delete_all_text">This permanently deletes every downloaded document, line, and recording — including any unsynced scans. This cannot be undone.</string>
+    <string name="settings_delete_all_title">Delete downloaded documents?</string>
+    <string name="settings_delete_all_text">This permanently deletes every downloaded document, its lines and its sent recordings. Documents with scans that have not been sent stay on the device: send them, or delete their scans in RECORDINGS first. This cannot be undone.</string>
     <string name="export_saved">Export saved</string>
     <string name="debug_request_urls_title">Debug — Request URLs</string>
     <string name="sync_errors_title">Sync completed with errors</string>
@@ -275,8 +275,8 @@
     <string name="ext_config_filter_rc">Responsibility Center</string>
     <string name="settings_insert_defaults_pending">(pending)</string>
     <string name="settings_insert_defaults_desc">Load, download, or import default external system settings. Applies when you save.</string>
-    <string name="settings_delete_all">Delete all documents and recordings</string>
-    <string name="settings_delete_all_desc">Permanently deletes every downloaded document, line, and recording. Settings and sign-in stay untouched.</string>
+    <string name="settings_delete_all">Delete downloaded documents</string>
+    <string name="settings_delete_all_desc">Deletes every downloaded document that holds no unsent scans. Settings and sign-in stay untouched.</string>
     <string name="settings_background_sync_desc">Upload in the background so you can keep working while documents are sent.</string>
     <string name="login_scan_qr">Scan QR code</string>
     <string name="login_qr_invalid">That QR code does not contain sign-in details.</string>
@@ -387,4 +387,10 @@
     <string name="server_change_unsent">You have scans that have not been sent. They cannot be sent to the new system: send them first, or come back to this system later.</string>
     <string name="server_change_confirm">Change and sign out</string>
     <string name="server_changed_toast">System changed. Sign in again.</string>
+    <string name="settings_documents_kept_title">Some documents were kept</string>
+    <string name="settings_documents_kept_hint">Send them, or delete their scans in RECORDINGS, and they can be deleted.</string>
+    <plurals name="settings_documents_kept">
+        <item quantity="one">%d document was kept because it holds scans that have not been sent.</item>
+        <item quantity="other">%d documents were kept because they hold scans that have not been sent.</item>
+    </plurals>
 </resources>

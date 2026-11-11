@@ -115,7 +115,7 @@
     <string name="settings_export">Izvozi podatke</string>
     <string name="settings_export_desc">Izpiši vse tabele v datoteko JSON na napravi</string>
     <string name="settings_clear_cache">Počisti predpomnilnik</string>
-    <string name="settings_clear_cache_desc">Izbriši svoje poverilnice, dokumente in snemanja</string>
+    <string name="settings_clear_cache_desc">Izbriši svojo shranjeno prijavo in dokumente brez neposlanih skeniranj</string>
     <string name="settings_app_version">Različica aplikacije</string>
     <string name="settings_android">Android</string>
     <string name="settings_sdk">SDK</string>
@@ -124,7 +124,7 @@
     <string name="settings_sign_out">Odjava iz zunanjega sistema</string>
     <string name="settings_coming_soon">KMALU</string>
     <string name="dialog_clear_cache_title">Počistiti predpomnilnik?</string>
-    <string name="dialog_clear_cache_text">To bo trajno izbrisalo vaše shranjene poverilnice, dokumente in snemanja. Drugi operaterji in nastavitve naprave ostanejo nedotaknjeni. Tega dejanja ni mogoče razveljaviti.</string>
+    <string name="dialog_clear_cache_text">To izbriše vašo shranjeno prijavo in vse prenesene dokumente, ki nimajo neposlanih skeniranj. Dokumenti z neposlanimi skeniranji ostanejo na napravi. Drugi operaterji in nastavitve naprave ostanejo nedotaknjeni. Tega dejanja ni mogoče razveljaviti.</string>
     <!-- Login -->
     <string name="login_title">Prijava v zunanji sistem</string>
     <string name="login_username">Uporabniško ime</string>
@@ -236,8 +236,8 @@
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Shraniti nastavitve pred izhodom?</string>
     <string name="settings_insert_defaults_dialog_title">Vstavi privzete nastavitve sistema</string>
-    <string name="settings_delete_all_title">Izbrisati vse dokumente in snemanja?</string>
-    <string name="settings_delete_all_text">To trajno izbriše vse prenesene dokumente, postavke in posnetke — vključno z nesinhroniziranimi skeniranji. Tega dejanja ni mogoče razveljaviti.</string>
+    <string name="settings_delete_all_title">Izbrisati prenesene dokumente?</string>
+    <string name="settings_delete_all_text">To trajno izbriše vse prenesene dokumente, njihove postavke in poslane zapise. Dokumenti z neposlanimi skeniranji ostanejo na napravi: pošljite jih ali jim najprej izbrišite skeniranja v ZAPISIH. Tega dejanja ni mogoče razveljaviti.</string>
     <string name="export_saved">Izvoz shranjen</string>
     <string name="debug_request_urls_title">Razhroščevanje — URL-ji zahtevkov</string>
     <string name="sync_errors_title">Sinhronizacija končana z napakami</string>
@@ -277,8 +277,8 @@
     <string name="ext_config_filter_rc">Stroškovno mesto</string>
     <string name="settings_insert_defaults_pending">(v čakanju)</string>
     <string name="settings_insert_defaults_desc">Naložite, prenesite ali uvozite privzete nastavitve zunanjega sistema. Uporabi se ob shranjevanju.</string>
-    <string name="settings_delete_all">Izbriši vse dokumente in posnetke</string>
-    <string name="settings_delete_all_desc">Trajno izbriše vse prenesene dokumente, postavke in posnetke. Nastavitve in prijava ostanejo nedotaknjene.</string>
+    <string name="settings_delete_all">Izbriši prenesene dokumente</string>
+    <string name="settings_delete_all_desc">Izbriše vse prenesene dokumente, ki nimajo neposlanih skeniranj. Nastavitve in prijava ostanejo nedotaknjene.</string>
     <string name="settings_background_sync_desc">Pošiljanje poteka v ozadju, tako da lahko med pošiljanjem dokumentov delate naprej.</string>
     <string name="login_scan_qr">Skeniraj kodo QR</string>
     <string name="login_qr_invalid">Ta koda QR ne vsebuje podatkov za prijavo.</string>
@@ -391,4 +391,12 @@
     <string name="server_change_unsent">Imate neposlana skeniranja. V novi sistem jih ni mogoče poslati: pošljite jih pred zamenjavo ali se pozneje vrnite v ta sistem.</string>
     <string name="server_change_confirm">Zamenjaj in me odjavi</string>
     <string name="server_changed_toast">Sistem je zamenjan. Prijavite se znova.</string>
+    <string name="settings_documents_kept_title">Nekateri dokumenti niso bili izbrisani</string>
+    <string name="settings_documents_kept_hint">Pošljite jih ali jim izbrišite skeniranja v ZAPISIH, nato jih je mogoče izbrisati.</string>
+    <plurals name="settings_documents_kept">
+        <item quantity="one">%d dokument ni bil izbrisan, ker ima neposlana skeniranja.</item>
+        <item quantity="two">%d dokumenta nista bila izbrisana, ker imata neposlana skeniranja.</item>
+        <item quantity="few">%d dokumenti niso bili izbrisani, ker imajo neposlana skeniranja.</item>
+        <item quantity="other">%d dokumentov ni bilo izbrisanih, ker imajo neposlana skeniranja.</item>
+    </plurals>
 </resources>

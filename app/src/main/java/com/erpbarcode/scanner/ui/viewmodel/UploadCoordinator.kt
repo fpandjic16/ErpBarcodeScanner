@@ -17,7 +17,13 @@ import javax.inject.Inject
 
 /**
  * Sends documents' recordings to the ERP, per scan or per document (ExtSystemConfig.uploadMode), and
- * moves each document on: deleted once nothing is left queued, UploadFailed with a reason otherwise.
+ * moves each document on: removed once the ERP holds every scan on it, UploadFailed with a reason
+ * otherwise.
+ *
+ * "Every scan on it" is asked of the database at the moment of removal, not assumed from the rows
+ * this run sent: a scan made while those were on their way is not among them. Such a document
+ * stays, with its sent rows marked, and the next upload sends what is new
+ * (DocumentRepository.deleteDocumentIfNothingUnsent).
  *
  * Split out of AppViewModel, which keeps the two entry points (blocking and background), holds the
  * change of operator off while this runs, and passes in the configuration and the signed-in
@@ -33,7 +39,10 @@ class UploadCoordinator @Inject constructor(
     private fun inAppText(id: Int, vararg args: Any): String =
         appContext.inAppLanguage().getString(id, *args)
 
-    /** Uploads each doc; on success deletes it, on failure marks UploadFailed. Returns failure count. */
+    /**
+     * Uploads each doc; on success removes it unless a new scan has arrived meanwhile, on failure
+     * marks it UploadFailed. Returns the failure count.
+     */
     suspend fun runUpload(docs: List<Document>, config: ExtSystemConfig, creds: ExtSystemCredentials?): Int {
         if (!config.isConfigured || creds == null) {
             docs.forEach {
@@ -93,7 +102,7 @@ class UploadCoordinator @Inject constructor(
                 // is the bug 220f284 fixed. One whose rows have all been accepted is finished,
                 // and this is where it is finally removed, taking its sent rows with it.
                 if (repository.hasAnyRecordings(doc.documentNo, doc.type.key)) {
-                    repository.deleteDocument(doc.documentNo, doc.type.key)
+                    repository.deleteDocumentIfNothingUnsent(doc.documentNo, doc.type.key)
                 }
                 continue
             }
@@ -110,7 +119,7 @@ class UploadCoordinator @Inject constructor(
                         rows.forEach {
                             repository.markRecordingSent(doc.documentNo, doc.type.key, it.documentLine, it.recordingLineNo)
                         }
-                        repository.deleteDocument(doc.documentNo, doc.type.key)
+                        repository.deleteDocumentIfNothingUnsent(doc.documentNo, doc.type.key)
                     }
                     is ExtSystemResult.Failure -> {
                         rows.forEach {
@@ -161,7 +170,7 @@ class UploadCoordinator @Inject constructor(
             }
 
             if (lastFailure == null) {
-                repository.deleteDocument(doc.documentNo, doc.type.key)
+                repository.deleteDocumentIfNothingUnsent(doc.documentNo, doc.type.key)
             } else {
                 // A dropped connection is best described by the error itself; individually
                 // refused rows are better described by how many, with the detail per row on the

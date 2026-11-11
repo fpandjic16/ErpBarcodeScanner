@@ -15,6 +15,7 @@ import com.erpbarcode.scanner.testing.testLine
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.runBlocking
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
@@ -30,6 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The upload loop from end to end: a real database, the real repository and the real ERP client,
@@ -338,5 +340,61 @@ class UploadCoordinatorTest {
         assertEquals(3, rows.size)
         assertTrue(rows.all { it.sentAt == null && it.lastError == "The document is closed." })
         assertEquals(DocState.UploadFailed("The document is closed."), device.state("D1"))
+    }
+
+    // ── A scan made while its document is on its way ───────────────────────────
+
+    /**
+     * The ERP accepts everything, and while it is serving the first request the operator scans
+     * line 20000 of D1: a scan the upload did not read and is not sending.
+     */
+    private fun acceptWithAScanDuringTheFirstRequest(response: () -> MockResponse) {
+        val first = AtomicBoolean(true)
+        erp.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (first.getAndSet(false)) runBlocking { device.scan("D1", 20000, "222") }
+                return response()
+            }
+        }
+    }
+
+    @Test
+    fun `per scan, a scan made during the upload keeps the document`(): Unit = runBlocking {
+        d1WithScans(2)
+        acceptWithAScanDuringTheFirstRequest { accepted() }
+
+        val failures = upload("D1")
+
+        assertEquals(0, failures)
+        // Only the two rows that were queued when the upload began went out.
+        assertEquals(2, erp.requestCount)
+        val (first, second, late) = device.recordings("D1")
+        assertNotNull(first.sentAt)
+        assertNotNull(second.sentAt)
+        assertEquals(20000, late.documentLine)
+        assertNull(late.sentAt)
+        // Every line is exact, counting what was sent and what was not.
+        assertEquals(DocState.Completed, device.state("D1"))
+
+        // The next upload sends the late scan alone, and then the document goes.
+        assertEquals(0, upload("D1"))
+        assertEquals(3, erp.requestCount)
+        assertEquals(20000, List(3) { nextRequest() }.last().json()["Document_Line_No"].asInt)
+        assertNull(device.document("D1"))
+    }
+
+    @Test
+    fun `per document, a scan made during the upload keeps the document`(): Unit = runBlocking {
+        d1WithScans(2)
+        acceptWithAScanDuringTheFirstRequest { MockResponse().setResponseCode(200).setBody("<ok/>") }
+
+        val failures = upload("D1", config = perDocument())
+
+        assertEquals(0, failures)
+        assertEquals(1, erp.requestCount)
+        val rows = device.recordings("D1")
+        assertEquals(3, rows.size)
+        assertEquals(listOf(20000), rows.filter { it.sentAt == null }.map { it.documentLine })
+        assertNotNull(device.document("D1"))
     }
 }

@@ -92,6 +92,13 @@ fun RecordingScreen(
      */
     onLineUpdate: (lineNo: Int, newScanned: Double, onRefused: (Double) -> Unit) -> Unit,
     onUpload: () -> Unit = {},
+    /**
+     * True while this document is being sent behind the "Uploading…" dialog. The hardware trigger
+     * still reaches this screen then, and a scan taken now would be written under a dialog, onto
+     * a document the operator expects to be gone when the dialog closes. So it is refused, with
+     * the warning signal, and nothing is recorded.
+     */
+    scanLocked: Boolean = false,
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
     debounceTime: Int = 200,
@@ -190,6 +197,12 @@ fun RecordingScreen(
         !line.isAddedOnDevice && !(doc.type.isStockCount && line.expected <= 0.0)
 
     fun handleScan(rawInput: String) {
+        // Before the debounce, so that every pull of the trigger during an upload is answered.
+        if (scanLocked) {
+            if (hapticEnabled) hapticEngine.error()
+            if (soundEnabled) soundEngine.warning()
+            return
+        }
         val now = System.currentTimeMillis()
         if (rawInput == lastHandledBarcode && now - lastHandledAtMs < debounceTime) return
         lastHandledBarcode = rawInput

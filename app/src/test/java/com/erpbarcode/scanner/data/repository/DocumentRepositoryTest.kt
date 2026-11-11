@@ -299,16 +299,72 @@ class DocumentRepositoryTest {
         assertEquals(listOf(1, 3), device.recordings("D1").map { it.recordingLineNo })
     }
 
+    // ── Removing documents ─────────────────────────────────────────────────────
+
     @Test
-    fun `deleting a document takes its lines and scans with it`(): Unit = runBlocking {
+    fun `a document sent in full is removed with its lines and scans`(): Unit = runBlocking {
         device.download(d1())
         device.scan("D1", 10000, "111")
+        repository.markRecordingSent("D1", shipment, 10000, 1)
 
-        repository.deleteDocument("D1", shipment)
+        assertTrue(repository.deleteDocumentIfNothingUnsent("D1", shipment))
 
         assertNull(device.document("D1"))
         assertTrue(device.db.documentLineDao().getAll().isEmpty())
         assertTrue(device.db.recordingDao().getAll().isEmpty())
+    }
+
+    @Test
+    fun `a document with a scan still queued is not removed`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 10000, "111")
+        device.scan("D1", 10000, "111")
+        repository.markRecordingSent("D1", shipment, 10000, 1)
+        // What a background upload leaves on the document while it runs.
+        repository.updateDocState("D1", shipment, DocState.PendingUpload)
+
+        assertFalse(repository.deleteDocumentIfNothingUnsent("D1", shipment))
+
+        assertEquals(2, device.recordings("D1").size)
+        // And it is not left "being sent": line 20000 has nothing yet.
+        assertEquals(DocState.InProgress, device.state("D1"))
+    }
+
+    @Test
+    fun `a document whose unsent scan lost its line is not removed`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 20000, "222")
+        // The ERP drops line 20000: the scan has nowhere to go, and has not been sent.
+        device.download(d1(lines = listOf(testLine("D1", 10000, "111", 2.0))))
+
+        assertFalse(repository.deleteDocumentIfNothingUnsent("D1", shipment))
+
+        assertEquals(1, device.recordings("D1").size)
+    }
+
+    @Test
+    fun `deleting every document keeps those with an unsent scan`(): Unit = runBlocking {
+        device.download(
+            d1(),
+            testDocument("D2", listOf(testLine("D2", 10000, "111", 1.0))),
+            testDocument("D3", listOf(testLine("D3", 10000, "111", 1.0))),
+        )
+        // D1 has a scan waiting, D2 has nothing scanned, D3 was sent in full.
+        device.scan("D1", 10000, "111")
+        device.scan("D3", 10000, "111")
+        repository.markRecordingSent("D3", shipment, 10000, 1)
+
+        assertEquals(1, repository.deleteDocumentsWithNothingUnsent())
+
+        assertNotNull(device.document("D1"))
+        assertNull(device.document("D2"))
+        assertNull(device.document("D3"))
+        assertEquals(listOf("D1"), device.db.recordingDao().getAll().map { it.documentNo })
+
+        // Once the operator has deleted the scan, the document can go as well.
+        repository.deleteDocumentRecordings("D1", shipment)
+        assertEquals(0, repository.deleteDocumentsWithNothingUnsent())
+        assertNull(device.document("D1"))
     }
 
     // ── Stock count: lines added on the device ─────────────────────────────────
