@@ -81,6 +81,32 @@ class ServerIdentityTest {
     }
 
     @Test
+    fun `encoded dots are not trusted to mean what they look like`() {
+        val stray = config(live, upload = "http://erp:7048/Live/ODataV4/%2e%2e/%2e%2e/Other/ODataV4/Company('Acme%20Ltd')/X")
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
+    fun `a company given in the query counts like one in the path`() {
+        val same = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Ltd")
+        assertEquals(config(live).serverIdentity, same.serverIdentity)
+        val other = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings?company=Acme%20Retail")
+        assertNotEquals(config(live).serverIdentity, other.serverIdentity)
+    }
+
+    @Test
+    fun `an address naming no company is an installation of its own`() {
+        val stray = config(live, upload = "http://erp:7048/Live/ODataV4/BarcodeAppRecordings")
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
+    fun `the same instance name on another port is another installation`() {
+        val stray = config(live, upload = odata("http://erp:9999/Live/ODataV4/", "Acme Ltd", "BarcodeAppRecordings"))
+        assertNotEquals(config(live).serverIdentity, stray.serverIdentity)
+    }
+
+    @Test
     fun `an address naming two companies matches no installation but its own`() {
         val stray = config(live, upload = "http://erp:7048/Live/ODataV4/Company('Acme%20Ltd')/Company('Acme%20Retail')/X")
         assertNotEquals(config(live).serverIdentity, stray.serverIdentity)

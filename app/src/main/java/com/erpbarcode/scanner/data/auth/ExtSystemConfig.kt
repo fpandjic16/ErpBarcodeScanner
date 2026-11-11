@@ -2,8 +2,8 @@ package com.erpbarcode.scanner.data.auth
 
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
-import java.net.URI
 import java.net.URLDecoder
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * Which ERP a device is talking to.
@@ -92,23 +92,30 @@ data class ExtSystemConfig(
      * service in one of the endpoint addresses does not.
      *
      * **Every endpoint counts, not only the server address.** The identity is the server base URL
-     * plus, for each endpoint that is filled in, the host, the server instance and the company it
-     * addresses ([endpointInstallation]). In a consistent configuration they all name the same
-     * one, and the identity is that. A configuration whose upload address, say, names another
-     * company or another host is a different installation from the consistent one, with data of
-     * its own, so scans made under the proper configuration can never be sent through it; and
-     * changing where any endpoint points ends the session like any other change of installation.
+     * plus, for each endpoint that is filled in, where it leads: scheme, host, port, server
+     * instance and company ([endpointKey]). In a consistent configuration they all lead to the
+     * same place, and the identity is that. A configuration whose upload address, say, names
+     * another company, host or port is a different installation from the consistent one, with
+     * data of its own, so scans made under the proper configuration can never be sent through
+     * it; and changing where any endpoint leads ends the session like any other change of
+     * installation.
+     *
+     * The SOAP upload address is the one exception to "same port": an instance's SOAP services
+     * listen on another port than its OData ones. It adds nothing to the identity while its host,
+     * instance and company match an OData endpoint's — so filling it in later does not strand the
+     * work already on the device — and counts in full when they do not.
      */
     val serverIdentity: String
         get() {
             val server = serverBaseUrl.trim().trimEnd('/').lowercase()
             if (server.isEmpty()) return ""
-            val endpoints = listOf(documentLinesUrl, recordingSyncUrl, locationsUrl, inventoryBatchesUrl, documentUploadUrl)
+            val keys = listOf(documentLinesUrl, recordingSyncUrl, locationsUrl, inventoryBatchesUrl, documentUploadUrl)
                 .filter { it.isNotBlank() }
-                .map { endpointInstallation(it) }
-                .distinct()
-                .sorted()
-            return server + "|" + endpoints.joinToString(";")
+                .map { endpointKey(it) }
+            val odata = keys.filter { !it.soap }
+            val straySoap = keys.filter { it.soap && odata.none { o -> o.loose == it.loose } }
+            val entries = (odata + straySoap).map { it.strict }.distinct().sorted()
+            return server + "|" + entries.joinToString(";")
         }
 
     /** What to call that installation on screen: the company, or the server's address when the URL names none. */
@@ -118,43 +125,58 @@ data class ExtSystemConfig(
     private companion object {
         val COMPANY_IN_URL = Regex("""Company\('((?:[^']|'')*)'\)""")
 
-        /**
-         * Where one endpoint address leads: `host/instance|company`, lower case.
-         *
-         * The port is left out: the SOAP services of an instance listen on another port than its
-         * OData services, and the instance name already tells two service tiers on one host apart.
-         * The company is `Company('…')` in an OData address and the segment after `/WS/` in a SOAP
-         * one. Dot segments are resolved first, so `/Live/../Other/` reads as `Other`.
-         *
-         * Anything that cannot be read that way — an address that does not parse, or one naming
-         * two companies — is returned whole. It then matches nothing but itself, which keeps an
-         * odd address on the careful side: a different installation rather than a trusted one.
-         */
-        fun endpointInstallation(url: String): String {
-            val raw = url.trim()
-            val whole = raw.lowercase()
-            val uri = runCatching { URI(raw.replace(" ", "%20")).normalize() }.getOrNull() ?: return whole
-            val authority = uri.rawAuthority ?: return whole
-            // URI.getHost() is null for names it does not consider host names (an underscore is
-            // enough), so fall back to the authority without user info and port.
-            val host = uri.host ?: authority.substringAfterLast('@').substringBeforeLast(':')
-            val path = uri.rawPath.orEmpty()
-            val segments = path.split('/').filter { it.isNotEmpty() }
-            val instance = segments.firstOrNull().orEmpty()
-            val odataCompanies = COMPANY_IN_URL.findAll(path).map { it.groupValues[1] }.toList()
-            val company = when {
-                odataCompanies.size > 1 -> return whole
-                odataCompanies.size == 1 -> decode(odataCompanies[0]).replace("''", "'")
-                else -> {
-                    val ws = segments.indexOfFirst { it.equals("WS", ignoreCase = true) }
-                    if (ws >= 0) decode(segments.getOrNull(ws + 1).orEmpty()) else ""
-                }
-            }
-            return (host + "/" + instance + "|" + company.trim()).lowercase()
-        }
+        /** `Company('…')` as a whole path segment, already percent-decoded. */
+        val COMPANY_SEGMENT = Regex("""Company\('((?:[^']|'')*)'\)""", RegexOption.IGNORE_CASE)
 
-        private fun decode(raw: String): String =
-            runCatching { URLDecoder.decode(raw.replace("+", "%2B"), "UTF-8") }.getOrDefault(raw)
+        /**
+         * Where one endpoint address leads.
+         *
+         * [strict] is `scheme://host:port/instance|company`; [loose] leaves scheme and port out,
+         * for comparing a SOAP address ([soap]) with the OData ones of the same instance.
+         */
+        class EndpointKey(val strict: String, val loose: String, val soap: Boolean)
+
+        /**
+         * Reads an endpoint address the way the HTTP client will, and says where it leads.
+         *
+         * Parsed with OkHttp's own `HttpUrl`, the parser the requests go through, so what is
+         * compared here is what is actually called: dot segments resolved, host canonical,
+         * segments decoded. The company is `Company('…')` in the path, a `company` query parameter,
+         * or the segment after `/WS/` in a SOAP address.
+         *
+         * **Anything ambiguous is returned whole**, which makes it match nothing but itself — a
+         * different installation rather than a trusted one:
+         * - an address that does not parse;
+         * - encoded dots, slashes or backslashes in it, which two parsers may read two ways;
+         * - no company at all (the server would pick its default), or more than one.
+         */
+        fun endpointKey(url: String): EndpointKey {
+            val raw = url.trim()
+            val lower = raw.lowercase()
+            val whole = EndpointKey(strict = lower, loose = lower, soap = false)
+            if ("%2e" in lower || "%2f" in lower || "%5c" in lower || '\\' in raw) return whole
+            val http = raw.toHttpUrlOrNull() ?: return whole
+            val segments = http.pathSegments.filter { it.isNotEmpty() }
+            val instance = segments.firstOrNull()?.lowercase() ?: return whole
+
+            val inPath = segments.mapNotNull { COMPANY_SEGMENT.matchEntire(it)?.groupValues?.get(1)?.replace("''", "'") }
+            val inQuery = http.queryParameterNames
+                .filter { it.equals("company", ignoreCase = true) }
+                .flatMap { http.queryParameterValues(it) }
+                .filterNotNull()
+                .map { it.trim().removeSurrounding("'") }
+            val ws = segments.drop(1).indexOfFirst { it.equals("WS", ignoreCase = true) }
+            val inSoap = if (ws >= 0) listOfNotNull(segments.getOrNull(ws + 2)) else emptyList()
+
+            val companies = inPath + inQuery + inSoap
+            if (companies.size != 1 || companies[0].isBlank()) return whole
+            val company = companies[0].trim().lowercase()
+            return EndpointKey(
+                strict = "${http.scheme}://${http.host}:${http.port}/$instance|$company",
+                loose = "${http.host}/$instance|$company",
+                soap = ws >= 0,
+            )
+        }
     }
 }
 
