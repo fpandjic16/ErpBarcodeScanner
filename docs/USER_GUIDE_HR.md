@@ -342,6 +342,9 @@ Dodirnite **POŠALJI** na bilo kojem popisu dokumenata (ili gumb za slanje na ek
 - Ako niste prijavljeni, najprije će se zatražiti prijava.
 - Ovisno o postavkama aplikacije, slanje se odvija **u pozadini** (možete odmah nastaviti raditi dok se šalje) ili se do kraja prikazuje **ekran napretka** („Slanje…”).
 - Nakon uspješnog slanja dokument se potpuno uklanja s uređaja — s njim ste gotovi.
+- Dok je prikazan ekran **„Slanje…”**, skeniranje je isključeno: skener se javlja zvukom upozorenja i ništa se ne bilježi. Pričekajte da slanje završi.
+- Ako skenirate na dokumentu dok se on šalje u pozadini, taj dokument nakon slanja **ostaje na uređaju** i pokazuje novo skeniranje kao neposlano. Ponovno dodirnite **POŠALJI** da ga pošaljete. Ništa se ne gubi.
+- Dokument koji se već šalje u pozadini izostavlja se kad ponovno dodirnete **POŠALJI**. Šalje se samo jednom.
 - Ako nešto pođe krivo (greška poslužitelja, problem s mrežom, nedostaje konfiguracija), dokument umjesto toga prelazi na karticu **Greške**, uz zabilježen točan razlog. Ništa se ne gubi, a ponovno treba poslati samo ono što nije uspjelo (ono što je uspjelo prije greške ne šalje se ponovno).
 - **Ako uređaj šalje skeniranje po skeniranje** (uobičajena postavka), skeniranje koje vanjski sustav odbije ne zaustavlja ostala: ostala se pošalju, a dokument čeka na kartici **Greške** i pokazuje koja su skeniranja odbijena i zašto.
 - **Ako uređaj šalje po dokumentu** (postavlja IT), dokument ulazi cijeli ili nikako: vanjski sustav prihvaća sva njegova skeniranja ili nijedno, a dokument čeka na kartici **Greške** s razlogom. Dokument nikad nije napola poslan.
@@ -424,9 +427,9 @@ Jedan redak, **„Poslužitelj i krajnje točke”**, koji otvara postavke veze 
 | **Debugger aktivan** | Prije svakog preuzimanja ili slanja prikazuje točne web adrese koje će aplikacija kontaktirati. Korisno je samo za otkrivanje problema s vezom zajedno s IT podrškom. U svakodnevnom radu ostavite isključeno. |
 | **Izvezi podatke** | Sprema potpuni ispis svega što je na uređaju u datoteku — korisno ako IT podrška zatraži dijagnostičke podatke. |
 | **Umetni zadane postavke sustava** | Omogućuje IT-u ili konzultantima da učitaju, preuzmu ili uvezu početnu konfiguraciju veze s vanjskim sustavom. Preuzeta kopija namjerno ne sadrži ključ za prijavu QR kodom, pa ju je sigurno dijeliti; uvoz takve datoteke ne dira ključ koji je već na uređaju. U svakodnevnom radu to obično ne trebate. |
-| **Obriši predmemoriju** *(crveno — briše podatke)* | Briše **vašu** prijavu, dokumente i skeniranja. Drugi operateri na ovom uređaju i postava samog uređaja ostaju netaknuti. Traži potvrdu. Koristite samo kad vam to kaže podrška. |
+| **Obriši predmemoriju** *(crveno — briše podatke)* | Briše **vašu** spremljenu prijavu i preuzete dokumente. **Dokument s neposlanim skeniranjima ostaje**, a aplikacija javlja koliko ih je ostalo. Drugi operateri na ovom uređaju i postava samog uređaja ostaju netaknuti. Traži potvrdu. Koristite samo kad vam to kaže podrška. |
 | **Operateri na ovom uređaju** | Pod Korisničkim računom. Prikazuje sve koji su se ikad ovdje prijavili i omogućuje uklanjanje pojedinog operatera — vidi [§18a](#18a-uklanjanje-operatera-s-uređaja). |
-| **Izbriši sve dokumente i zapise** *(crveno — briše podatke)* | Briše sve preuzete dokumente i skeniranja, ali **zadržava** vaše postavke i prijavu. Traži potvrdu. Koristite je kad želite potpuno očistiti radne podatke bez ponovne prijave. |
+| **Izbriši preuzete dokumente** *(crveno — briše podatke)* | Briše preuzete dokumente, ali **zadržava** vaše postavke i prijavu. **Dokument s neposlanim skeniranjima ostaje**, a aplikacija javlja koliko ih je ostalo: pošaljite ih ili im prvo obrišite skeniranja pod **ZAPISI**, pa ih je moguće obrisati. Već poslana skeniranja ne mogu se obrisati zasebno; nestaju zajedno s dokumentom. Traži potvrdu. |
 
 ### Informacije o sustavu
 Podaci samo za čitanje — verzija aplikacije, verzija Androida, SDK, verzija baze podataka, za koji je sustav uređaj postavljen (Test ili Produkcija) i za koju tvrtku — korisni kad prijavljujete grešku podršci. Isti podaci nalaze se i na ekranu za prijavu pod **O aplikaciji**, za slučaj kad se ne možete prijaviti.

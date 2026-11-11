@@ -340,6 +340,9 @@ Tap **UPLOAD** from any document list (or the in-screen upload button while scan
 - If you're not signed in, you'll be asked to sign in first.
 - Depending on how your app is configured, upload either runs in the **background** (you can keep working immediately while it sends) or shows a **blocking progress screen** until it finishes.
 - On success, the document is completely removed from your device — you're done with it.
+- While the **Uploading…** screen is showing, scanning is switched off: the scanner answers with the warning sound and nothing is recorded. Wait for the upload to finish.
+- If you scan on a document while it is being sent in the background, that document **stays on your device** afterwards and shows the new scan as not sent. Tap **UPLOAD** again to send it. Nothing is lost.
+- A document that is already being sent in the background is left out when you tap **UPLOAD** again. It is sent once.
 - If something goes wrong (server error, network issue, missing configuration), the document moves to the **Errors** tab instead, with the specific reason recorded — nothing is lost, and only the parts that failed need to be resent (anything that did succeed before the failure is not resent).
 - **If your device sends scan by scan** (the usual setting), a scan the central system refuses does not stop the others: the rest are sent, and the document waits in **Errors**, showing which scans were refused and why.
 - **If your device sends per document** (set by IT), a document goes in whole or not at all: either the central system takes every scan of it, or none, and the document waits in **Errors** with the reason. A document is never half sent.
@@ -422,9 +425,9 @@ A single row, **"Server & endpoints"**, that opens the connection settings for t
 | **Debugger active** | Shows the exact web addresses the app is about to contact before every download/upload — useful only for diagnosing connectivity issues with IT support. Leave off for normal daily use. |
 | **Export data** | Saves a full dump of everything on your device to a file — useful if IT support asks for diagnostic data. |
 | **Insert system defaults** | Lets IT/consultants load, download, or import a starter configuration for the External System connection. A downloaded copy deliberately leaves out the QR sign-in key, so it is safe to pass around; importing such a file leaves the key already on the device untouched. Not something you'd normally use day-to-day. |
-| **Clear cache** *(red — destructive)* | Deletes **your** sign-in, documents and scans. Other operators on this device, and the device’s own setup, are untouched. Requires confirmation. Use only when told to by support. |
+| **Clear cache** *(red — destructive)* | Deletes **your** saved sign-in and your downloaded documents. **A document with scans that have not been sent is kept**, and the app tells you how many stayed. Other operators on this device, and the device’s own setup, are untouched. Requires confirmation. Use only when told to by support. |
 | **Operators on this device** | Under Account. Shows everyone who has ever signed in here, and lets you remove one — see [§18a](#18a-removing-an-operator-from-a-device). |
-| **Delete all documents and recordings** *(red — destructive)* | Deletes all downloaded documents and scans, but **keeps** your settings and sign-in. Requires confirmation. Use this to fully reset your working data without having to sign in again. |
+| **Delete downloaded documents** *(red — destructive)* | Deletes your downloaded documents, but **keeps** your settings and sign-in. **A document with scans that have not been sent is kept**, and the app tells you how many stayed: send them, or delete their scans under **RECORDINGS** first, and then they can be deleted. Scans that were already sent cannot be deleted on their own; they go with their document. Requires confirmation. |
 
 ### System Info
 Read-only details — app version, Android version, SDK, database version, which system the device is set up for (Test or Production) and which company — useful when reporting a bug to support. The same details are on the sign-in screen under **About the app**, for when you cannot sign in.
