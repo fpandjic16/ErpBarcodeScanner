@@ -516,49 +516,22 @@ fun RecordingScreen(
 
 
     barcodeNotFoundError?.let { barcode ->
-        AlertDialog(
-            onDismissRequest = { barcodeNotFoundError = null },
-            title = { Text(stringResource(R.string.recording_barcode_not_found_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Danger) },
-            text = { Text(stringResource(R.string.recording_barcode_not_found_text, barcode)) },
-            confirmButton = {
-                Button(onClick = { barcodeNotFoundError = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
-            },
-        )
+        BarcodeNotFoundDialog(barcode, onDismiss = { barcodeNotFoundError = null })
     }
 
     notOnDocumentScan?.let { scan ->
-        AlertDialog(
-            onDismissRequest = { notOnDocumentScan = null },
-            title = { Text(stringResource(R.string.recording_not_on_document_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.inkColor) },
-            text = { Text(stringResource(R.string.recording_not_on_document_text, scan.barcode)) },
-            confirmButton = {
-                Button(onClick = {
-                    notOnDocumentScan = null
-                    onScanNotOnDocument(scan.barcode, scan.unitOfMeasureCode, scan.quantity)
-                }) { Text(stringResource(R.string.recording_not_on_document_add), fontWeight = FontWeight.SemiBold) }
+        NotOnDocumentDialog(
+            scan = scan,
+            onCount = {
+                notOnDocumentScan = null
+                onScanNotOnDocument(scan.barcode, scan.unitOfMeasureCode, scan.quantity)
             },
-            dismissButton = {
-                TextButton(onClick = { notOnDocumentScan = null }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            onDismiss = { notOnDocumentScan = null },
         )
     }
 
     uomMismatchWarning?.let { info ->
-        AlertDialog(
-            onDismissRequest = { uomMismatchWarning = null },
-            title = { Text(stringResource(R.string.recording_uom_mismatch_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Warning) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.recording_uom_mismatch_body,
-                        info.itemNo, info.itemName, info.barcode, info.expectedUom, info.scannedUom,
-                    )
-                )
-            },
-            confirmButton = {
-                Button(onClick = { uomMismatchWarning = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
-            },
-        )
+        UomMismatchDialog(info, onDismiss = { uomMismatchWarning = null })
     }
 
     // Composed last, so it sits on top when a scan raises more than one warning at once. Only a
@@ -567,73 +540,16 @@ fun RecordingScreen(
     // composed after this one and covered it, which read as "over-scan is never reported".
     // Over-scan is the more consequential of the two, so it gets the front.
     overScanWarning?.let { info ->
-        AlertDialog(
-            onDismissRequest = { overScanWarning = null },
-            title = { Text(stringResource(R.string.recording_overscan_title), fontWeight = FontWeight.Bold, color = LineStatus.OVER.inkColor) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.recording_overscan_body,
-                        info.itemNo, info.itemName, info.barcode, info.expected.formatQty(), info.scanned.formatQty(),
-                    )
-                )
-            },
-            confirmButton = {
-                Button(onClick = { overScanWarning = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
-            },
-        )
+        OverScanDialog(info, onDismiss = { overScanWarning = null })
     }
 
     // Composed after the over-scan dialog: a single edit cannot raise both, so nothing is being
     // ranked here — it just has to sit above the keypad it was raised from.
     sentFloorWarning?.let { info ->
-        AlertDialog(
-            onDismissRequest = { sentFloorWarning = null },
-            title = { Text(stringResource(R.string.recording_sent_floor_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.recording_sent_floor_body,
-                        info.itemNo,
-                        "${info.sent.formatQty()} ${info.uom}".trim(),
-                    )
-                )
-            },
-            confirmButton = {
-                Button(onClick = { sentFloorWarning = null }) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
-            },
-        )
+        SentFloorDialog(info, onDismiss = { sentFloorWarning = null })
     }
 
 }
-
-private data class NotOnDocumentScan(
-    val barcode: String,
-    val unitOfMeasureCode: String,
-    val quantity: Double,
-)
-
-private data class SentFloorInfo(
-    val itemNo: String,
-    val sent: Double,
-    val uom: String,
-)
-
-private data class OverScanInfo(
-    val itemNo: String,
-    val itemName: String,
-    val barcode: String,
-    val expected: Double,
-    val scanned: Double,
-)
-
-private data class UomMismatchInfo(
-    val itemNo: String,
-    val itemName: String,
-    val barcode: String,
-    val expectedUom: String,
-    val scannedUom: String,
-)
 
 @Composable
 private fun OverviewContent(
