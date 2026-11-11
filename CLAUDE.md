@@ -17,7 +17,7 @@ Use `gradlew.bat` instead of `./gradlew` on Windows.
 
 ### Tests
 
-Unit tests are plain JUnit 4 (`./gradlew test`, no Android runtime) and cover the logic kept free of Compose and Android for exactly that purpose: `ScanMatcherTest`, `DocumentUploadSoapTest`, `ODataFilterTest`, `ServerIdentityTest`, `ShellDataTest`. Nothing tests the repository's merge and state rules, the upload loop or the migrations yet (TECHNICAL_GUIDE §B.15, §B.17). Logic that decides what an operator sees or what is sent belongs in a plain function with a test, not inside a composable.
+Every test is local (`./gradlew test`, no device). Plain JUnit 4 covers the logic kept free of Compose and Android for exactly that purpose: `ScanMatcherTest`, `DocumentUploadSoapTest`, `ODataFilterTest`, `ServerIdentityTest`, `ShellDataTest`. Under Robolectric, against a real SQLite and the real `DatabaseProvider`: `DocumentRepositoryTest` (merge, orphans, state, what may be deleted), `UploadCoordinatorTest` (the whole loop in both modes, against a local HTTP server standing in for the ERP) and `MigrationTest` (every exported schema version taken up to the current one through `AppDatabase.ALL_MIGRATIONS`, the one list of migrations). `TestDevice` in `app/src/test/…/testing/` is their fixture. Nothing tests downloads, the ViewModels or the screens (TECHNICAL_GUIDE §B.15, §B.17). Logic that decides what an operator sees or what is sent belongs in a plain function with a test, not inside a composable; a change to the upload loop or to a repository rule comes with its test. **Never run `connectedAndroidTest` on a device in use**: it uninstalls the app when it ends, and the unsent scans with it.
 
 ## Architecture
 

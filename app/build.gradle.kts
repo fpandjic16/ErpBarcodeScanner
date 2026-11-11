@@ -17,8 +17,8 @@ android {
         applicationId = "com.erpbarcode.scanner"
         minSdk = 26
         targetSdk = 36
-        versionCode = 142
-        versionName = "3.6.67"
+        versionCode = 143
+        versionName = "3.6.68"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,6 +42,13 @@ android {
     }
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
+    }
+    testOptions {
+        // The repository, upload and migration tests run on this machine, not on a device, against
+        // a real SQLite through Robolectric. It needs the merged manifest and resources for that.
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 
@@ -97,6 +104,11 @@ dependencies {
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     testImplementation(libs.junit)
+    // Android's SQLite, resources and Context on the JVM, so Room and everything above it can be
+    // tested without a device. Its first run downloads the Android runtime it stands in for.
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    // A local HTTP server standing in for the ERP. The version is the OkHttp that Ktor brings.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

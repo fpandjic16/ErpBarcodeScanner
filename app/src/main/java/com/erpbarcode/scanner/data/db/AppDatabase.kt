@@ -346,5 +346,17 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("UPDATE documentLine SET addedOnDevice = 1 WHERE lineNo < 0")
             }
         }
+
+        /**
+         * Every migration, oldest first: the one list [DatabaseProvider] registers and
+         * `MigrationTest` walks. A new migration is added here and nowhere else, so the chain the
+         * test proves is the chain the app runs.
+         */
+        val ALL_MIGRATIONS: Array<Migration>
+            get() = arrayOf(
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+                MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
+                MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
+            )
     }
 }
