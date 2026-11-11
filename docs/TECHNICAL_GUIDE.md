@@ -926,7 +926,9 @@ Read-only failed-upload detail: header card, document-info card, full raw error-
 
 Inside `setContent`: obtains `AppViewModel` via `hiltViewModel()`, loads `initialSettings` once, holds every setting as its own `remember { mutableStateOf(...) }`, with `buildSettings()` reassembling `AppSettings` and every `on...Change` callback persisting via `appVm.saveSettings(...)`. Wraps everything in `PrimaBarcodeTheme(textSizeOffset, uppercaseEnabled) { PrimaBarcodeApp(...) }`.
 
-### `PrimaBarcodeApp` composable (private, in `MainActivity.kt`) — the NavHost/app shell
+**Split in 3.6.40–3.6.42** (no change in behaviour): the shell lives in `navigation/` — `PrimaNavHost.kt` (`PrimaBarcodeApp`), `Routes.kt` (every route pattern and the builders for the three with arguments) and `AppDialogs.kt` (processing, download error, debugger, upload errors, blocked change of operator). The same round split `RecordingScreen.kt` into four files and moved `AppViewModel`'s configuration files, upload loop and downloads into `ConfigController`, `UploadCoordinator` and `DownloadCoordinator` (§B.11.2). The state before is tagged `pre-split`.
+
+### `PrimaBarcodeApp` composable (internal, in `navigation/PrimaNavHost.kt`) — the NavHost/app shell
 Creates `nav = rememberNavController()`; derives `user` from `appVm.credentials`; collects `locations`/`responsibilityCenters`/`documents`/`extSystemConfig` (all `StateFlow`, `collectAsState()`); auto-recovers stale RC/location selections; filters `documents` per document type via `DocTypeFilterMode`; builds `docTypes: List<DocTypeSummary>`; computes shift-wide counters:
 ```kotlin
 val shiftScans  = filteredDocs.sumOf { d -> d.lines.count { it.scanned > 0 } }  // count of lines-with-progress, not total qty
@@ -962,6 +964,8 @@ val overDocs    = filteredDocs.filter { it.state !is DocState.UploadFailed && it
 Route-scoped (one instance per `recording/{documentNo}/{type}` navigation entry). Wraps `DocumentRepository`, exposing `document: StateFlow<Document?>` (via `observeDocument`) plus thin suspend wrappers around the repository's scan-mutation functions (`recordScan`, `setLineScanned`) that `RecordingScreen` calls directly from its callbacks.
 
 ### B.11.2 `AppViewModel` (`@HiltViewModel`)
+Since 3.6.37–3.6.39 three helpers carry the bulk, each an unscoped `@Inject` class the ViewModel delegates to under unchanged public names: **`ConfigController`** (parse, bundled defaults, export, list of bundled files), **`UploadCoordinator`** (`runUpload`, both modes; takes the config and credentials) and **`DownloadCoordinator`** (locations, inventory batches, documents and the `$filter` builder; suspend functions taking the config and credentials). The ViewModel keeps the coroutine scope, the exposed state and `duringErpWork`, the guard against changing operator mid-transfer, which now wraps each whole download call.
+
 Constructor deps: `Context`, `DocumentRepository`, `LocationDao`, `DatabaseExporter`, `ExtSystemConfigStore` (public `val`), `ExtSystemCredentialStore` (public `val`), `ExtSystemODataClient`, `AppSettingsStore`, private `Gson`. The orchestrator wiring repository + NAV networking together — there is no separate "SyncRepository" (see §B.1).
 
 **Exposed state** (all `StateFlow`, all safe to `collectAsState()` from any composable):
