@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.prima.barcode"
+    namespace = "com.erpbarcode.scanner"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -14,11 +14,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.prima.barcode"
+        applicationId = "com.erpbarcode.scanner"
         minSdk = 26
         targetSdk = 36
-        versionCode = 122
-        versionName = "3.6.47"
+        versionCode = 123
+        versionName = "3.6.48"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
