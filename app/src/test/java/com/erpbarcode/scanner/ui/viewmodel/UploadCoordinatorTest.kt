@@ -6,6 +6,7 @@ import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.extsystem.DocumentUploadSoap
 import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
+import com.erpbarcode.scanner.data.extsystem.ExtSystemResult
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.DocumentType
 import com.erpbarcode.scanner.i18n.inAppLanguage
@@ -33,6 +34,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.net.InetAddress
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -424,6 +426,37 @@ class UploadCoordinatorTest {
         assertEquals(2, erp.requestCount)
         val sent = List(2) { nextRequest().json()["Recording_Guid"].asString }
         assertEquals(stored.map { it.recordingGuid }, sent)
+        assertNull(device.document("D1"))
+    }
+
+    // ── A sign-in tried while an upload is running ─────────────────────────────
+
+    @Test
+    fun `trying another sign-in does not disturb an upload in progress`(): Unit = runBlocking {
+        d1WithScans(1)
+        // The ERP holds the upload's row until the other sign-in has been tried.
+        val signInTried = CountDownLatch(1)
+        erp.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "POST") {
+                    signInTried.await(5, TimeUnit.SECONDS)
+                    accepted()
+                } else {
+                    MockResponse().setResponseCode(200).setBody("{}")
+                }
+        }
+        val uploading = async(Dispatchers.IO) { upload("D1") }
+        assertEquals("POST", nextRequest().method)
+
+        val tried = client.checkCredentials(
+            perScan(), ExtSystemCredentials("somebody-else", "another-password"), address("/"),
+        )
+        signInTried.countDown()
+
+        // This server never asks who is calling, and the check reports that rather than accept it.
+        assertEquals(text(R.string.ext_error_no_challenge_ok), (tried as ExtSystemResult.Failure).message)
+        // The upload went on, on the client it started with.
+        assertEquals(0, uploading.await())
         assertNull(device.document("D1"))
     }
 }

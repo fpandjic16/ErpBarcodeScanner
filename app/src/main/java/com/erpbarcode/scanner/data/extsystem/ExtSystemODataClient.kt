@@ -68,21 +68,32 @@ class ExtSystemODataClient @Inject constructor(
             else -> error.message ?: text(R.string.ext_error_unknown)
         }
     }
+    /**
+     * The client every transfer uses, built for the signed-in operator's saved credentials.
+     *
+     * Only [configure] replaces it, and only the transfers call that, each with those same saved
+     * credentials. Trying out a sign-in is not a transfer and never touches it: see
+     * [checkCredentials].
+     */
     private var httpClient: HttpClient? = null
     private var clientKey: Triple<String, String, String>? = null  // domain, rawUsername, pass
-    private var ntlmAuth: NtlmAuthenticator? = null
 
     fun configure(config: ExtSystemConfig, creds: ExtSystemCredentials): ExtSystemODataClient {
         val key = Triple(config.domain, creds.username, creds.password)
         if (clientKey != key) {
             httpClient?.close()
-            httpClient = buildClient(config.domain, creds.username, creds.password)
+            httpClient = buildClient(config.domain, creds.username, creds.password).first
             clientKey = key
         }
         return this
     }
 
-    private fun buildClient(configuredDomain: String, rawUsername: String, password: String): HttpClient {
+    /** A client and the authenticator that answers for it; the two are only ever built together. */
+    private fun buildClient(
+        configuredDomain: String,
+        rawUsername: String,
+        password: String,
+    ): Pair<HttpClient, NtlmAuthenticator> {
         // What the user typed always wins over the configured domain, so a login can be
         // corrected on the spot without touching Settings:
         //   DOMAIN\user / user@domain -> that domain
@@ -99,7 +110,6 @@ class ExtSystemODataClient @Inject constructor(
         val statesOwnDomain = '\\' in typed || '@' in typed
         val domain = if (statesOwnDomain) typedDomain else configuredDomain.trim()
         val auth = NtlmAuthenticator(domain, username, password)
-        ntlmAuth = auth
         val okHttp = OkHttpClient.Builder()
             .proxy(Proxy.NO_PROXY)  // bypass system proxy; the ERP is always on local LAN
             .authenticator(auth)
@@ -108,18 +118,41 @@ class ExtSystemODataClient @Inject constructor(
             .writeTimeout(60, TimeUnit.SECONDS)
             .build()
 
-        return HttpClient(OkHttp) {
+        val client = HttpClient(OkHttp) {
             engine { preconfigured = okHttp }
             expectSuccess = false
         }
+        return client to auth
     }
 
-    suspend fun testConnection(baseUrl: String): ExtSystemResult<Unit> {
-        val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
-        ntlmAuth?.resetPhase()
+    /**
+     * Asks the ERP whether [creds] are accepted at [baseUrl]: the connection test and the sign-in.
+     *
+     * On a client built for this one question and closed after it. It used to go through
+     * [configure], which rebuilds the shared client whenever the credentials differ, and a
+     * transfer reads that client anew at every request. A test run while an upload was sending
+     * in the background, or while the locations were refreshing, therefore switched the rest of
+     * that transfer to whatever had just been typed: somebody else's account, or a mistyped
+     * password that failed every row still to go.
+     */
+    suspend fun checkCredentials(
+        config: ExtSystemConfig,
+        creds: ExtSystemCredentials,
+        baseUrl: String,
+    ): ExtSystemResult<Unit> {
+        val (client, auth) = buildClient(config.domain, creds.username, creds.password)
+        return try {
+            probe(client, auth, baseUrl)
+        } finally {
+            client.close()
+        }
+    }
+
+    private suspend fun probe(client: HttpClient, auth: NtlmAuthenticator, baseUrl: String): ExtSystemResult<Unit> {
+        auth.resetPhase()
         return runCatching {
             val response = client.get(baseUrl) { accept(ContentType.Application.Json) }
-            val phase = ntlmAuth?.phaseReached ?: 0
+            val phase = auth.phaseReached
             if (response.status.isSuccess()) {
                 // A 2xx on its own proves nothing about the password. NtlmAuthenticator is an
                 // okhttp3.Authenticator, so OkHttp only invokes it in answer to a 401 — an endpoint
@@ -127,12 +160,12 @@ class ExtSystemODataClient @Inject constructor(
                 // every password "works". Treating that as a success would enrol an operator on
                 // this device under a password the ERP has never seen.
                 if (phase == 0) {
-                    Timber.w("testConnection: HTTP ${response.status.value} with no NTLM challenge")
+                    Timber.w("checkCredentials: HTTP ${response.status.value} with no NTLM challenge")
                     return@runCatching ExtSystemResult.Failure(text(R.string.ext_error_no_challenge_ok))
                 }
                 ExtSystemResult.Success(Unit)
             } else {
-                Timber.w("testConnection: HTTP ${response.status.value}, NTLM phase=$phase")
+                Timber.w("checkCredentials: HTTP ${response.status.value}, NTLM phase=$phase")
                 val msg = when {
                     response.status.value == 401 && phase == 0 -> text(R.string.ext_error_no_challenge)
                     // The NTLM phase reached is in the log line above; the operator only needs to
@@ -244,7 +277,6 @@ class ExtSystemODataClient @Inject constructor(
         httpClient?.close()
         httpClient = null
         clientKey = null
-        ntlmAuth = null
     }
 
     companion object {

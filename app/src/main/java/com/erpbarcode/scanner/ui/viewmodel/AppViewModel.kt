@@ -398,8 +398,9 @@ class AppViewModel @Inject constructor(
                 environment = config.environment?.name,
             )
             val serverResult = if (config.serverBaseUrl.isBlank()) null else {
-                extSystemClient.configure(config, ExtSystemCredentials(typedUsername.trim(), password))
-                extSystemClient.testConnection(config.serverBaseUrl.trim())
+                extSystemClient.checkCredentials(
+                    config, ExtSystemCredentials(typedUsername.trim(), password), config.serverBaseUrl.trim(),
+                )
             }
 
             if (serverResult is ExtSystemResult.Success) {
@@ -445,8 +446,9 @@ class AppViewModel @Inject constructor(
             }
             val config = extSystemConfig.value.copy(serverBaseUrl = url)
             val creds  = ExtSystemCredentials(username.trim(), password)
-            extSystemClient.configure(config, creds)
-            val result = extSystemClient.testConnection(url)
+            // On a client of its own: a transfer may be running, and it must go on under the
+            // credentials it started with whatever is typed here.
+            val result = extSystemClient.checkCredentials(config, creds, url)
             // A server that accepts somebody else's account is still a failure here: the point of
             // the test is to obtain access for this session, and access that cannot be stored is
             // access this session does not have. Nobody signed in is a different matter — see
