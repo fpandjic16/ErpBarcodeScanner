@@ -75,9 +75,8 @@ class AppViewModel @Inject constructor(
     private val databaseProvider: DatabaseProvider,
     private val configController: ConfigController,
     private val uploadCoordinator: UploadCoordinator,
+    private val downloadCoordinator: DownloadCoordinator,
 ) : ViewModel() {
-
-    private val gson = Gson()
 
     /**
      * A message for the operator, in the app's language rather than the device's — see
@@ -167,122 +166,21 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    /** Returns null on success, or an error message on failure. */
-    private suspend fun realDownloadLocations(): String? {
-        val config = extSystemConfig.value
-        val creds  = savedCredentials() ?: return inAppText(R.string.ext_error_not_signed_in)
-        if (!config.isConfigured) return inAppText(R.string.ext_error_not_configured)
-        if (config.locationsUrl.isBlank()) return inAppText(R.string.ext_error_locations_url_missing)
-        extSystemClient.configure(config, creds)
-        return when (val result = extSystemClient.downloadRaw(config.locationsUrl)) {
-            is ExtSystemResult.Success -> {
-                val typeToken = object : TypeToken<NavODataList<NavLocation>>() {}.type
-                val odata = gson.fromJson<NavODataList<NavLocation>>(result.data, typeToken)
-                val rcCodes = odata.value.map { it.rcCode }.filter { it.isNotBlank() }.distinct()
-                locationDao.clearRcs()
-                locationDao.upsertRcs(rcCodes.map { ResponsibilityCenterEntity(it, it, null) })
-                locationDao.clearLocations()
-                locationDao.upsertLocations(odata.value.map { LocationEntity(it.code, it.name, it.rcCode) })
-                null
-            }
-            is ExtSystemResult.Failure -> result.message
-        }
-    }
+    /** See [DownloadCoordinator.downloadLocations]. */
+    private suspend fun realDownloadLocations(): String? =
+        downloadCoordinator.downloadLocations(extSystemConfig.value, savedCredentials())
 
-    private fun buildODataFilterString(filter: DownloadFilter, typeCode: String, type: DocumentType): String? {
-        val clauses = mutableListOf<String>()
-        if (typeCode.isNotBlank()) clauses.add("Document_Type eq ${odataLiteral(typeCode)}")
-        // Retail and warehouse share a Document_Type code, so this clause is what actually
-        // separates them — mandatory for all four, never optional. Transport sheets have no
-        // retailLocation and so get no clause at all.
-        type.retailLocation?.let { clauses.add("Retail_Location eq $it") }
-        filter.dateFrom?.let { clauses.add("Document_Date ge $it") }
-        filter.dateTo?.let { clauses.add("Document_Date le $it") }
-        if (filter.destinationCode.isNotBlank()) clauses.add("Destination_No eq ${odataLiteral(filter.destinationCode)}")
-        if (filter.sourceCode.isNotBlank()) clauses.add("Source_No eq ${odataLiteral(filter.sourceCode)}")
-        if (filter.rcCode.isNotBlank()) clauses.add("Responsibility_Center eq ${odataLiteral(filter.rcCode)}")
-        if (filter.documentNo.isNotBlank()) clauses.add("Document_No eq ${odataLiteral(filter.documentNo)}")
-        return if (clauses.isEmpty()) null else clauses.joinToString(" and ")
-    }
-
-    /**
-     * The inventory journal batches the ERP has sent for scanning in [filter]'s location or
-     * responsibility centre, for the operator to pick one before downloading.
-     *
-     * Read from the ERP's own list of them (`BarcodeInventoryBatches`, page 50208): one row per
-     * batch that has a count on the devices and is not finished yet, with its location,
-     * responsibility centre, date and number of lines worked out on the ERP side. There is no
-     * other way: reading every Barcode App Entry of the location and grouping them here was
-     * replaced, because on a large location that meant thousands of rows to list a handful.
-     */
+    /** See [DownloadCoordinator.loadInventoryBatches]. */
     fun loadInventoryBatches(filter: DownloadFilter, onResult: (ExtSystemResult<List<InventoryBatch>>) -> Unit) {
         viewModelScope.launch {
-            val config = extSystemConfig.value
-            val creds  = savedCredentials()
-            if (!config.isConfigured || creds == null) {
-                onResult(ExtSystemResult.Failure(
-                    if (creds == null) inAppText(R.string.ext_error_not_signed_in)
-                    else inAppText(R.string.ext_error_not_configured)
-                ))
-                return@launch
-            }
-            if (config.inventoryBatchesUrl.isBlank()) {
-                onResult(ExtSystemResult.Failure(inAppText(R.string.ext_error_inventory_batches_url_missing)))
-                return@launch
-            }
-            extSystemClient.configure(config, creds)
-            val clauses = buildList {
-                if (filter.sourceCode.isNotBlank()) add("Barcode_Location_Code eq ${odataLiteral(filter.sourceCode)}")
-                if (filter.rcCode.isNotBlank()) add("Barcode_Resp_Center eq ${odataLiteral(filter.rcCode)}")
-            }
-            val url = if (clauses.isEmpty()) config.inventoryBatchesUrl
-                else appendODataFilter(config.inventoryBatchesUrl, clauses.joinToString(" and "))
-            val result = duringErpWork { extSystemClient.downloadRaw(url) }
-            onResult(when (result) {
-                is ExtSystemResult.Success -> {
-                    val typeToken = object : TypeToken<NavODataList<NavInventoryBatch>>() {}.type
-                    val odata = gson.fromJson<NavODataList<NavInventoryBatch>>(result.data, typeToken)
-                    ExtSystemResult.Success(
-                        odata.value
-                            .filter { it.documentNo.isNotBlank() }
-                            .map { row ->
-                                InventoryBatch(
-                                    documentNo          = row.documentNo,
-                                    journalTemplateName = row.journalTemplateName,
-                                    journalBatchName    = row.journalBatchName,
-                                    description         = row.description,
-                                    // NAV writes an empty date as 0001-01-01.
-                                    documentDate        = row.postingDate
-                                        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                                        ?.takeIf { it.year > 1 },
-                                    lineCount           = row.lineCount,
-                                )
-                            }
-                            .sortedWith(compareBy({ it.journalTemplateName }, { it.journalBatchName }, { it.documentNo }))
-                    )
-                }
-                is ExtSystemResult.Failure -> result
+            onResult(duringErpWork {
+                downloadCoordinator.loadInventoryBatches(filter, extSystemConfig.value, savedCredentials())
             })
         }
     }
 
-    private fun appendODataFilter(url: String, filterStr: String): String {
-        val encoded = java.net.URLEncoder.encode(filterStr, "UTF-8").replace("+", "%20")
-        val sep = if ('?' in url) '&' else '?'
-        return "$url${sep}\$filter=$encoded"
-    }
-
-    fun buildDownloadUrls(filter: DownloadFilter, docType: DocumentType? = null): List<Pair<String, String>> {
-        val config = extSystemConfig.value
-        if (config.documentLinesUrl.isBlank()) return emptyList()
-        val types = if (docType != null) listOf(docType) else DocumentType.entries
-        return types.map { type ->
-            val typeCode = config.docTypeCodeFor(type)
-            val filterStr = buildODataFilterString(filter, typeCode, type)
-            val finalUrl = if (filterStr != null) appendODataFilter(config.documentLinesUrl, filterStr) else config.documentLinesUrl
-            type.display to finalUrl
-        }
-    }
+    fun buildDownloadUrls(filter: DownloadFilter, docType: DocumentType? = null): List<Pair<String, String>> =
+        downloadCoordinator.buildDownloadUrls(filter, docType, extSystemConfig.value)
 
     fun getLocationsUrl(): String = extSystemConfig.value.locationsUrl
     /** The address an upload goes to under the configured upload mode; the debugger shows it. */
@@ -290,80 +188,15 @@ class AppViewModel @Inject constructor(
         if (it.uploadMode == RecordingUploadMode.PER_DOCUMENT) it.documentUploadUrl else it.recordingSyncUrl
     }
 
+    /** See [DownloadCoordinator.downloadDocuments]. */
     fun realDownloadDocuments(
         filter: DownloadFilter = DownloadFilter(),
         docType: DocumentType? = null,
         onComplete: (failureCount: Int, errors: List<String>) -> Unit = { _, _ -> },
     ) {
         viewModelScope.launch {
-            val config = extSystemConfig.value
-            val creds  = savedCredentials()
-            if (!config.isConfigured || creds == null) {
-                val msg = if (creds == null) inAppText(R.string.ext_error_not_signed_in)
-                    else inAppText(R.string.ext_error_not_configured)
-                onComplete(1, listOf(msg))
-                return@launch
-            }
-            if (config.documentLinesUrl.isBlank()) {
-                onComplete(1, listOf(inAppText(R.string.ext_error_document_lines_url_missing)))
-                return@launch
-            }
-            extSystemClient.configure(config, creds)
-            val typesToDownload = if (docType != null) listOf(docType) else DocumentType.entries
-            var failures = 0
-            val errorMessages = mutableListOf<String>()
-            duringErpWork {
-                for (type in typesToDownload) {
-                    val typeCode = config.docTypeCodeFor(type)
-                    val filterStr = buildODataFilterString(filter, typeCode, type)
-                    val finalUrl = if (filterStr != null) appendODataFilter(config.documentLinesUrl, filterStr) else config.documentLinesUrl
-                    val result = extSystemClient.downloadRaw(finalUrl)
-                    when (result) {
-                        is ExtSystemResult.Success -> {
-                            val now = Instant.now()
-                            val typeToken = object : TypeToken<NavODataList<NavBarcodeAppEntry>>() {}.type
-                            val odata = gson.fromJson<NavODataList<NavBarcodeAppEntry>>(result.data, typeToken)
-                            val documents = odata.value.groupBy { it.documentNo }.map { (docNo, rows) ->
-                                val first = rows.first()
-                                val lines = rows.filter { it.lineNo > 0 }.map { row ->
-                                    Line(
-                                        documentNo        = docNo,
-                                        lineNo            = row.lineNo,
-                                        item              = Item(row.itemNo, row.description),
-                                        barcodeNo         = row.barcodeNo,
-                                        expected          = row.qtyOutstanding,
-                                        scanned           = 0.0,
-                                        destinationCode   = row.destinationCode,
-                                        sourceCode        = row.sourceCode,
-                                        unitOfMeasureCode = row.unitOfMeasureCode,
-                                        scanningQty       = row.scanningQty,
-                                    )
-                                }
-                                Document(
-                                    documentNo       = docNo,
-                                    type             = type,
-                                    destinationCode  = first.destinationCode,
-                                    sourceCode       = first.sourceCode,
-                                    rcCode           = first.rcCode,
-                                    isSourceRetail   = first.isRetailLocation,
-                                    creationDateTime = now,
-                                    documentDate     = runCatching {
-                                        first.documentDate?.let { Instant.parse("${it}T00:00:00Z") } ?: now
-                                    }.getOrDefault(now),
-                                    lines            = lines,
-                                    state            = DocState.Downloaded,
-                                )
-                            }
-                            // A download of one picked document says nothing about the others.
-                            repository.replaceDownloadedDocuments(type, documents, pruneMissing = filter.documentNo.isBlank())
-                        }
-                        is ExtSystemResult.Failure -> {
-                            Timber.w("Failed to download ${type.display}: ${result.message}")
-                            failures++
-                            errorMessages.add(result.message)
-                        }
-                    }
-                }
+            val (failures, errorMessages) = duringErpWork {
+                downloadCoordinator.downloadDocuments(filter, docType, extSystemConfig.value, savedCredentials())
             }
             onComplete(failures, errorMessages)
         }
