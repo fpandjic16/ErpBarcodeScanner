@@ -293,6 +293,7 @@ internal fun BarcodeApp(
         mainMenuRoute(shell)
         documentRoutes(shell)
         dashboardRoutes(shell)
+        recordingRoutes(shell)
         with(shell) {
         composable(Routes.PROFILES) {
             // Re-read after a deletion rather than observed: profiles change only here, and a
@@ -304,13 +305,6 @@ internal fun BarcodeApp(
                 onBack = { nav.popBackStack() },
                 loadFootprint = { key, onResult -> appVm.profileFootprint(key, onResult) },
                 onDelete = { key -> appVm.deleteProfile(key) { profilesRefresh++ } },
-            )
-        }
-        composable(Routes.RECORDINGS_LIST) {
-            RecordingsListScreen(
-                docs = recordedDocs,
-                onBack = { nav.popBackStack() },
-                onDocumentTap = { doc -> nav.navigate(Routes.recordings(doc.documentNo, doc.type.key)) },
             )
         }
         composable(Routes.USER_INFO) {
@@ -430,99 +424,6 @@ internal fun BarcodeApp(
                 environment = extSystemConfig.environment,
                 companyName = extSystemConfig.companyName,
             )
-        }
-        composable(
-            route = Routes.RECORDING,
-            arguments = listOf(
-                navArgument("documentNo") { type = NavType.StringType },
-                navArgument("type") { type = NavType.StringType },
-            ),
-        ) {
-            val vm: RecordingViewModel = hiltViewModel()
-            val doc by vm.document.collectAsState()
-            doc?.let { currentDoc ->
-                RecordingScreen(
-                    doc = currentDoc,
-                    docTypeCode = extSystemConfig.docTypeCodeFor(currentDoc.type),
-                    onBack = { nav.popBackStack() },
-                    onScan = { lineNo, barcode, quantity ->
-                        vm.recordScan(lineNo, barcode, activeProfile.id, quantity)
-                    },
-                    onScanNotOnDocument = { barcode, uom, quantity ->
-                        vm.recordScanNotOnDocument(barcode, uom, activeProfile.id, quantity)
-                    },
-                    onLineUpdate = { lineNo, newScanned, onRefused ->
-                        vm.setLineScanned(lineNo, newScanned, activeProfile.id, onRefused)
-                    },
-                    onUpload = {
-                        upload(
-                            listOf(currentDoc),
-                            onBackgroundStarted = { nav.popBackStack(Routes.MAIN, false) },
-                            onBlockingDone = { failures ->
-                                nav.popBackStack(Routes.MAIN, false)
-                                if (failures > 0) showSyncErrorDialog = true
-                            },
-                        )
-                    },
-                        hapticEnabled = hapticEnabled,
-                    soundEnabled = soundEnabled,
-                    debounceTime = debounceTime,
-                    warnOnOver = warnOnOver,
-                )
-            }
-        }
-        composable(
-            route = Routes.RECORDINGS,
-            arguments = listOf(
-                navArgument("documentNo") { type = NavType.StringType },
-                navArgument("type") { type = NavType.StringType },
-            ),
-        ) {
-            val vm: RecordingsTreeViewModel = hiltViewModel()
-            val treeState by vm.state.collectAsState()
-            treeState.document?.let { currentDoc ->
-                RecordingsTreeScreen(
-                    document = currentDoc,
-                    tree = treeState.tree,
-                    onBack = { nav.popBackStack() },
-                    onDeleteScan = { scan -> vm.deleteScan(scan) },
-                    onDeleteAllQueued = { vm.deleteAllQueued() },
-                )
-            }
-        }
-        composable(
-            route = Routes.UPLOAD_ERROR,
-            arguments = listOf(navArgument("documentNo") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val docNo = backStackEntry.arguments?.getString("documentNo") ?: ""
-            val doc = documents.find { it.documentNo == docNo }
-            doc?.let { currentDoc ->
-                UploadErrorScreen(
-                    document = currentDoc,
-                    onBack = { nav.popBackStack() },
-                    onDiscardOrphans = {
-                        appVm.discardOrphanedScans(currentDoc.documentNo, currentDoc.type) {
-                            nav.popBackStack()
-                        }
-                    },
-                    onDiscardFailed = {
-                        appVm.discardFailedScans(currentDoc.documentNo, currentDoc.type) {
-                            nav.popBackStack()
-                        }
-                    },
-                    // Leaves this screen once the upload is handed over or has gone through; a
-                    // failed blocking upload stays here, under the dialog that says so.
-                    onRetryUpload = {
-                        upload(
-                            listOf(currentDoc),
-                            onBackgroundStarted = { nav.popBackStack() },
-                            onBlockingDone = { failures ->
-                                if (failures > 0) { showSyncErrorDialog = true } else { nav.popBackStack() }
-                            },
-                        )
-                    },
-                )
-            }
         }
         } // with(shell)
     }
