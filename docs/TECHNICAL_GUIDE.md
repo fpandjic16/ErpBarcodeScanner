@@ -817,6 +817,8 @@ For a stock count (`docType.isStockCount`) the date range is replaced by a batch
 ### `ExtSystemConfigScreen.kt`
 Server URL, Test Connection (opens `LoginSheet`), TTL segmented buttons (8h/24h/48h/7d), per-`DocumentType` cards (enable switch — every type starts off on a new installation —, URL field, read-only doc-type-code, Filter-by segmented control), Locations URL, Inventory batches URL, Upload mode (Per scan / Per document), Recording sync URL, Document upload URL. Saving with a server URL and no environment goes through the "No environment chosen" dialog (§A.5.2). "Load configuration" dialog (3 options, see §A.5.2). `BackHandler` + top-bar back both route through `attemptExit()` → shows "Save changes?" only if the buffered form differs (structural equality) from `initial`.
 
+Since 3.6.46 its pieces live beside it: `ExtSystemConfigComponents.kt` (`ConfigSectionHeader`, `ConfigCard`, `ConfigField`, `ConfigDivider`, `ConfigSegmentedChoice` for session duration / filter by / upload mode, `DocTypeConfigCard`) and `ExtSystemConfigDialogs.kt` (testing, connection result, missing environment). The "Load configuration" flow is `ConfigLoadFlow` in `ConfigLoadDialogs.kt`, shared with Settings since 3.6.44; the "which system?" prompt on saving is its `EnvironmentPickDialog`.
+
 ### `LocationRcPickScreen.kt`
 Two picker rows (RC, then Location filtered to that RC) opening bottom sheets (`RcPickerSheet`/`LocationPickerSheet`, also reused by `DownloadFilterScreen`). Refresh icon triggers `onRefresh` directly if credentials exist, else opens `LoginSheet` first. Selecting a different RC clears the selected location; selecting a location auto-syncs its owning RC.
 
@@ -892,6 +894,8 @@ The gate itself — see §B.7 for why it exists and what it may open. Lists the 
 
 ### `SettingsScreen.kt`
 Buffered-edit-then-confirm-on-exit pattern (identical to `ExtSystemConfigScreen`'s): every field is local `remember` state; `attemptExit()` compares the rebuilt `AppSettings` (plus `pendingExtSystemConfig != null`) against `initial`; only diverges → "Save changes?" dialog. Sections: Appearance, Scanning, Sync, External System Configuration (single row → `ExtSystemConfigScreen`), Debug (Debugger active, Export data, **Insert system defaults** [3-option picker, stages into `pendingExtSystemConfig`, only persisted via Settings' own save], **Clear cache** [red, wipes the signed-in operator's credentials + documents + recordings; leaves settings, the device’s ERP config, and every other operator alone], **Delete all documents and recordings** [red, wipes only documents/recordings, not settings/sign-in]), System Info (read-only version/schema info), Account (avatar/name, immediate Sign out — no confirmation). The System info section is `AppInfoCard` (§`AppInfo.kt`), shared with the sign-in screen.
+
+Since 3.6.45 the rows come from `SettingsComponents.kt`: `SettingsNavRow` (chevron rows), `SettingsDangerRow` (the two red ones), `SettingsToggleRow`, `SettingsChoiceChip` (text size, debounce), `SettingsRowHeader`/`SettingsRowText`, `SettingsSectionHeader`, `SettingsIcon`, `SettingsDivider` (the last two also used by `AppInfoCard`), and `SettingsConfirmDialog` for clear cache and delete all. "Insert system defaults" opens the shared `ConfigLoadFlow`.
 
 ### `ProfilesScreen.kt`
 Route `profiles`, reached from Settings → Account → "Operators on this device". Lists every enrolled profile; the signed-in one is marked and carries **no** delete affordance.
