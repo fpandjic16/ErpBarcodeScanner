@@ -90,7 +90,7 @@ class SecureStore(
 
     private companion object {
         const val KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "prima_secure_store_v1"
+        const val KEY_ALIAS = "secure_store_v1"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
         const val TAG_BITS = 128

@@ -80,14 +80,14 @@ import com.erpbarcode.scanner.ui.screen.SignInScreen
 import com.erpbarcode.scanner.ui.screen.UserInfoScreen
 import com.erpbarcode.scanner.ui.screen.localizedDisplay
 import com.erpbarcode.scanner.ui.theme.Language
-import com.erpbarcode.scanner.ui.theme.PrimaBarcodeTheme
+import com.erpbarcode.scanner.ui.theme.AppTheme
 import com.erpbarcode.scanner.ui.theme.TextSize
 import com.erpbarcode.scanner.ui.viewmodel.AppViewModel
 import com.erpbarcode.scanner.ui.viewmodel.RecordingViewModel
 import com.erpbarcode.scanner.ui.viewmodel.RecordingsTreeViewModel
 import com.erpbarcode.scanner.navigation.DebugUrlsDialog
 import com.erpbarcode.scanner.navigation.Routes
-import com.erpbarcode.scanner.navigation.PrimaBarcodeApp
+import com.erpbarcode.scanner.navigation.BarcodeApp
 import com.erpbarcode.scanner.navigation.DownloadErrorDialog
 import com.erpbarcode.scanner.navigation.ProcessingDialog
 import com.erpbarcode.scanner.navigation.SwitchBlockedDialog
@@ -210,8 +210,8 @@ class MainActivity : AppCompatActivity() {
                 rcCode = s.lastRcCode
             }
 
-            PrimaBarcodeTheme(textSizeOffset = textSize.spOffset, uppercaseEnabled = uppercaseText) {
-                PrimaBarcodeApp(
+            AppTheme(textSizeOffset = textSize.spOffset, uppercaseEnabled = uppercaseText) {
+                BarcodeApp(
                     locationCode              = locationCode,
                     rcCode                    = rcCode,
                     onLocationCodeChange      = { code -> locationCode = code; appVm.saveSettings(buildSettings().copy(lastLocationCode = code)) },

@@ -1,7 +1,7 @@
 package com.erpbarcode.scanner.data.model
 
 import androidx.compose.ui.graphics.Color
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppStatus
 
 /**
  * The four-state status language used across every screen that
@@ -25,10 +25,10 @@ enum class LineStatus {
 /** Foreground / accent color for each state. */
 val LineStatus.color: Color
     get() = when (this) {
-        LineStatus.EMPTY   -> PrimaStatus.Empty
-        LineStatus.PARTIAL -> PrimaStatus.Partial
-        LineStatus.EXACT   -> PrimaStatus.Exact
-        LineStatus.OVER    -> PrimaStatus.Over
+        LineStatus.EMPTY   -> AppStatus.Empty
+        LineStatus.PARTIAL -> AppStatus.Partial
+        LineStatus.EXACT   -> AppStatus.Exact
+        LineStatus.OVER    -> AppStatus.Over
     }
 
 /**
@@ -38,19 +38,19 @@ val LineStatus.color: Color
  */
 val LineStatus.inkColor: Color
     get() = when (this) {
-        LineStatus.EMPTY   -> PrimaStatus.EmptyInk
-        LineStatus.PARTIAL -> PrimaStatus.PartialInk
-        LineStatus.EXACT   -> PrimaStatus.ExactInk
-        LineStatus.OVER    -> PrimaStatus.OverInk
+        LineStatus.EMPTY   -> AppStatus.EmptyInk
+        LineStatus.PARTIAL -> AppStatus.PartialInk
+        LineStatus.EXACT   -> AppStatus.ExactInk
+        LineStatus.OVER    -> AppStatus.OverInk
     }
 
 /** Soft tinted background — used on chips and badges. */
 val LineStatus.bgColor: Color
     get() = when (this) {
-        LineStatus.EMPTY   -> PrimaStatus.EmptyBg
-        LineStatus.PARTIAL -> PrimaStatus.PartialBg
-        LineStatus.EXACT   -> PrimaStatus.ExactBg
-        LineStatus.OVER    -> PrimaStatus.OverBg
+        LineStatus.EMPTY   -> AppStatus.EmptyBg
+        LineStatus.PARTIAL -> AppStatus.PartialBg
+        LineStatus.EXACT   -> AppStatus.ExactBg
+        LineStatus.OVER    -> AppStatus.OverBg
     }
 
 fun Document.scanStatus(): LineStatus {

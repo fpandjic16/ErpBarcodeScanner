@@ -30,16 +30,16 @@ import androidx.compose.ui.unit.sp
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.formatQty
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val errDateFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
@@ -57,8 +57,8 @@ fun UploadErrorScreen(
     var confirmDiscard by remember { mutableStateOf(false) }
     var confirmDiscardFailed by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = document.documentNo,
             subtitle = stringResource(R.string.upload_error_subtitle),
             onBack = onBack,
@@ -77,8 +77,8 @@ fun UploadErrorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(PrimaSignal.DangerTint)
-                    .border(1.dp, PrimaSignal.DangerBorder, RoundedCornerShape(14.dp))
+                    .background(AppSignal.DangerTint)
+                    .border(1.dp, AppSignal.DangerBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -86,14 +86,14 @@ fun UploadErrorScreen(
                 Icon(
                     Icons.Outlined.CloudOff,
                     contentDescription = null,
-                    tint = PrimaSignal.Danger,
+                    tint = AppSignal.Danger,
                     modifier = Modifier.size(32.dp),
                 )
                 Column {
                     Text(
                         stringResource(R.string.upload_error_header),
                         style = monoLabel.copy(
-                            color = PrimaSignal.Danger,
+                            color = AppSignal.Danger,
                             fontWeight = FontWeight.Bold,
                             fontSize = (14 + sizeOffset).sp,
                         ),
@@ -102,7 +102,7 @@ fun UploadErrorScreen(
                     Text(
                         document.documentNo,
                         style = monoLabel.copy(
-                            color = PrimaSignal.DangerMuted,
+                            color = AppSignal.DangerMuted,
                             fontSize = (12 + sizeOffset).sp,
                         ),
                     )
@@ -115,15 +115,15 @@ fun UploadErrorScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                    .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
                     stringResource(R.string.upload_error_doc_section),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
+                    style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                 )
-                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 ErrorInfoRow(stringResource(R.string.upload_error_row_type),   document.type.localizedDisplay(), sizeOffset)
                 ErrorInfoRow(stringResource(R.string.upload_error_row_source), document.sourceCode,   sizeOffset)
                 if (document.destinationCode.isNotBlank())
@@ -142,19 +142,19 @@ fun UploadErrorScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                    .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     stringResource(R.string.upload_error_details),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
+                    style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                 )
-                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 Text(
                     errorReason,
                     style = monoLabel.copy(
-                        color = PrimaPalette.Ink,
+                        color = AppPalette.Ink,
                         fontSize = (13 + sizeOffset).sp,
                         lineHeight = (20 + sizeOffset).sp,
                     ),
@@ -167,7 +167,7 @@ fun UploadErrorScreen(
             if (document.sentScans > 0) {
                 Text(
                     stringResource(R.string.upload_sent_progress, document.sentScans, document.totalScans),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (12 + sizeOffset).sp),
+                    style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (12 + sizeOffset).sp),
                 )
             }
 
@@ -181,14 +181,14 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                        .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.sent_orphan_title),
                         style = monoLabel.copy(
-                            color = PrimaPalette.Ink3,
+                            color = AppPalette.Ink3,
                             fontWeight = FontWeight.Bold,
                             fontSize = (12 + sizeOffset).sp,
                         ),
@@ -196,12 +196,12 @@ fun UploadErrorScreen(
                     Text(
                         stringResource(R.string.sent_orphan_intro),
                         style = monoLabel.copy(
-                            color = PrimaPalette.Ink3,
+                            color = AppPalette.Ink3,
                             fontSize = (11 + sizeOffset).sp,
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                    HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                     document.sentOrphanedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -221,14 +221,14 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, PrimaSignal.DangerBorder, RoundedCornerShape(14.dp))
+                        .border(1.dp, AppSignal.DangerBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.failed_title),
                         style = monoLabel.copy(
-                            color = PrimaSignal.Danger,
+                            color = AppSignal.Danger,
                             fontWeight = FontWeight.Bold,
                             fontSize = (12 + sizeOffset).sp,
                         ),
@@ -236,12 +236,12 @@ fun UploadErrorScreen(
                     Text(
                         stringResource(R.string.failed_intro),
                         style = monoLabel.copy(
-                            color = PrimaPalette.Ink3,
+                            color = AppPalette.Ink3,
                             fontSize = (11 + sizeOffset).sp,
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                    HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                     document.failedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -262,14 +262,14 @@ fun UploadErrorScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White)
-                        .border(1.dp, PrimaSignal.WarningBorder, RoundedCornerShape(14.dp))
+                        .border(1.dp, AppSignal.WarningBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.review_title),
                         style = monoLabel.copy(
-                            color = PrimaSignal.Warning,
+                            color = AppSignal.Warning,
                             fontWeight = FontWeight.Bold,
                             fontSize = (12 + sizeOffset).sp,
                         ),
@@ -277,12 +277,12 @@ fun UploadErrorScreen(
                     Text(
                         stringResource(R.string.review_intro),
                         style = monoLabel.copy(
-                            color = PrimaPalette.Ink3,
+                            color = AppPalette.Ink3,
                             fontSize = (11 + sizeOffset).sp,
                             lineHeight = (17 + sizeOffset).sp,
                         ),
                     )
-                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                    HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                     document.orphanedScans.forEach { scan ->
                         ErrorInfoRow(
                             label = scan.barcodeNo,
@@ -311,7 +311,7 @@ fun UploadErrorScreen(
                 Button(
                     onClick = { confirmDiscard = true },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Warning),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Warning),
                 ) {
                     Text(stringResource(R.string.review_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
                 }
@@ -322,7 +322,7 @@ fun UploadErrorScreen(
                 Button(
                     onClick = onRetryUpload,
                     modifier = Modifier.weight(1f).height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaPalette.Coral),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Coral),
                 ) {
                     Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
@@ -333,7 +333,7 @@ fun UploadErrorScreen(
                     Button(
                         onClick = { confirmDiscardFailed = true },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                     ) {
                         Text(stringResource(R.string.failed_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
                     }
@@ -350,7 +350,7 @@ fun UploadErrorScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDiscardFailed = false; onDiscardFailed() },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.failed_discard), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -367,7 +367,7 @@ fun UploadErrorScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDiscard = false; onDiscardOrphans() },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.review_discard), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -386,12 +386,12 @@ private fun ErrorInfoRow(label: String, value: String, sizeOffset: Int) {
     ) {
         Text(
             label,
-            style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (12 + sizeOffset).sp),
+            style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (12 + sizeOffset).sp),
             modifier = Modifier.weight(0.35f),
         )
         Text(
             value,
-            style = monoLabel.copy(color = PrimaPalette.Ink, fontWeight = FontWeight.Medium, fontSize = (12 + sizeOffset).sp),
+            style = monoLabel.copy(color = AppPalette.Ink, fontWeight = FontWeight.Medium, fontSize = (12 + sizeOffset).sp),
             modifier = Modifier.weight(0.65f),
         )
     }

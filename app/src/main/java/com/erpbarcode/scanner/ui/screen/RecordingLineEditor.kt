@@ -28,9 +28,9 @@ import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.formatQty
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoCounter
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import kotlinx.coroutines.delay
@@ -63,7 +63,7 @@ internal fun ItemQtyDetails(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrimaPalette.Cream)
+            .background(AppPalette.Cream)
             .background(bgColor),
     ) {
         Column(
@@ -71,14 +71,14 @@ internal fun ItemQtyDetails(
                 .fillMaxSize()
                 .padding(horizontal = 22.dp, vertical = 18.dp),
         ) {
-            val metaStyle = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (13 + sizeOffset).sp)
+            val metaStyle = monoLabel.copy(color = AppPalette.Ink3, fontSize = (13 + sizeOffset).sp)
             Text(stringResource(R.string.recording_barcode_prefix) + line.barcodeNo, style = metaStyle)
             // Says the floor out loud, so the stepper refusing to go lower isn't a mystery.
             if (line.hasSentQuantity) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     stringResource(R.string.recording_sent_floor_hint, line.sentQuantity.formatQty()),
-                    style = metaStyle.copy(color = PrimaStatus.ExactInk),
+                    style = metaStyle.copy(color = AppStatus.ExactInk),
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -87,7 +87,7 @@ internal fun ItemQtyDetails(
                 if (line.isAddedOnDevice) stringResource(R.string.recording_not_on_document_label) else line.item.name,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Medium,
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                     fontSize = (16 + sizeOffset).sp,
                 ),
             )
@@ -148,21 +148,21 @@ internal fun ItemQtyDetails(
                     modifier = Modifier
                         .weight(1f).height(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, PrimaLine.Outline, RoundedCornerShape(14.dp))
+                        .border(1.dp, AppLine.Outline, RoundedCornerShape(14.dp))
                         .background(Color.White)
                         .clickable(onClick = onDecrement),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         "-1",
-                        style = monoCounter.copy(color = PrimaPalette.Ink, fontSize = (26 + sizeOffset).sp, fontWeight = FontWeight.Medium),
+                        style = monoCounter.copy(color = AppPalette.Ink, fontSize = (26 + sizeOffset).sp, fontWeight = FontWeight.Medium),
                     )
                 }
                 Box(
                     modifier = Modifier
                         .weight(1f).height(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(PrimaPalette.Coral)
+                        .background(AppPalette.Coral)
                         .clickable(onClick = onIncrement),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -204,7 +204,7 @@ internal fun ItemQtyExtraDetails(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrimaPalette.Cream)
+            .background(AppPalette.Cream)
             .padding(horizontal = 22.dp, vertical = 16.dp),
     ) {
         // Hero card
@@ -233,7 +233,7 @@ internal fun ItemQtyExtraDetails(
                             .width(3.dp).height(30.dp)
                             .alpha(if (caretVisible) 1f else 0f)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(PrimaPalette.Coral),
+                            .background(AppPalette.Coral),
                     )
                 }
                 Text(
@@ -270,8 +270,8 @@ internal fun ItemQtyExtraDetails(
                             modifier = Modifier
                                 .weight(1f).fillMaxHeight()
                                 .clip(RoundedCornerShape(14.dp))
-                                .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
-                                .background(if (isMuted) PrimaPalette.CreamAlt else Color.White)
+                                .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
+                                .background(if (isMuted) AppPalette.CreamAlt else Color.White)
                                 .clickable { onKey(key) },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -279,13 +279,13 @@ internal fun ItemQtyExtraDetails(
                                 Icon(
                                     Icons.AutoMirrored.Outlined.Backspace,
                                     contentDescription = null,
-                                    tint = PrimaPalette.Ink,
+                                    tint = AppPalette.Ink,
                                     modifier = Modifier.size((26 + sizeOffset).dp),
                                 )
                             } else {
                                 Text(
                                     if (key == ".") "," else key,
-                                    style = monoCounter.copy(color = PrimaPalette.Ink, fontSize = (26 + sizeOffset).sp, fontWeight = FontWeight.Medium),
+                                    style = monoCounter.copy(color = AppPalette.Ink, fontSize = (26 + sizeOffset).sp, fontWeight = FontWeight.Medium),
                                 )
                             }
                         }
@@ -299,7 +299,7 @@ internal fun ItemQtyExtraDetails(
         val btnColor = when {
             typed.isEmpty()  -> LineStatus.EXACT.inkColor
             confirmEnabled   -> previewColor
-            else             -> PrimaPalette.CreamAlt
+            else             -> AppPalette.CreamAlt
         }
         val btnEnabled = typed.isEmpty() || confirmEnabled
         val btnAction: () -> Unit = if (typed.isEmpty()) onConfirmRequired else onConfirm
@@ -320,7 +320,7 @@ internal fun ItemQtyExtraDetails(
                     btnText,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Medium,
-                        color = if (btnEnabled) Color.White else PrimaPalette.Ink4,
+                        color = if (btnEnabled) Color.White else AppPalette.Ink4,
                         fontSize = (18 + sizeOffset).sp,
                     ),
                 )

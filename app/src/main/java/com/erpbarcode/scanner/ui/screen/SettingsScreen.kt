@@ -34,9 +34,9 @@ import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.Language
 import com.erpbarcode.scanner.ui.theme.TextSize
 import androidx.compose.ui.platform.LocalContext
@@ -44,8 +44,8 @@ import com.erpbarcode.scanner.ui.theme.monoLabel
 import com.erpbarcode.scanner.ui.theme.uppercased
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 // The enum can't hold a resource lookup, so the label is resolved here instead — same
 // pattern as DocumentType.localizedDisplay() on the other screens.
@@ -168,8 +168,8 @@ fun SettingsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = stringResource(R.string.settings_title),
             subtitle = stringResource(R.string.settings_subtitle),
             onBack = { attemptExit() },
@@ -232,7 +232,7 @@ fun SettingsScreen(
                             )
                             Text(
                                 language.label,
-                                style = monoLabel.copy(color = PrimaPalette.Ink3, fontWeight = FontWeight.Medium),
+                                style = monoLabel.copy(color = AppPalette.Ink3, fontWeight = FontWeight.Medium),
                             )
                         }
                         DropdownMenu(
@@ -399,7 +399,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(if (user != null) PrimaPalette.SlateAlt else PrimaLine.Vacant),
+                                .background(if (user != null) AppPalette.SlateAlt else AppLine.Vacant),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -413,13 +413,13 @@ fun SettingsScreen(
                                 user?.displayName ?: stringResource(R.string.settings_not_signed_in),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
-                                    color = if (user != null) PrimaPalette.Ink else PrimaPalette.Ink3,
+                                    color = if (user != null) AppPalette.Ink else AppPalette.Ink3,
                                 ),
                             )
                             if (user != null) {
                                 Text(
                                     user.username,
-                                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                                    style = monoLabel.copy(color = AppPalette.Ink3),
                                 )
                             }
                         }
@@ -444,13 +444,13 @@ fun SettingsScreen(
                         Icon(
                             Icons.AutoMirrored.Outlined.Logout,
                             contentDescription = null,
-                            tint = PrimaSignal.Danger,
+                            tint = AppSignal.Danger,
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
                             stringResource(R.string.settings_sign_out),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = PrimaSignal.Danger,
+                                color = AppSignal.Danger,
                                 fontWeight = FontWeight.Medium,
                             ),
                         )

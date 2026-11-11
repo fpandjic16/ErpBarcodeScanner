@@ -65,7 +65,7 @@ data class ExtSystemConfig(
      *
      * Read from the address rather than stored beside it: this is the company the device actually
      * talks to, and a separate field could say one thing while the URL said another. OData doubles
-     * an apostrophe inside the name, and the name is percent-encoded (`Prima%20Commerce`).
+     * an apostrophe inside the name, and the name is percent-encoded (`Acme%20Ltd`).
      */
     val companyName: String?
         get() {

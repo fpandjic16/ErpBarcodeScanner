@@ -22,15 +22,15 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
 
-private val SignOutRed = PrimaSignal.Danger
+private val SignOutRed = AppSignal.Danger
 
 @Composable
 fun UserInfoScreen(
@@ -40,8 +40,8 @@ fun UserInfoScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = stringResource(R.string.user_info_title),
             onBack = onBack,
         )
@@ -57,16 +57,16 @@ fun UserInfoScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                    .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 UserInfoRow(stringResource(R.string.user_info_id), user?.id ?: "—")
-                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.user_info_name), user?.displayName ?: "—")
-                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.lrc_section_rc), rc?.let { "${it.code} · ${it.name}" } ?: "—")
-                HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 UserInfoRow(stringResource(R.string.lrc_section_location), location?.let { "${it.code} · ${it.name}" } ?: "—")
             }
         }
@@ -99,12 +99,12 @@ private fun UserInfoRow(label: String, value: String) {
     ) {
         Text(
             label,
-            style = monoLabel.copy(color = PrimaPalette.Ink3),
+            style = monoLabel.copy(color = AppPalette.Ink3),
             modifier = Modifier.weight(0.4f),
         )
         Text(
             value,
-            style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink, fontWeight = FontWeight.Medium),
+            style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Ink, fontWeight = FontWeight.Medium),
             modifier = Modifier.weight(0.6f),
         )
     }

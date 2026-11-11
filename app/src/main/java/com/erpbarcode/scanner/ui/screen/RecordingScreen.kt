@@ -42,13 +42,13 @@ import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.formatQty
 import com.erpbarcode.scanner.data.model.scanStatus
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.TOP_BAR_BUTTON_HEIGHT
 import com.erpbarcode.scanner.ui.component.ScanBar
 import com.erpbarcode.scanner.ui.component.StatusProgressBar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoCounter
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import kotlinx.coroutines.delay
@@ -62,9 +62,9 @@ import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.ui.component.CameraPreview
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 private enum class RecordingView { OVERVIEW, ACTIVE_LINE, KEYPAD }
 
@@ -278,7 +278,7 @@ fun RecordingScreen(
     }
 
     val scanBarBg by animateColorAsState(
-        targetValue = if (scanErrorFlash) PrimaSignal.DangerDeep else PrimaPalette.Slate,
+        targetValue = if (scanErrorFlash) AppSignal.DangerDeep else AppPalette.Slate,
         animationSpec = tween(durationMillis = 300),
         label = "scanBarBg",
     )
@@ -303,8 +303,8 @@ fun RecordingScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = when (view) {
                 // The document number alone: it is what the operator is working on, and the
                 // screen they came from already said this is recording.
@@ -322,7 +322,7 @@ fun RecordingScreen(
             onBack = { handleBack() },
             actions = {
                 if (showUpload && view == RecordingView.OVERVIEW) {
-                    // Same footprint as PrimaTopBar's back button (60 x TOP_BAR_BUTTON_HEIGHT, 8dp
+                    // Same footprint as AppTopBar's back button (60 x TOP_BAR_BUTTON_HEIGHT, 8dp
                     // radius, 24dp icon), just mirrored padding and the Coral fill — so the two
                     // top-bar controls read as a matching pair across the bar.
                     Box(
@@ -330,7 +330,7 @@ fun RecordingScreen(
                             .padding(start = 4.dp, top = 2.dp, bottom = 2.dp, end = 8.dp)
                             .size(width = 60.dp, height = TOP_BAR_BUTTON_HEIGHT)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(PrimaPalette.Coral)
+                            .background(AppPalette.Coral)
                             .clickable(onClick = onUpload),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -369,7 +369,7 @@ fun RecordingScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(PrimaPalette.SlateAlt)
+                    .background(AppPalette.SlateAlt)
                     .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 12.dp),
             ) {
                 Row(
@@ -378,7 +378,7 @@ fun RecordingScreen(
                 ) {
                     Text(
                         "${doc.sourceCode} · ${doc.destinationCode}",
-                        style = monoLabel.copy(color = PrimaOnDark.TextSecondary, fontSize = (11 + sizeOffset).sp),
+                        style = monoLabel.copy(color = AppOnDark.TextSecondary, fontSize = (11 + sizeOffset).sp),
                     )
                     val allDone = doc.linesExact == doc.linesTotal && doc.linesTotal > 0
                     Text(

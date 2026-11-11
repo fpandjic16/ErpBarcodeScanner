@@ -29,13 +29,13 @@ import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val TTL_OPTIONS = listOf(8, 24, 48, 168)
 
@@ -51,7 +51,7 @@ private fun Int.ttlLabel(): String =
  * Internal rather than file-private: SettingsScreen offers the same export from its own
  * "Insert system defaults" dialog, and two spellings of one filename is how they drift apart.
  */
-internal const val EXPORT_FILE_NAME = "prima_configuration.json"
+internal const val EXPORT_FILE_NAME = "barcode_configuration.json"
 
 @Composable
 fun ExtSystemConfigScreen(
@@ -209,8 +209,8 @@ fun ExtSystemConfigScreen(
 
     BackHandler { attemptExit() }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title    = stringResource(R.string.ext_config_title),
             subtitle = listOfNotNull(
                 stringResource(R.string.ext_config_subtitle),
@@ -234,7 +234,7 @@ fun ExtSystemConfigScreen(
                     }
                     Text(
                         stringResource(R.string.ext_config_load_desc),
-                        style = monoLabel.copy(color = PrimaPalette.Ink3),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -262,7 +262,7 @@ fun ExtSystemConfigScreen(
                         }
                         Text(
                             stringResource(R.string.ext_config_test_connection_desc),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
+                            style = monoLabel.copy(color = AppPalette.Ink3),
                             modifier = Modifier.padding(top = 6.dp),
                         )
                     }

@@ -22,10 +22,10 @@ val GeistMono = FontFamily(
     Font(R.font.geistmono_medium, FontWeight.Medium),
 )
 
-/** Drives the +2 / +4 sp text-size preference. Provided by [PrimaBarcodeTheme]. */
+/** Drives the +2 / +4 sp text-size preference. Provided by [AppTheme]. */
 val LocalTextSizeOffset = compositionLocalOf { 0 }
 
-/** Drives the uppercase-text preference. Provided by [PrimaBarcodeTheme]. */
+/** Drives the uppercase-text preference. Provided by [AppTheme]. */
 val LocalUppercaseEnabled = compositionLocalOf { false }
 
 /** Transforms [this] to uppercase when the uppercase-text preference is active. */
@@ -45,7 +45,7 @@ enum class TextSize(val spOffset: Int) {
  * Base typography — consumed by [scaledTypography] in the theme.
  * Never use directly in composables; go through [MaterialTheme.typography] instead.
  */
-internal val BasePrimaTypography = Typography(
+internal val BaseAppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = Geist, fontWeight = FontWeight.Medium,
         fontSize = 40.sp, lineHeight = 44.sp, letterSpacing = (-0.5).sp,

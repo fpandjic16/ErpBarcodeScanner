@@ -33,14 +33,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.UserProfile
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
 
-private val SignOutRed = PrimaSignal.Danger
+private val SignOutRed = AppSignal.Danger
 
 /** What deleting a profile would destroy. Null while it is still being counted. */
 private data class Footprint(val documents: Int, val scans: Int, val unsentScans: Int)
@@ -69,8 +69,8 @@ fun ProfilesScreen(
     var pending by remember { mutableStateOf<UserProfile?>(null) }
     var footprint by remember { mutableStateOf<Footprint?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(title = stringResource(R.string.profiles_title), onBack = onBack)
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(title = stringResource(R.string.profiles_title), onBack = onBack)
 
         val listState = rememberLazyListState()
         LazyColumn(
@@ -82,7 +82,7 @@ fun ProfilesScreen(
             item {
                 Text(
                     stringResource(R.string.profiles_explainer),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
             items(profiles, key = { it.id }) { profile ->
@@ -174,12 +174,12 @@ private fun ProfileManageRow(profile: UserProfile, isSignedIn: Boolean, onDelete
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(PrimaPalette.Coral),
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(AppPalette.Coral),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -191,14 +191,14 @@ private fun ProfileManageRow(profile: UserProfile, isSignedIn: Boolean, onDelete
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 profile.displayName,
-                style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink),
+                style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Ink),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (isSignedIn) {
                 Text(
                     stringResource(R.string.profiles_signed_in),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
         }

@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.BuildConfig
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
-import com.erpbarcode.scanner.data.db.PRIMA_DB_VERSION
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.data.db.DB_VERSION
+import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 
 /**
@@ -70,7 +70,7 @@ internal fun AppInfoCard(environment: ExtSystemEnvironment?, companyName: String
             ),
         )
         SettingsDivider()
-        InfoRow(Icons.Outlined.Storage, stringResource(R.string.settings_db_schema), "Room v$PRIMA_DB_VERSION")
+        InfoRow(Icons.Outlined.Storage, stringResource(R.string.settings_db_schema), "Room v$DB_VERSION")
         SettingsDivider()
         InfoRow(
             Icons.Outlined.Dns,
@@ -88,8 +88,8 @@ fun AppInfoScreen(environment: ExtSystemEnvironment?, companyName: String?, onBa
     // Shown in front of the sign-in gate rather than as a route, so the system back button has to
     // be caught here; left alone it would close the app.
     BackHandler(onBack = onBack)
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(title = stringResource(R.string.app_info_title), onBack = onBack)
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(title = stringResource(R.string.app_info_title), onBack = onBack)
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 16.dp)) {
             AppInfoCard(environment, companyName)
         }
@@ -107,9 +107,9 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 label,
-                style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink, fontWeight = FontWeight.Normal),
+                style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Ink, fontWeight = FontWeight.Normal),
             )
-            Text(value, style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(value, style = monoLabel.copy(color = AppPalette.Ink3))
         }
     }
 }

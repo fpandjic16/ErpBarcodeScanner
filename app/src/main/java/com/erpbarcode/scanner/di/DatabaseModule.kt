@@ -28,7 +28,7 @@ abstract class DatabaseModule {
          *
          * Note what is *not* provided here any more: the work database. There is one of those per
          * profile and it changes at runtime, so it comes from `DatabaseProvider` rather than from
-         * Dagger — a `@Singleton PrimaDatabase` would have pinned the first operator's file for
+         * Dagger — a `@Singleton AppDatabase` would have pinned the first operator's file for
          * the life of the process.
          *
          * The migration discipline that applied to that database applies here too, and to every
@@ -54,7 +54,7 @@ abstract class DatabaseModule {
             Room.databaseBuilder(
                 context,
                 SharedDatabase::class.java,
-                "prima_shared.db",
+                "shared.db",
             ).build()
 
         @Provides

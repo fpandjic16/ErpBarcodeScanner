@@ -23,11 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppSignal
 
 /*
  * The app shell's own dialogs: what an upload, a download, the debugger and a change of operator
- * can bring up over whichever screen is showing. PrimaBarcodeApp owns their state; these only draw.
+ * can bring up over whichever screen is showing. BarcodeApp owns their state; these only draw.
  */
 
 /** Blocks the screen while a blocking transfer runs; cannot be dismissed. */
@@ -105,7 +105,7 @@ internal fun SyncErrorDialog(onSeeErrors: () -> Unit, onDismiss: () -> Unit) {
                 Button(
                     onClick = onSeeErrors,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.btn_see_errors), fontWeight = FontWeight.Bold) }
                 OutlinedButton(
                     onClick = onDismiss,

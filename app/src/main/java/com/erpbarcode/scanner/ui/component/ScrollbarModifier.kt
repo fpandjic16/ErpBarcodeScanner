@@ -8,9 +8,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppLine
 
-private val BarColor = PrimaLine.Scrollbar
+private val BarColor = AppLine.Scrollbar
 
 fun Modifier.verticalScrollbar(state: ScrollState): Modifier = drawWithContent {
     drawContent()

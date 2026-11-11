@@ -19,7 +19,7 @@ class DocumentUploadSoapTest {
         scannedQuantity = qty,
         unitOfMeasureCode = "KOM",
         sourceCreationDateTime = "2026-11-10T08:15:30.123456789Z",
-        sourceUserId = "PRIMA\\ana",
+        sourceUserId = "DOMAIN\\ana",
         sourceCode = "MP01",
         destinationCode = "",
     )
@@ -37,7 +37,7 @@ class DocumentUploadSoapTest {
         val xml = DocumentUploadSoap.envelope(listOf(row(barcode = "A&B<C>|KOM|1", qty = 0.0001)))
         assertTrue(xml.contains("<Barcode>A&amp;B&lt;C&gt;|KOM|1</Barcode>"))
         assertTrue(xml.contains("<ScannedQuantity>0.0001</ScannedQuantity>"))
-        assertTrue(xml.contains("<SourceUserID>PRIMA\\ana</SourceUserID>"))
+        assertTrue(xml.contains("<SourceUserID>DOMAIN\\ana</SourceUserID>"))
     }
 
     @Test

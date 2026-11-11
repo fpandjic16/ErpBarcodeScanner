@@ -6,10 +6,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * The schema version of [PrimaDatabase], written once. The app info shows this value; it used to
+ * The schema version of [AppDatabase], written once. The app info shows this value; it used to
  * show a constant of its own, "7.0.0", that nobody updated while the schema went on to 19.
  */
-const val PRIMA_DB_VERSION = 21
+const val DB_VERSION = 21
 
 /**
  * One operator's work: their documents, lines and recordings.
@@ -29,10 +29,10 @@ const val PRIMA_DB_VERSION = 21
         DocumentLineEntity::class,
         RecordingEntity::class,
     ],
-    version = PRIMA_DB_VERSION,
+    version = DB_VERSION,
     exportSchema = true,
 )
-abstract class PrimaDatabase : RoomDatabase() {
+abstract class AppDatabase : RoomDatabase() {
     abstract fun documentHeaderDao(): DocumentHeaderDao
     abstract fun documentLineDao(): DocumentLineDao
     abstract fun recordingDao(): RecordingDao

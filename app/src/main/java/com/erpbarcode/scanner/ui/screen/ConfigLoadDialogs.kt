@@ -29,7 +29,7 @@ import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.DeviceConfiguration
 import com.erpbarcode.scanner.data.auth.ExtSystemDefaultsCompany
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 
 /*
@@ -120,7 +120,7 @@ internal fun ConfigLoadFlow(
                     if (companies.isEmpty()) {
                         Text(
                             stringResource(R.string.ext_config_no_companies_found),
-                            style = monoLabel.copy(color = PrimaPalette.Ink3),
+                            style = monoLabel.copy(color = AppPalette.Ink3),
                         )
                     }
                     companies.forEach { company ->

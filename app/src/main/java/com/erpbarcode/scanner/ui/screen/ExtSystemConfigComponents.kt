@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 
 /*
@@ -47,11 +47,11 @@ internal fun <T> ConfigSegmentedChoice(
         Text(
             title,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
+                fontWeight = FontWeight.Medium, color = AppPalette.Ink,
             ),
         )
         description?.let {
-            Text(it, style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(it, style = monoLabel.copy(color = AppPalette.Ink3))
         }
         Spacer(Modifier.height(gap))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -91,7 +91,7 @@ internal fun DocTypeConfigCard(
                 type.localizedDisplay(),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = if (enabled) PrimaPalette.Ink else PrimaPalette.Ink3,
+                    color = if (enabled) AppPalette.Ink else AppPalette.Ink3,
                 ),
                 modifier = Modifier.weight(1f),
             )
@@ -99,7 +99,7 @@ internal fun DocTypeConfigCard(
                 checked = enabled,
                 onCheckedChange = onEnabledChange,
                 colors = SwitchDefaults.colors(
-                    checkedTrackColor = PrimaPalette.Slate,
+                    checkedTrackColor = AppPalette.Slate,
                     checkedThumbColor = Color.White,
                 ),
             )
@@ -136,7 +136,7 @@ internal fun ConfigSectionHeader(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
-        style = monoLabel.copy(color = PrimaPalette.Ink3),
+        style = monoLabel.copy(color = AppPalette.Ink3),
     )
 }
 
@@ -164,25 +164,25 @@ internal fun ConfigField(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Medium, color = PrimaPalette.Ink,
+                fontWeight = FontWeight.Medium, color = AppPalette.Ink,
             ),
         )
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(hint, style = monoLabel.copy(color = PrimaPalette.Ink4)) },
+            placeholder = { Text(hint, style = monoLabel.copy(color = AppPalette.Ink4)) },
             singleLine = true,
             readOnly = readOnly,
             modifier = Modifier.fillMaxWidth(),
-            textStyle = monoLabel.copy(color = if (readOnly) PrimaPalette.Ink3 else PrimaPalette.Ink),
+            textStyle = monoLabel.copy(color = if (readOnly) AppPalette.Ink3 else AppPalette.Ink),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
             shape = RoundedCornerShape(8.dp),
             colors = if (readOnly) OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = PrimaLine.InputBorder,
-                unfocusedBorderColor = PrimaLine.InputBorder,
-                focusedContainerColor   = PrimaLine.ReadOnlyFill,
-                unfocusedContainerColor = PrimaLine.ReadOnlyFill,
+                focusedBorderColor   = AppLine.InputBorder,
+                unfocusedBorderColor = AppLine.InputBorder,
+                focusedContainerColor   = AppLine.ReadOnlyFill,
+                unfocusedContainerColor = AppLine.ReadOnlyFill,
             ) else OutlinedTextFieldDefaults.colors(),
         )
     }
@@ -190,5 +190,5 @@ internal fun ConfigField(
 
 @Composable
 internal fun ConfigDivider() {
-    HorizontalDivider(modifier = Modifier.padding(start = 16.dp), color = PrimaLine.Divider)
+    HorizontalDivider(modifier = Modifier.padding(start = 16.dp), color = AppLine.Divider)
 }

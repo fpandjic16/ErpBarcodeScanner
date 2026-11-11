@@ -40,10 +40,10 @@ import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
 import com.erpbarcode.scanner.ui.component.CameraPreview
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppSignal
 
 /**
  * The way into the app. Nothing else is reachable until somebody is signed in.
@@ -151,8 +151,8 @@ fun SignInScreen(
 
     // A Box so the camera overlay can cover the screen; the sheet this replaced had the same.
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-            PrimaTopBar(title = stringResource(R.string.signin_title), onBack = onBack)
+        Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+            AppTopBar(title = stringResource(R.string.signin_title), onBack = onBack)
 
             Column(
                 modifier = Modifier
@@ -165,7 +165,7 @@ fun SignInScreen(
                 if (profiles.isNotEmpty()) {
                     Text(
                         stringResource(R.string.signin_known_operators),
-                        style = monoLabel.copy(color = PrimaPalette.Ink3),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
                     )
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
@@ -192,7 +192,7 @@ fun SignInScreen(
                 if (tooLong) {
                     Text(
                         stringResource(R.string.signin_name_too_long, UserProfileStore.MAX_NAME_LENGTH),
-                        style = monoLabel.copy(color = PrimaSignal.Danger),
+                        style = monoLabel.copy(color = AppSignal.Danger),
                     )
                 }
 
@@ -236,22 +236,22 @@ fun SignInScreen(
                         Icon(
                             Icons.Outlined.QrCodeScanner,
                             contentDescription = null,
-                            tint = PrimaPalette.Ink3,
+                            tint = AppPalette.Ink3,
                             modifier = Modifier.size(20.dp),
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
                             stringResource(R.string.login_scan_qr),
-                            style = monoLabel.copy(color = PrimaPalette.Ink),
+                            style = monoLabel.copy(color = AppPalette.Ink),
                         )
                     }
                 }
 
-                qrError?.let { Text(it, style = monoLabel, color = PrimaSignal.Danger) }
+                qrError?.let { Text(it, style = monoLabel, color = AppSignal.Danger) }
 
                 Text(
                     stringResource(R.string.signin_first_time_note),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
 
                 onOpenConfig?.let { open ->
@@ -263,13 +263,13 @@ fun SignInScreen(
                         Icon(
                             Icons.Outlined.Settings,
                             contentDescription = null,
-                            tint = PrimaPalette.Ink3,
+                            tint = AppPalette.Ink3,
                             modifier = Modifier.size(20.dp),
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
                             stringResource(R.string.signin_open_config),
-                            style = monoLabel.copy(color = PrimaPalette.Ink),
+                            style = monoLabel.copy(color = AppPalette.Ink),
                         )
                     }
                 }
@@ -283,13 +283,13 @@ fun SignInScreen(
                         Icon(
                             Icons.Outlined.Info,
                             contentDescription = null,
-                            tint = PrimaPalette.Ink3,
+                            tint = AppPalette.Ink3,
                             modifier = Modifier.size(20.dp),
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
                             stringResource(R.string.app_info_title),
-                            style = monoLabel.copy(color = PrimaPalette.Ink),
+                            style = monoLabel.copy(color = AppPalette.Ink),
                         )
                     }
                 }
@@ -301,7 +301,7 @@ fun SignInScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (canSubmit) PrimaPalette.Coral else PrimaPalette.Coral.copy(alpha = 0.35f))
+                    .background(if (canSubmit) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
                     .clickable(enabled = canSubmit) { onSignIn(username.trim(), password) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -345,13 +345,13 @@ private fun ProfileRow(profile: UserProfile, selected: Boolean, onClick: () -> U
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) PrimaPalette.CreamAlt else Color.White)
+            .background(if (selected) AppPalette.CreamAlt else Color.White)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(32.dp).clip(CircleShape).background(PrimaPalette.Coral),
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(AppPalette.Coral),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -360,6 +360,6 @@ private fun ProfileRow(profile: UserProfile, selected: Boolean, onClick: () -> U
             )
         }
         Spacer(Modifier.width(12.dp))
-        Text(profile.displayName, style = monoLabel.copy(color = PrimaPalette.Ink))
+        Text(profile.displayName, style = monoLabel.copy(color = AppPalette.Ink))
     }
 }

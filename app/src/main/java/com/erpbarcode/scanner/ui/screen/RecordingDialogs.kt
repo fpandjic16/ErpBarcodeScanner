@@ -11,7 +11,7 @@ import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.formatQty
 import com.erpbarcode.scanner.data.model.inkColor
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppSignal
 
 /*
  * The recording screen's dialogs: what a scan or an edit can bring up. Each one is shown by
@@ -52,7 +52,7 @@ internal data class UomMismatchInfo(
 internal fun BarcodeNotFoundDialog(barcode: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.recording_barcode_not_found_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Danger) },
+        title = { Text(stringResource(R.string.recording_barcode_not_found_title), fontWeight = FontWeight.Bold, color = AppSignal.Danger) },
         text = { Text(stringResource(R.string.recording_barcode_not_found_text, barcode)) },
         confirmButton = {
             Button(onClick = onDismiss) { Text(stringResource(R.string.btn_ok), fontWeight = FontWeight.SemiBold) }
@@ -80,7 +80,7 @@ internal fun NotOnDocumentDialog(scan: NotOnDocumentScan, onCount: () -> Unit, o
 internal fun UomMismatchDialog(info: UomMismatchInfo, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.recording_uom_mismatch_title), fontWeight = FontWeight.Bold, color = PrimaSignal.Warning) },
+        title = { Text(stringResource(R.string.recording_uom_mismatch_title), fontWeight = FontWeight.Bold, color = AppSignal.Warning) },
         text = {
             Text(
                 stringResource(

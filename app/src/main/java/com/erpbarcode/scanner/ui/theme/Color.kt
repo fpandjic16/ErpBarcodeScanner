@@ -5,13 +5,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Prima brand palette — extracted from the 2021 Prima rebrand
- * (Bruketa&Žinić&Grey, custom typography by Nikola Đurek).
+ * The brand palette: Coral, Slate, Cream and Teal, with an ink scale for text.
  *
  * Each color has a role; do not reuse outside its role unless extending
  * the system deliberately.
  */
-object PrimaPalette {
+object AppPalette {
     // Chrome / data surfaces
     val Slate    = Color(0xFF2E3539)
     val SlateAlt = Color(0xFF3A4146)
@@ -40,7 +39,7 @@ object PrimaPalette {
  * Read these via [com.erpbarcode.scanner.data.model.LineStatus.color] — never
  * hard-code outside that mapping.
  */
-object PrimaStatus {
+object AppStatus {
     // Fill: bars, dots, progress segments, tints. Reaches 3:1 against Cream and White (WCAG
     // non-text contrast). Only Partial had to change for that: it was #C7943A, 2.3:1 on Cream.
     val Empty   = Color(0xFFCE3A3A)
@@ -69,18 +68,18 @@ object PrimaStatus {
  * Every colour a screen or component uses comes from one of the objects in this file; a literal
  * `Color(0x…)` outside it is a bug (CLAUDE.md). Until 3.6.30 the screens carried 90 such literals.
  * Moving them here kept every value except these near-duplicates, which were made one:
- *   black 0x0A (list dividers)          -> PrimaLine.Divider    0x0F
- *   black 0x14, 0x1A (card borders)     -> PrimaLine.CardBorder 0x18
- *   black 0x18 (search field outline)   -> PrimaLine.InputBorder 0x28
- *   white 0x22 (buttons on Slate)       -> PrimaOnDark.Button   0x20
- *   white 0x1A (scan field border dark) -> PrimaOnDark.Border   0x18
- *   white 0xC5 (recording subtitle)     -> PrimaOnDark.TextSecondary 0xB3
+ *   black 0x0A (list dividers)          -> AppLine.Divider    0x0F
+ *   black 0x14, 0x1A (card borders)     -> AppLine.CardBorder 0x18
+ *   black 0x18 (search field outline)   -> AppLine.InputBorder 0x28
+ *   white 0x22 (buttons on Slate)       -> AppOnDark.Button   0x20
+ *   white 0x1A (scan field border dark) -> AppOnDark.Border   0x18
+ *   white 0xC5 (recording subtitle)     -> AppOnDark.TextSecondary 0xB3
  * The state before is tagged pre-design-tokens in git.
  */
 
 /** Signals that are not a line's status: errors, warnings, the test-environment badge. */
-object PrimaSignal {
-    /** The same red as [PrimaStatus.Empty], in its other role: something went wrong. */
+object AppSignal {
+    /** The same red as [AppStatus.Empty], in its other role: something went wrong. */
     val Danger        = Color(0xFFCE3A3A)
     /** The recording bar's flash behind a scan that matched nothing. */
     val DangerDeep    = Color(0xFF7A1A1A)
@@ -101,7 +100,7 @@ object PrimaSignal {
 }
 
 /** Hairlines, borders and fills on the light surfaces (Cream, White). */
-object PrimaLine {
+object AppLine {
     val Divider      = Color(0x0F000000)
     val CardBorder   = Color(0x18000000)
     val Outline      = Color(0x24000000)
@@ -115,7 +114,7 @@ object PrimaLine {
 }
 
 /** The same on the dark chrome (Slate). */
-object PrimaOnDark {
+object AppOnDark {
     val Fill          = Color(0x14FFFFFF)
     val Border        = Color(0x18FFFFFF)
     val Button        = Color(0x20FFFFFF)
@@ -127,52 +126,52 @@ object PrimaOnDark {
 }
 
 /** The camera scanner's viewfinder. */
-object PrimaCamera {
+object AppCamera {
     val Scrim     = Color(0x66000000)
     val Mask      = Color(0x99000000)
     val Laser     = Color(0xFFFF2D2D)
     val LaserGlow = Color(0x55FF2D2D)
 }
 
-val PrimaLightColors = lightColorScheme(
-    primary        = PrimaPalette.Coral,
+val AppLightColors = lightColorScheme(
+    primary        = AppPalette.Coral,
     onPrimary      = Color.White,
-    primaryContainer = PrimaPalette.CreamAlt,
-    onPrimaryContainer = PrimaPalette.Ink,
+    primaryContainer = AppPalette.CreamAlt,
+    onPrimaryContainer = AppPalette.Ink,
 
-    secondary      = PrimaPalette.Slate,
+    secondary      = AppPalette.Slate,
     onSecondary    = Color.White,
 
-    tertiary       = PrimaPalette.Teal,
+    tertiary       = AppPalette.Teal,
     onTertiary     = Color.White,
 
-    background     = PrimaPalette.Cream,
-    onBackground   = PrimaPalette.Ink,
+    background     = AppPalette.Cream,
+    onBackground   = AppPalette.Ink,
 
     surface        = Color.White,
-    onSurface      = PrimaPalette.Ink,
-    surfaceVariant = PrimaPalette.CreamAlt,
-    onSurfaceVariant = PrimaPalette.Ink2,
+    onSurface      = AppPalette.Ink,
+    surfaceVariant = AppPalette.CreamAlt,
+    onSurfaceVariant = AppPalette.Ink2,
 
-    error          = PrimaStatus.Empty,
+    error          = AppStatus.Empty,
     onError        = Color.White,
 
     outline        = Color(0x24000000),
     outlineVariant = Color(0x12000000),
 )
 
-val PrimaDarkColors = darkColorScheme(
-    primary        = PrimaPalette.Coral,
+val AppDarkColors = darkColorScheme(
+    primary        = AppPalette.Coral,
     onPrimary      = Color.White,
     secondary      = Color(0xFFCBD0D6),
-    onSecondary    = PrimaPalette.Slate,
+    onSecondary    = AppPalette.Slate,
     background     = Color(0xFF0F1113),
     onBackground   = Color(0xFFE7E8EA),
     surface        = Color(0xFF15181C),
     onSurface      = Color(0xFFE7E8EA),
     surfaceVariant = Color(0xFF1F2429),
     onSurfaceVariant = Color(0xFFB6B8BC),
-    error          = PrimaStatus.Empty,
+    error          = AppStatus.Empty,
     onError        = Color.White,
     outline        = Color(0x40FFFFFF),
     outlineVariant = Color(0x14FFFFFF),

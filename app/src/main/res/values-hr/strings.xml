@@ -132,7 +132,7 @@
     <string name="login_show_password">Prikaži lozinku</string>
     <string name="login_hide_password">Sakrij lozinku</string>
     <string name="login_footer">Vjerodajnice pohranjene šifrirano s AES-256-GCM za %s.</string>
-    <string name="login_username_hint">npr. korisnik@prima</string>
+    <string name="login_username_hint">npr. korisnik@domena</string>
     <plurals name="login_ttl_hours">
         <item quantity="one">%d sat</item>
         <item quantity="few">%d sata</item>
@@ -231,7 +231,7 @@
     <string name="ext_config_test_ok">NTLM prijava je uspjela i poslužitelj je odgovorio.</string>
     <string name="ext_config_connection_ok">Veza uspostavljena</string>
     <string name="ext_config_connection_failed">Veza neuspješna</string>
-    <string name="ext_config_domain_hint">npr. PRIMA (ostavite prazno ako nema)</string>
+    <string name="ext_config_domain_hint">npr. TVRTKA (ostavite prazno ako nema)</string>
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Spremiti postavke prije izlaska?</string>
     <string name="settings_insert_defaults_dialog_title">Umetni zadane postavke sustava</string>

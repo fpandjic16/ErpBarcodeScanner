@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
-fun PrimaBarcodeTheme(
+fun AppTheme(
     textSizeOffset: Int = 0,
     uppercaseEnabled: Boolean = false,
     content: @Composable () -> Unit,
@@ -15,9 +15,9 @@ fun PrimaBarcodeTheme(
         LocalUppercaseEnabled provides uppercaseEnabled,
     ) {
         MaterialTheme(
-            colorScheme = PrimaLightColors,
+            colorScheme = AppLightColors,
             typography = scaledTypography(textSizeOffset),
-            shapes = PrimaShapes,
+            shapes = AppShapes,
             content = content,
         )
     }

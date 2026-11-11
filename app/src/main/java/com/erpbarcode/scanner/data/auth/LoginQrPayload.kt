@@ -19,7 +19,7 @@ import javax.crypto.spec.SecretKeySpec
  *
  * and the plaintext inside is the JSON below:
  *
- *     {"username":"PRIMA-COMMERCE\\filip","password":"…"}
+ *     {"username":"DOMAIN\\user","password":"…"}
  *
  * JSON rather than a delimited string because a Windows password may contain the very characters
  * a delimiter would have to reserve (`|`, `:`, `,`); splitting on one would truncate the password

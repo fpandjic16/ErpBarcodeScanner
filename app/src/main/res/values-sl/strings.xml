@@ -132,7 +132,7 @@
     <string name="login_show_password">Prikaži geslo</string>
     <string name="login_hide_password">Skrij geslo</string>
     <string name="login_footer">Poverilnice shranjene šifrirano z AES-256-GCM za %s.</string>
-    <string name="login_username_hint">npr. uporabnik@prima</string>
+    <string name="login_username_hint">npr. uporabnik@domena</string>
     <plurals name="login_ttl_hours">
         <item quantity="one">%d uro</item>
         <item quantity="two">%d uri</item>
@@ -232,7 +232,7 @@
     <string name="ext_config_test_ok">Prijava NTLM je uspela in strežnik se je odzval.</string>
     <string name="ext_config_connection_ok">Povezava uspešna</string>
     <string name="ext_config_connection_failed">Povezava neuspešna</string>
-    <string name="ext_config_domain_hint">npr. PRIMA (pustite prazno, če ni)</string>
+    <string name="ext_config_domain_hint">npr. PODJETJE (pustite prazno, če ni)</string>
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Shraniti nastavitve pred izhodom?</string>
     <string name="settings_insert_defaults_dialog_title">Vstavi privzete nastavitve sistema</string>

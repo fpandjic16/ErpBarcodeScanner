@@ -107,7 +107,7 @@ class DocumentRepositoryImpl @Inject constructor(
      * Transactional methods below shadow this with a local `val db` so that one transaction
      * cannot straddle two databases.
      */
-    private val db: PrimaDatabase get() = provider.current()
+    private val db: AppDatabase get() = provider.current()
 
     /**
      * Flows follow the signed-in operator.
@@ -175,7 +175,7 @@ class DocumentRepositoryImpl @Inject constructor(
      * recordings. Header/lines always refresh to the downloaded values; docState is
      * always recomputed from the merged recordings.
      */
-    private suspend fun mergeDocument(db: PrimaDatabase, doc: Document, type: String) {
+    private suspend fun mergeDocument(db: AppDatabase, doc: Document, type: String) {
         // Header first: documentLine has a foreign key to it, so a new document needs its parent
         // row before any line can be inserted. docState is corrected at the end.
         db.documentHeaderDao().upsert(doc.toEntity())
@@ -226,7 +226,7 @@ class DocumentRepositoryImpl @Inject constructor(
      * Several lines sharing a barcode resolves to the lowest line number, matching what
      * `RecordingScreen.handleScan` already does when a scan could land on more than one line.
      */
-    private suspend fun reattachOrphansByBarcode(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun reattachOrphansByBarcode(db: AppDatabase, documentNo: String, type: String) {
         val orphans = db.recordingDao().getOrphansByDoc(documentNo, type)
         if (orphans.isEmpty()) return
 
@@ -548,14 +548,14 @@ class DocumentRepositoryImpl @Inject constructor(
      * A device-added line exists only to carry its scans. Once they are all gone it is a red line
      * with nothing expected, which would keep the document from ever reading as complete.
      */
-    private suspend fun dropEmptyLinesAddedOnDevice(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun dropEmptyLinesAddedOnDevice(db: AppDatabase, documentNo: String, type: String) {
         val linesWithScans = db.recordingDao().getByDoc(documentNo, type).mapTo(HashSet()) { it.documentLine }
         db.documentLineDao().getByDoc(documentNo, type)
             .filter { it.addedOnDevice && it.lineNo !in linesWithScans }
             .forEach { db.documentLineDao().deleteByKey(documentNo, type, it.lineNo) }
     }
 
-    private suspend fun refreshStateFromRecordings(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun refreshStateFromRecordings(db: AppDatabase, documentNo: String, type: String) {
         dropEmptyLinesAddedOnDevice(db, documentNo, type)
         val lines = db.documentLineDao().getByDoc(documentNo, type).map { it.toDomain(0.0) }
         val recordings = db.recordingDao().getByDoc(documentNo, type)
@@ -612,14 +612,14 @@ class DocumentRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun advanceToInProgressIfNeeded(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun advanceToInProgressIfNeeded(db: AppDatabase, documentNo: String, type: String) {
         val doc = db.documentHeaderDao().getByKey(documentNo, type)
         if (doc?.docState == DocState.Downloaded.toDbString() || doc?.docState?.startsWith("UploadFailed:") == true) {
             db.documentHeaderDao().updateState(documentNo, type, DocState.InProgress.toDbString())
         }
     }
 
-    private suspend fun regressToDownloadedIfNeeded(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun regressToDownloadedIfNeeded(db: AppDatabase, documentNo: String, type: String) {
         val header = db.documentHeaderDao().getByKey(documentNo, type) ?: return
         if (header.docState != DocState.InProgress.toDbString()) return
         val recordings = db.recordingDao().getByDoc(documentNo, type)
@@ -628,7 +628,7 @@ class DocumentRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun regressFromCompletedIfNeeded(db: PrimaDatabase, documentNo: String, type: String) {
+    private suspend fun regressFromCompletedIfNeeded(db: AppDatabase, documentNo: String, type: String) {
         val header = db.documentHeaderDao().getByKey(documentNo, type) ?: return
         if (header.docState != DocState.Completed.toDbString()) return
         val lines = db.documentLineDao().getByDoc(documentNo, type)

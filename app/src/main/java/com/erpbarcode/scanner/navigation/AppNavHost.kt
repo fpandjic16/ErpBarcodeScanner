@@ -84,7 +84,7 @@ import com.erpbarcode.scanner.ui.screen.UploadErrorScreen
 import com.erpbarcode.scanner.ui.screen.UserInfoScreen
 import com.erpbarcode.scanner.ui.screen.localizedDisplay
 import com.erpbarcode.scanner.ui.theme.Language
-import com.erpbarcode.scanner.ui.theme.PrimaBarcodeTheme
+import com.erpbarcode.scanner.ui.theme.AppTheme
 import com.erpbarcode.scanner.ui.theme.TextSize
 import com.erpbarcode.scanner.ui.viewmodel.AppViewModel
 import com.erpbarcode.scanner.ui.viewmodel.RecordingViewModel
@@ -104,7 +104,7 @@ private val exportTimestampFmt = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
     .withZone(ZoneId.systemDefault())
 
 @Composable
-internal fun PrimaBarcodeApp(
+internal fun BarcodeApp(
     locationCode: String,
     rcCode: String,
     onLocationCodeChange: (String) -> Unit,
@@ -574,7 +574,7 @@ internal fun PrimaBarcodeApp(
                 exportConfiguration = { appVm.exportConfigurationJson() },
                 onExport = {
                     val ts = exportTimestampFmt.format(Instant.now())
-                    exportLauncher.launch("prima_export_${ts}.json")
+                    exportLauncher.launch("barcode_export_${ts}.json")
                 },
                 onClearCache = { appVm.clearCache() },
                 onDeleteAllDocuments = { appVm.deleteAllDocuments() },

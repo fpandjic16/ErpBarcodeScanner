@@ -25,14 +25,14 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val lrcSyncFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy · HH:mm").withZone(ZoneId.systemDefault())
@@ -75,8 +75,8 @@ fun LocationRcPickScreen(
         availableLocations.find { it.code == selectedLocationCode }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = stringResource(R.string.lrc_title),
             subtitle = if (lastSyncedAt != null)
                 stringResource(R.string.lrc_synced_at, lrcSyncFmt.format(lastSyncedAt))
@@ -99,7 +99,7 @@ fun LocationRcPickScreen(
                             // Coral, the palette's action colour — same fill as the upload
                             // action in the recording top bar, so top-bar actions match. The
                             // translucent white this replaced barely registered as a button.
-                            .background(PrimaPalette.Coral)
+                            .background(AppPalette.Coral)
                             .clickable(onClick = { if (hasCredentials) onRefresh() else showLoginSheet = true })
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -129,13 +129,13 @@ fun LocationRcPickScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (selectedRc != null) PrimaPalette.Slate else PrimaPalette.CreamAlt),
+                                .background(if (selectedRc != null) AppPalette.Slate else AppPalette.CreamAlt),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 selectedRc?.let { it.short ?: it.code.take(2) } ?: "—",
                                 style = monoLabel.copy(
-                                    color = if (selectedRc != null) Color.White else PrimaPalette.Ink3,
+                                    color = if (selectedRc != null) Color.White else AppPalette.Ink3,
                                     fontWeight = FontWeight.Medium,
                                 ),
                             )
@@ -156,13 +156,13 @@ fun LocationRcPickScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (selectedLocation != null) PrimaPalette.Teal else PrimaPalette.CreamAlt),
+                                .background(if (selectedLocation != null) AppPalette.Teal else AppPalette.CreamAlt),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 Icons.Outlined.LocationOn,
                                 contentDescription = null,
-                                tint = if (selectedLocation != null) Color.White else PrimaPalette.Ink3,
+                                tint = if (selectedLocation != null) Color.White else AppPalette.Ink3,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -185,7 +185,7 @@ fun LocationRcPickScreen(
                 onClick = { onSelect(selectedRcCode, selectedLocationCode) },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 enabled = true,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaPalette.Slate),
+                colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Slate),
             ) {
                 Text(stringResource(R.string.btn_apply), fontWeight = FontWeight.Medium)
             }
@@ -262,7 +262,7 @@ internal fun RcPickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = PrimaPalette.Cream,
+        containerColor = AppPalette.Cream,
     ) {
         Column(
             modifier = Modifier
@@ -292,7 +292,7 @@ internal fun RcPickerSheet(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            color = PrimaLine.Divider,
+                            color = AppLine.Divider,
                         )
                     }
                 }
@@ -302,7 +302,7 @@ internal fun RcPickerSheet(
                             modifier = Modifier.fillMaxWidth().padding(32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(stringResource(R.string.lrc_no_results), style = monoLabel.copy(color = PrimaPalette.Ink3))
+                            Text(stringResource(R.string.lrc_no_results), style = monoLabel.copy(color = AppPalette.Ink3))
                         }
                     }
                 } else {
@@ -315,7 +315,7 @@ internal fun RcPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = PrimaLine.Divider,
+                                color = AppLine.Divider,
                             )
                         }
                     }
@@ -344,7 +344,7 @@ internal fun LocationPickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = PrimaPalette.Cream,
+        containerColor = AppPalette.Cream,
     ) {
         Column(
             modifier = Modifier
@@ -364,7 +364,7 @@ internal fun LocationPickerSheet(
                     Text(
                         if (locations.isEmpty()) stringResource(R.string.lrc_no_locations)
                         else stringResource(R.string.lrc_no_results),
-                        style = monoLabel.copy(color = PrimaPalette.Ink3),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
                     )
                 }
             } else {
@@ -387,7 +387,7 @@ internal fun LocationPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = PrimaLine.Divider,
+                                color = AppLine.Divider,
                             )
                         }
                     }
@@ -402,19 +402,19 @@ internal fun LrcSearchField(value: String, onValueChange: (String) -> Unit, plac
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PrimaPalette.Cream)
+            .background(AppPalette.Cream)
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, style = monoLabel.copy(color = PrimaPalette.Ink3)) },
+            placeholder = { Text(placeholder, style = monoLabel.copy(color = AppPalette.Ink3)) },
             leadingIcon = {
                 Icon(
                     Icons.Outlined.Search,
                     contentDescription = null,
-                    tint = PrimaPalette.Ink3,
+                    tint = AppPalette.Ink3,
                     modifier = Modifier.size(18.dp),
                 )
             },
@@ -423,10 +423,10 @@ internal fun LrcSearchField(value: String, onValueChange: (String) -> Unit, plac
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
-                focusedBorderColor = PrimaPalette.Slate,
-                unfocusedBorderColor = PrimaLine.CardBorder,
+                focusedBorderColor = AppPalette.Slate,
+                unfocusedBorderColor = AppLine.CardBorder,
             ),
-            textStyle = monoLabel.copy(color = PrimaPalette.Ink),
+            textStyle = monoLabel.copy(color = AppPalette.Ink),
         )
     }
 }
@@ -454,18 +454,18 @@ internal fun LrcSelectionRow(
                 title,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = if (hasValue) PrimaPalette.Ink else PrimaPalette.Ink3,
+                    color = if (hasValue) AppPalette.Ink else AppPalette.Ink3,
                 ),
             )
             if (subtitle != null) {
-                Text(subtitle, style = monoLabel.copy(color = PrimaPalette.Ink3))
+                Text(subtitle, style = monoLabel.copy(color = AppPalette.Ink3))
             }
         }
         if (showChevron) {
             Icon(
                 Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
-                tint = PrimaPalette.Ink3,
+                tint = AppPalette.Ink3,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -479,7 +479,7 @@ private fun LrcSectionHeader(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
-        style = monoLabel.copy(color = PrimaPalette.Ink3),
+        style = monoLabel.copy(color = AppPalette.Ink3),
     )
 }
 
@@ -496,13 +496,13 @@ internal fun RcClearRow(selected: Boolean, onClick: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) PrimaPalette.Slate else PrimaPalette.CreamAlt),
+                .background(if (selected) AppPalette.Slate else AppPalette.CreamAlt),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "—",
                 style = monoLabel.copy(
-                    color = if (selected) Color.White else PrimaPalette.Ink3,
+                    color = if (selected) Color.White else AppPalette.Ink3,
                     fontWeight = FontWeight.Medium,
                 ),
             )
@@ -513,14 +513,14 @@ internal fun RcClearRow(selected: Boolean, onClick: () -> Unit) {
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Medium,
-                color = if (selected) PrimaPalette.Ink else PrimaPalette.Ink2,
+                color = if (selected) AppPalette.Ink else AppPalette.Ink2,
             ),
         )
         if (selected) {
             Icon(
                 Icons.Outlined.Check,
                 contentDescription = null,
-                tint = PrimaPalette.Slate,
+                tint = AppPalette.Slate,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -540,13 +540,13 @@ internal fun RcSelectRow(rc: ResponsibilityCenter, selected: Boolean, onClick: (
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) PrimaPalette.Slate else PrimaPalette.CreamAlt),
+                .background(if (selected) AppPalette.Slate else AppPalette.CreamAlt),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 rc.short ?: rc.code.take(2),
                 style = monoLabel.copy(
-                    color = if (selected) Color.White else PrimaPalette.Ink2,
+                    color = if (selected) Color.White else AppPalette.Ink2,
                     fontWeight = FontWeight.Medium,
                 ),
             )
@@ -557,16 +557,16 @@ internal fun RcSelectRow(rc: ResponsibilityCenter, selected: Boolean, onClick: (
                 rc.name,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                 ),
             )
-            Text(rc.code, style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(rc.code, style = monoLabel.copy(color = AppPalette.Ink3))
         }
         if (selected) {
             Icon(
                 Icons.Outlined.Check,
                 contentDescription = null,
-                tint = PrimaPalette.Slate,
+                tint = AppPalette.Slate,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -586,13 +586,13 @@ internal fun LocationSelectRow(location: Location, selected: Boolean, onClick: (
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) PrimaPalette.Teal else PrimaPalette.CreamAlt),
+                .background(if (selected) AppPalette.Teal else AppPalette.CreamAlt),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Outlined.LocationOn,
                 contentDescription = null,
-                tint = if (selected) Color.White else PrimaPalette.Ink3,
+                tint = if (selected) Color.White else AppPalette.Ink3,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -602,16 +602,16 @@ internal fun LocationSelectRow(location: Location, selected: Boolean, onClick: (
                 location.code,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                 ),
             )
-            Text(location.name, style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(location.name, style = monoLabel.copy(color = AppPalette.Ink3))
         }
         if (selected) {
             Icon(
                 Icons.Outlined.Check,
                 contentDescription = null,
-                tint = PrimaPalette.Teal,
+                tint = AppPalette.Teal,
                 modifier = Modifier.size(20.dp),
             )
         }

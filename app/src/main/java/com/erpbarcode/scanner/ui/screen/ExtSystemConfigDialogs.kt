@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppSignal
 
 /*
  * External System Configuration's own dialogs. Split out of ExtSystemConfigScreen.kt; the screen
@@ -59,7 +59,7 @@ internal fun ConnectionResultDialog(ok: Boolean, message: String, onDismiss: () 
             Text(
                 if (ok) stringResource(R.string.ext_config_connection_ok) else stringResource(R.string.ext_config_connection_failed),
                 fontWeight = FontWeight.Bold,
-                color = if (ok) PrimaPalette.Teal else PrimaSignal.Danger,
+                color = if (ok) AppPalette.Teal else AppSignal.Danger,
             )
         },
         text = { Text(message) },

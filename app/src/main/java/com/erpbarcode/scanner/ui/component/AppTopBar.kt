@@ -17,10 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import com.erpbarcode.scanner.ui.theme.uppercased
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 /**
  * Height of a button in the top bar (back, and the recording screen's upload): 48 dp, the
@@ -29,7 +29,7 @@ import com.erpbarcode.scanner.ui.theme.PrimaOnDark
 val TOP_BAR_BUTTON_HEIGHT = 48.dp
 
 @Composable
-fun PrimaTopBar(
+fun AppTopBar(
     title: String,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
@@ -41,7 +41,7 @@ fun PrimaTopBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 2.dp)
-            .background(PrimaPalette.Slate)
+            .background(AppPalette.Slate)
             .statusBarsPadding()
             // 52, so the 48 dp buttons below keep their 2 dp of air. Was 48 with 44 dp buttons until
             // 3.6.29; 48 dp is the smallest target a gloved thumb reliably hits.
@@ -57,7 +57,7 @@ fun PrimaTopBar(
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
                         .size(width = 60.dp, height = TOP_BAR_BUTTON_HEIGHT)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(PrimaOnDark.Button)
+                        .background(AppOnDark.Button)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -77,7 +77,7 @@ fun PrimaTopBar(
             subtitle?.let {
                 Text(
                     text = it.uppercased,
-                    style = monoLabel.copy(color = PrimaOnDark.TextSecondary),
+                    style = monoLabel.copy(color = AppOnDark.TextSecondary),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

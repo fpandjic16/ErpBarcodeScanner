@@ -36,17 +36,17 @@ class DatabaseProvider @Inject constructor(
      * handles is the cheaper side of that trade; there are as many as there are operators who
      * used this device since it last booted.
      */
-    private val open = mutableMapOf<String, PrimaDatabase>()
+    private val open = mutableMapOf<String, AppDatabase>()
 
     /**
      * Starts null on every process launch, because sign-in is required on every process launch —
      * [UserProfileStore] keeps the current profile in memory precisely so that a device left on a
      * shelf cannot come back up inside the last operator's data.
      */
-    private val _database = MutableStateFlow<PrimaDatabase?>(null)
+    private val _database = MutableStateFlow<AppDatabase?>(null)
 
     /** Null until somebody signs in. Emits again on every profile switch. */
-    val database: StateFlow<PrimaDatabase?> = _database.asStateFlow()
+    val database: StateFlow<AppDatabase?> = _database.asStateFlow()
 
     /**
      * The database to act on right now.
@@ -55,7 +55,7 @@ class DatabaseProvider @Inject constructor(
      * screen that only exists behind sign-in, so a null here is a routing bug, and failing loudly
      * beats writing an operator's scans somewhere nobody will look for them.
      */
-    fun current(): PrimaDatabase =
+    fun current(): AppDatabase =
         _database.value ?: error("No profile is signed in; there is no database to use")
 
     fun switchTo(profileId: String) {
@@ -77,7 +77,7 @@ class DatabaseProvider @Inject constructor(
      * Nothing else should call it, and nothing may hold what it returns — the rule in this class's
      * header applies here with the usual force.
      */
-    fun forProfile(profileId: String): PrimaDatabase = openFor(profileId)
+    fun forProfile(profileId: String): AppDatabase = openFor(profileId)
 
     /**
      * Deletes a profile's database file and everything in it. Not undoable.
@@ -93,26 +93,26 @@ class DatabaseProvider @Inject constructor(
         context.deleteDatabase(UserProfileStore.databaseName(profileId))
     }
 
-    private fun openFor(profileId: String): PrimaDatabase = open.getOrPut(profileId) {
+    private fun openFor(profileId: String): AppDatabase = open.getOrPut(profileId) {
         Room.databaseBuilder(
             context,
-            PrimaDatabase::class.java,
+            AppDatabase::class.java,
             UserProfileStore.databaseName(profileId),
         ).addMigrations(
-            PrimaDatabase.MIGRATION_7_8,
-            PrimaDatabase.MIGRATION_8_9,
-            PrimaDatabase.MIGRATION_9_10,
-            PrimaDatabase.MIGRATION_10_11,
-            PrimaDatabase.MIGRATION_11_12,
-            PrimaDatabase.MIGRATION_12_13,
-            PrimaDatabase.MIGRATION_13_14,
-            PrimaDatabase.MIGRATION_14_15,
-            PrimaDatabase.MIGRATION_15_16,
-            PrimaDatabase.MIGRATION_16_17,
-            PrimaDatabase.MIGRATION_17_18,
-            PrimaDatabase.MIGRATION_18_19,
-            PrimaDatabase.MIGRATION_19_20,
-            PrimaDatabase.MIGRATION_20_21,
+            AppDatabase.MIGRATION_7_8,
+            AppDatabase.MIGRATION_8_9,
+            AppDatabase.MIGRATION_9_10,
+            AppDatabase.MIGRATION_10_11,
+            AppDatabase.MIGRATION_11_12,
+            AppDatabase.MIGRATION_12_13,
+            AppDatabase.MIGRATION_13_14,
+            AppDatabase.MIGRATION_14_15,
+            AppDatabase.MIGRATION_15_16,
+            AppDatabase.MIGRATION_16_17,
+            AppDatabase.MIGRATION_17_18,
+            AppDatabase.MIGRATION_18_19,
+            AppDatabase.MIGRATION_19_20,
+            AppDatabase.MIGRATION_20_21,
         ).build()
     }
 }

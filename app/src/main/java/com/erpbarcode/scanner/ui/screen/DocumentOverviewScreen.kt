@@ -29,12 +29,12 @@ import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.scanStatus
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.component.StatusProgressBar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import com.erpbarcode.scanner.ui.theme.uppercased
 import java.time.Instant
@@ -43,9 +43,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 private val dashDateFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
@@ -106,8 +106,8 @@ fun DocumentOverviewScreen(
         visibleDocs.filter { doc -> doc.lines.any { it.scanned > 0.0 } || doc.needsReview }
     }
     val listState = rememberLazyListState()
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = stringResource(R.string.overview_title),
             subtitle = stringResource(R.string.overview_subtitle),
             onBack = onBack,
@@ -122,7 +122,7 @@ fun DocumentOverviewScreen(
                     Icon(
                         Icons.Outlined.Tune,
                         contentDescription = stringResource(R.string.cd_filter),
-                        tint = if (filter.isActive) PrimaPalette.Coral else Color.White,
+                        tint = if (filter.isActive) AppPalette.Coral else Color.White,
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -131,14 +131,14 @@ fun DocumentOverviewScreen(
 
         PrimaryTabRow(
             selectedTabIndex = selectedTab,
-            containerColor = PrimaPalette.SlateAlt,
+            containerColor = AppPalette.SlateAlt,
             contentColor = Color.White,
             indicator = {
                 Box(
                     Modifier
                         .tabIndicatorOffset(selectedTab)
                         .height(2.dp)
-                        .background(PrimaPalette.Coral)
+                        .background(AppPalette.Coral)
                 )
             },
         ) {
@@ -155,7 +155,7 @@ fun DocumentOverviewScreen(
                             if (count > 0) {
                                 Box(
                                     Modifier.clip(RoundedCornerShape(4.dp))
-                                        .background(PrimaOnDark.Button)
+                                        .background(AppOnDark.Button)
                                         .padding(horizontal = 5.dp, vertical = 1.dp),
                                 ) {
                                     Text(count.toString(), style = monoLabel.copy(color = Color.White))
@@ -169,9 +169,9 @@ fun DocumentOverviewScreen(
         if (visibleDocs.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.CheckCircle, null, tint = PrimaStatus.Exact, modifier = Modifier.size(40.dp))
+                    Icon(Icons.Outlined.CheckCircle, null, tint = AppStatus.Exact, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.overview_no_issues), style = monoLabel.copy(color = PrimaPalette.Ink3))
+                    Text(stringResource(R.string.overview_no_issues), style = monoLabel.copy(color = AppPalette.Ink3))
                 }
             }
         } else {
@@ -185,7 +185,7 @@ fun DocumentOverviewScreen(
                         showErrorDetails = selectedTab == 0,
                         onClick = { if (selectedTab == 0 && doc.state is DocState.UploadFailed) onErrorTap(doc) else onDocTap(doc) },
                     )
-                    HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                    HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                 }
             }
         }
@@ -213,7 +213,7 @@ fun DocumentOverviewScreen(
                         modifier = Modifier
                             .fillMaxWidth().height(64.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (uploadableDocs.isNotEmpty()) PrimaPalette.Coral else PrimaPalette.Coral.copy(alpha = 0.35f))
+                            .background(if (uploadableDocs.isNotEmpty()) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
                             .clickable(enabled = uploadableDocs.isNotEmpty()) { onUpload(uploadableDocs) },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -235,7 +235,7 @@ fun DocumentOverviewScreen(
             confirmButton = {
                 Button(
                     onClick = { showClearErrorsDialog = false; onClearErrors() },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -274,7 +274,7 @@ private fun DashboardDocRow(doc: Document, showErrorDetails: Boolean = false, on
                     Text(
                         doc.documentNo,
                         style = monoLabel.copy(
-                            color = PrimaPalette.Ink,
+                            color = AppPalette.Ink,
                             fontWeight = FontWeight.Bold,
                             fontSize = (14 + sizeOffset).sp,
                         ),
@@ -286,8 +286,8 @@ private fun DashboardDocRow(doc: Document, showErrorDetails: Boolean = false, on
                     }
                 }
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(top = 2.dp)) {
-                    Text(doc.sourceCode, style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (12 + sizeOffset).sp))
-                    Text(dashDateFmt.format(doc.documentDate ?: doc.creationDateTime), style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (12 + sizeOffset).sp))
+                    Text(doc.sourceCode, style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (12 + sizeOffset).sp))
+                    Text(dashDateFmt.format(doc.documentDate ?: doc.creationDateTime), style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (12 + sizeOffset).sp))
                 }
             }
             if (doc.state == DocState.InProgress || doc.state == DocState.Completed) {
@@ -298,7 +298,7 @@ private fun DashboardDocRow(doc: Document, showErrorDetails: Boolean = false, on
                 Spacer(Modifier.height(8.dp))
                 Text(
                     doc.state.reason,
-                    style = monoLabel.copy(color = PrimaSignal.Danger, fontSize = (12 + sizeOffset).sp),
+                    style = monoLabel.copy(color = AppSignal.Danger, fontSize = (12 + sizeOffset).sp),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -324,7 +324,7 @@ private fun DashStateErrorChip() {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(PrimaSignal.Danger)
+            .background(AppSignal.Danger)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(stringResource(R.string.doc_chip_error).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))

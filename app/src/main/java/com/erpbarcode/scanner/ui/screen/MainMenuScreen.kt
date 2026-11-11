@@ -47,17 +47,17 @@ import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
 import com.erpbarcode.scanner.ui.component.DocumentStatsDashboard
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.component.StatusProgressBar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import com.erpbarcode.scanner.ui.theme.uppercased
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 data class DocTypeSummary(
     val type: DocumentType,
@@ -97,8 +97,8 @@ fun MainMenuScreen(
 ) {
     var showBlockedError by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = user?.displayName ?: stringResource(R.string.settings_not_signed_in),
             leading = {
                 Box(
@@ -106,7 +106,7 @@ fun MainMenuScreen(
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(if (user != null) PrimaPalette.Coral else PrimaOnDark.Button)
+                        .background(if (user != null) AppPalette.Coral else AppOnDark.Button)
                         .clickable(onClick = onUserInfoTap),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -147,8 +147,8 @@ fun MainMenuScreen(
                         .fillMaxWidth()
                         .height(IntrinsicSize.Min)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(PrimaPalette.SlateAlt)
-                        .border(1.dp, PrimaOnDark.Border, RoundedCornerShape(14.dp)),
+                        .background(AppPalette.SlateAlt)
+                        .border(1.dp, AppOnDark.Border, RoundedCornerShape(14.dp)),
                 ) {
                     Box(
                         modifier = Modifier
@@ -169,7 +169,7 @@ fun MainMenuScreen(
                         modifier = Modifier
                             .width(1.dp)
                             .fillMaxHeight()
-                            .background(PrimaOnDark.Subtle),
+                            .background(AppOnDark.Subtle),
                     )
                     Box(
                         modifier = Modifier
@@ -182,7 +182,7 @@ fun MainMenuScreen(
                         Text(
                             location?.code ?: "—",
                             style = monoLabel.copy(
-                                color = if (location != null) Color.White else PrimaOnDark.TextFaint,
+                                color = if (location != null) Color.White else AppOnDark.TextFaint,
                                 fontWeight = FontWeight.Medium,
                             ),
                             maxLines = 1,
@@ -202,7 +202,7 @@ fun MainMenuScreen(
                             modifier = Modifier
                                 .width(1.dp)
                                 .fillMaxHeight()
-                                .background(PrimaOnDark.Subtle),
+                                .background(AppOnDark.Subtle),
                         )
                         Box(
                             modifier = Modifier
@@ -215,7 +215,7 @@ fun MainMenuScreen(
                                 stringResource(env.labelRes),
                                 style = monoLabel.copy(
                                     color = when (env) {
-                                        ExtSystemEnvironment.TEST -> PrimaSignal.WarningOnDark
+                                        ExtSystemEnvironment.TEST -> AppSignal.WarningOnDark
                                         ExtSystemEnvironment.PRODUCTION -> Color.White
                                     },
                                     fontWeight = FontWeight.Medium,
@@ -229,7 +229,7 @@ fun MainMenuScreen(
             }
             item {
                 Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.main_documents_header), style = monoLabel.copy(color = PrimaPalette.Ink3))
+                Text(stringResource(R.string.main_documents_header), style = monoLabel.copy(color = AppPalette.Ink3))
             }
             // Every type starts switched off on a new installation, so this is the first thing a
             // fresh device shows. An empty list under the header would only look broken.
@@ -240,7 +240,7 @@ fun MainMenuScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color.White)
-                            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                             .padding(16.dp),
                     ) {
                         Text(
@@ -250,7 +250,7 @@ fun MainMenuScreen(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.main_no_doc_types_text),
-                            style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Ink3),
+                            style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Ink3),
                         )
                         Spacer(Modifier.height(12.dp))
                         Button(
@@ -283,7 +283,7 @@ fun MainMenuScreen(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.main_recordings_section_header),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
             item {
@@ -319,7 +319,7 @@ private fun RecordingsEntryRow(documentCount: Int, scanCount: Int, onClick: () -
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -328,9 +328,9 @@ private fun RecordingsEntryRow(documentCount: Int, scanCount: Int, onClick: () -
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(PrimaPalette.CreamAlt),
+                .background(AppPalette.CreamAlt),
             contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Outlined.Checklist, contentDescription = null, tint = PrimaPalette.Slate) }
+        ) { Icon(Icons.Outlined.Checklist, contentDescription = null, tint = AppPalette.Slate) }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -340,7 +340,7 @@ private fun RecordingsEntryRow(documentCount: Int, scanCount: Int, onClick: () -
             Spacer(Modifier.height(2.dp))
             Text(
                 stringResource(R.string.main_recordings_scans, scanCount),
-                style = monoLabel.copy(color = PrimaPalette.Ink3),
+                style = monoLabel.copy(color = AppPalette.Ink3),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -352,7 +352,7 @@ private fun RecordingsEntryRow(documentCount: Int, scanCount: Int, onClick: () -
                 fontFamily = com.erpbarcode.scanner.ui.theme.GeistMono,
                 // Greyed at zero, same as a document-type row, so "nothing here" reads as nothing
                 // rather than as a number worth looking at.
-                color = if (documentCount > 0) PrimaPalette.Ink else PrimaPalette.Ink4,
+                color = if (documentCount > 0) AppPalette.Ink else AppPalette.Ink4,
                 fontWeight = FontWeight.Medium,
             ),
         )
@@ -379,7 +379,7 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -388,9 +388,9 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(PrimaPalette.CreamAlt),
+                .background(AppPalette.CreamAlt),
             contentAlignment = Alignment.Center,
-        ) { Icon(icon, contentDescription = null, tint = PrimaPalette.Slate) }
+        ) { Icon(icon, contentDescription = null, tint = AppPalette.Slate) }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(summary.type.localizedDisplay().uppercased, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium))
@@ -404,7 +404,7 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
             summary.count.toString(),
             style = MaterialTheme.typography.titleMedium.copy(
                 fontFamily = com.erpbarcode.scanner.ui.theme.GeistMono,
-                color = if (summary.count > 0) PrimaPalette.Ink else PrimaPalette.Ink4,
+                color = if (summary.count > 0) AppPalette.Ink else AppPalette.Ink4,
                 fontWeight = FontWeight.Medium,
             ),
         )

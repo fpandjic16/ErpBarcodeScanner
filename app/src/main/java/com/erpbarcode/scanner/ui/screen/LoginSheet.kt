@@ -35,13 +35,13 @@ import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
 import com.erpbarcode.scanner.ui.component.CameraPreview
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppSignal
 
 /**
  * Puts the window in resize-on-keyboard mode.
@@ -176,8 +176,8 @@ fun LoginSheet(
         }
         // Box so the camera overlay below can sit on top of the form rather than beside it.
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-                PrimaTopBar(
+            Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+                AppTopBar(
                     title = stringResource(R.string.login_title),
                     onBack = onDismiss,
                 )
@@ -249,7 +249,7 @@ fun LoginSheet(
 
                     errorMessage?.let {
                         Spacer(Modifier.height(8.dp))
-                        Text(it, style = monoLabel, color = PrimaSignal.Danger)
+                        Text(it, style = monoLabel, color = AppSignal.Danger)
                     }
 
                     Spacer(Modifier.height(20.dp))

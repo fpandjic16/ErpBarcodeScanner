@@ -45,19 +45,19 @@ import com.erpbarcode.scanner.data.model.ScanRecord
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.formatQty
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 private val scanTimeFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM. HH:mm").withZone(ZoneId.systemDefault())
@@ -91,8 +91,8 @@ fun RecordingsTreeScreen(
         document.orphanedScans.map { it to false } + document.sentOrphanedScans.map { it to true }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(
             title = document.documentNo,
             subtitle = document.type.localizedDisplay(),
             onBack = onBack,
@@ -110,7 +110,7 @@ fun RecordingsTreeScreen(
             ) {
                 Text(
                     stringResource(R.string.recordings_tree_empty),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
         } else {
@@ -139,7 +139,7 @@ fun RecordingsTreeScreen(
                             Text(
                                 stringResource(R.string.recordings_tree_no_scans),
                                 style = monoLabel.copy(
-                                    color = PrimaPalette.Ink4,
+                                    color = AppPalette.Ink4,
                                     fontSize = (11 + sizeOffset).sp,
                                 ),
                                 modifier = Modifier.padding(start = 38.dp, top = 6.dp, bottom = 8.dp),
@@ -147,7 +147,7 @@ fun RecordingsTreeScreen(
                         }
                     }
                     item(key = "div-${branch.line.lineNo}") {
-                        HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+                        HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
                     }
                 }
 
@@ -156,13 +156,13 @@ fun RecordingsTreeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(PrimaStatus.EmptyBg)
+                                .background(AppStatus.EmptyBg)
                                 .padding(horizontal = 18.dp, vertical = 10.dp),
                         ) {
                             Text(
                                 stringResource(R.string.recordings_tree_orphans),
                                 style = monoLabel.copy(
-                                    color = PrimaStatus.EmptyInk,
+                                    color = AppStatus.EmptyInk,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = (13 + sizeOffset).sp,
                                 ),
@@ -170,7 +170,7 @@ fun RecordingsTreeScreen(
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 stringResource(R.string.recordings_tree_orphans_desc),
-                                style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
+                                style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                             )
                         }
                     }
@@ -195,7 +195,7 @@ fun RecordingsTreeScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDelete = null; onDeleteScan(scan) },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -225,7 +225,7 @@ fun RecordingsTreeScreen(
                     if (document.sentScans > 0) {
                         Text(
                             stringResource(R.string.doc_delete_recordings_kept, document.sentScans),
-                            color = PrimaPalette.Ink3,
+                            color = AppPalette.Ink3,
                         )
                     }
                 }
@@ -233,7 +233,7 @@ fun RecordingsTreeScreen(
             confirmButton = {
                 Button(
                     onClick = { confirmDeleteAll = false; onDeleteAllQueued() },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaSignal.Danger),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                 ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -262,7 +262,7 @@ private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color.White)
-                .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+                .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
                 .pointerInput(onLongHold) {
                     detectTapGestures(
                         onPress = {
@@ -288,7 +288,7 @@ private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
                 Text(
                     document.totalScans.toString(),
                     style = monoLabel.copy(
-                        color = PrimaPalette.Ink,
+                        color = AppPalette.Ink,
                         fontWeight = FontWeight.Bold,
                         fontSize = (20 + sizeOffset).sp,
                     ),
@@ -301,18 +301,18 @@ private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text(
                 stringResource(R.string.recordings_tree_hold_hint),
-                style = monoLabel.copy(color = PrimaPalette.Ink4, fontSize = (11 + sizeOffset).sp),
+                style = monoLabel.copy(color = AppPalette.Ink4, fontSize = (11 + sizeOffset).sp),
             )
         }
         if (holdProgress > 0f) {
             Box(
-                modifier = Modifier.matchParentSize().background(PrimaLine.Overlay, RoundedCornerShape(14.dp)),
+                modifier = Modifier.matchParentSize().background(AppLine.Overlay, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
                     progress = { holdProgress },
-                    color = PrimaPalette.Coral,
-                    trackColor = PrimaOnDark.Track,
+                    color = AppPalette.Coral,
+                    trackColor = AppOnDark.Track,
                     modifier = Modifier.size(40.dp),
                 )
             }
@@ -326,13 +326,13 @@ private fun SentChip(count: Int) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(PrimaStatus.ExactBg)
+            .background(AppStatus.ExactBg)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
             stringResource(R.string.recordings_sent_chip, count),
             style = monoLabel.copy(
-                color = PrimaStatus.ExactInk,
+                color = AppStatus.ExactInk,
                 fontWeight = FontWeight.Medium,
                 fontSize = (11 + sizeOffset).sp,
             ),
@@ -362,7 +362,7 @@ private fun LineBranchRow(branch: LineScans) {
             Text(
                 line.item.no,
                 style = monoLabel.copy(
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                     fontWeight = FontWeight.Bold,
                     fontSize = (13 + sizeOffset).sp,
                 ),
@@ -372,7 +372,7 @@ private fun LineBranchRow(branch: LineScans) {
             if (line.item.name.isNotBlank()) {
                 Text(
                     line.item.name,
-                    style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
+                    style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -407,25 +407,25 @@ private fun OrphanLeafRow(orphan: OrphanedScan, sent: Boolean) {
             .padding(start = 22.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(PrimaStatus.Empty.copy(alpha = 0.35f)))
+        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(AppStatus.Empty.copy(alpha = 0.35f)))
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
             Text(
                 orphan.barcodeNo,
-                style = monoLabel.copy(color = PrimaPalette.Ink, fontSize = (13 + sizeOffset).sp),
+                style = monoLabel.copy(color = AppPalette.Ink, fontSize = (13 + sizeOffset).sp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 orphan.at?.let { scanTimeFmt.format(it) }.orEmpty(),
-                style = monoLabel.copy(color = PrimaPalette.Ink4, fontSize = (11 + sizeOffset).sp),
+                style = monoLabel.copy(color = AppPalette.Ink4, fontSize = (11 + sizeOffset).sp),
             )
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 "${orphan.quantity.formatQty()} ${orphan.unitOfMeasureCode}".trim(),
                 style = monoLabel.copy(
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                     fontWeight = FontWeight.Medium,
                     fontSize = (13 + sizeOffset).sp,
                 ),
@@ -434,7 +434,7 @@ private fun OrphanLeafRow(orphan: OrphanedScan, sent: Boolean) {
                 if (sent) stringResource(R.string.recordings_tree_sent)
                 else stringResource(R.string.recordings_tree_queued),
                 style = monoLabel.copy(
-                    color = if (sent) PrimaStatus.ExactInk else PrimaPalette.Ink3,
+                    color = if (sent) AppStatus.ExactInk else AppPalette.Ink3,
                     fontSize = (11 + sizeOffset).sp,
                 ),
             )
@@ -460,13 +460,13 @@ private fun ScanLeafRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The connector that makes this read as a child of the line above it.
-        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(PrimaLine.CardBorder))
+        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(AppLine.CardBorder))
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     scan.quantity.formatQty(),
                     style = monoLabel.copy(
-                        color = PrimaPalette.Ink,
+                        color = AppPalette.Ink,
                         fontWeight = FontWeight.Medium,
                         fontSize = (13 + sizeOffset).sp,
                     ),
@@ -475,7 +475,7 @@ private fun ScanLeafRow(
                     Spacer(Modifier.width(4.dp))
                     Text(
                         unitOfMeasureCode,
-                        style = monoLabel.copy(color = PrimaPalette.Ink3, fontSize = (11 + sizeOffset).sp),
+                        style = monoLabel.copy(color = AppPalette.Ink3, fontSize = (11 + sizeOffset).sp),
                     )
                 }
                 Spacer(Modifier.width(10.dp))
@@ -483,7 +483,7 @@ private fun ScanLeafRow(
                     if (scan.sent) stringResource(R.string.recordings_tree_sent)
                     else stringResource(R.string.recordings_tree_queued),
                     style = monoLabel.copy(
-                        color = if (scan.sent) PrimaStatus.ExactInk else PrimaPalette.Ink3,
+                        color = if (scan.sent) AppStatus.ExactInk else AppPalette.Ink3,
                         fontSize = (11 + sizeOffset).sp,
                     ),
                 )
@@ -491,7 +491,7 @@ private fun ScanLeafRow(
             Spacer(Modifier.height(2.dp))
             Text(
                 scan.at?.let { scanTimeFmt.format(it) }.orEmpty(),
-                style = monoLabel.copy(color = PrimaPalette.Ink4, fontSize = (11 + sizeOffset).sp),
+                style = monoLabel.copy(color = AppPalette.Ink4, fontSize = (11 + sizeOffset).sp),
             )
         }
         // A sent scan keeps the slot but answers the tap with an explanation instead of a delete;
@@ -505,7 +505,7 @@ private fun ScanLeafRow(
             Icon(
                 if (scan.sent) Icons.Outlined.Lock else Icons.Outlined.Delete,
                 contentDescription = null,
-                tint = if (scan.sent) PrimaPalette.Ink4 else PrimaSignal.Danger,
+                tint = if (scan.sent) AppPalette.Ink4 else AppSignal.Danger,
                 modifier = Modifier.size(20.dp),
             )
         }

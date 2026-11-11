@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.addTextChangedListener
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaOnDark
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 /**
  * Manual barcode entry, plus the camera fallback, without ever auto-opening the on-screen
@@ -69,8 +69,8 @@ fun ScanField(
     // Distinguishes deliberate manual typing (keyboard shown) from a scanner burst.
     val manualTyping = remember { mutableStateOf(false) }
 
-    val textColor = (if (dark) Color.White else PrimaPalette.Ink).toArgb()
-    val hintColor = (if (dark) PrimaOnDark.TextFaint else PrimaPalette.Ink4).toArgb()
+    val textColor = (if (dark) Color.White else AppPalette.Ink).toArgb()
+    val hintColor = (if (dark) AppOnDark.TextFaint else AppPalette.Ink4).toArgb()
 
     val editText = remember {
         EditText(context).apply {
@@ -139,8 +139,8 @@ fun ScanField(
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    val bg = if (dark) PrimaOnDark.Fill else PrimaPalette.Cream
-    val borderColor = if (dark) PrimaOnDark.Border else PrimaLine.CardBorder
+    val bg = if (dark) AppOnDark.Fill else AppPalette.Cream
+    val borderColor = if (dark) AppOnDark.Border else AppLine.CardBorder
 
     Row(
         modifier = modifier
@@ -165,14 +165,14 @@ fun ScanField(
             modifier = Modifier
                 .size(32.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (dark) PrimaOnDark.Button else PrimaPalette.CreamAlt)
+                .background(if (dark) AppOnDark.Button else AppPalette.CreamAlt)
                 .clickable { showKeyboard() },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Keyboard,
                 contentDescription = stringResource(R.string.cd_show_keyboard),
-                tint = if (dark) Color.White else PrimaPalette.Slate,
+                tint = if (dark) Color.White else AppPalette.Slate,
             )
         }
         if (showCamera) {
@@ -181,7 +181,7 @@ fun ScanField(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (dark) PrimaPalette.Coral else PrimaPalette.Slate)
+                    .background(if (dark) AppPalette.Coral else AppPalette.Slate)
                     .clickable(onClick = onCameraTap),
                 contentAlignment = Alignment.Center,
             ) {

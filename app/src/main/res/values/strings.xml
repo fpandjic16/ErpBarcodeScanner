@@ -132,7 +132,7 @@
     <string name="login_show_password">Show password</string>
     <string name="login_hide_password">Hide password</string>
     <string name="login_footer">Credentials stored encrypted with AES-256-GCM for %s.</string>
-    <string name="login_username_hint">e.g. user@prima</string>
+    <string name="login_username_hint">e.g. user@domain</string>
     <plurals name="login_ttl_hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
@@ -230,7 +230,7 @@
     <string name="ext_config_test_ok">NTLM authentication succeeded and the server responded.</string>
     <string name="ext_config_connection_ok">Connection OK</string>
     <string name="ext_config_connection_failed">Connection failed</string>
-    <string name="ext_config_domain_hint">e.g. PRIMA (leave blank if none)</string>
+    <string name="ext_config_domain_hint">e.g. COMPANY (leave blank if none)</string>
     <!-- Settings (audit additions) -->
     <string name="settings_exit_dialog_text">Save your settings before leaving?</string>
     <string name="settings_insert_defaults_dialog_title">Insert system defaults</string>

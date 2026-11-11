@@ -24,7 +24,7 @@ object DataWedgeManager {
 
     fun configure(context: Context) {
         context.sendBroadcast(Intent(DW_ACTION).apply {
-            putExtra("com.symbol.datawedge.api.CREATE_PROFILE", "PrimaBarcode")
+            putExtra("com.symbol.datawedge.api.CREATE_PROFILE", "Prima Barcode")
         })
 
         val appBundle = Bundle().apply {
@@ -75,7 +75,7 @@ object DataWedgeManager {
 
         context.sendBroadcast(Intent(DW_ACTION).apply {
             putExtra("com.symbol.datawedge.api.SET_CONFIG", Bundle().apply {
-                putString("PROFILE_NAME",    "PrimaBarcode")
+                putString("PROFILE_NAME",    "Prima Barcode")
                 putString("PROFILE_ENABLED", "true")
                 putString("CONFIG_MODE",     "UPDATE")
                 putParcelableArray("APP_LIST", arrayOf(appBundle))

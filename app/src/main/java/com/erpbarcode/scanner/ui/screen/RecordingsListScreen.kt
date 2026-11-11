@@ -24,13 +24,13 @@ import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.scanStatus
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.GeistMono
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaStatus
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoLabel
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 /**
  * Every document on this device that carries a scan, newest first.
@@ -49,8 +49,8 @@ fun RecordingsListScreen(
     onBack: () -> Unit,
     onDocumentTap: (Document) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize().background(PrimaPalette.Cream)) {
-        PrimaTopBar(title = stringResource(R.string.main_recordings_header), onBack = onBack)
+    Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
+        AppTopBar(title = stringResource(R.string.main_recordings_header), onBack = onBack)
 
         if (docs.isEmpty()) {
             // Reachable two ways: the row that opens this screen stays on the main menu at zero,
@@ -61,7 +61,7 @@ fun RecordingsListScreen(
             ) {
                 Text(
                     stringResource(R.string.recordings_list_empty),
-                    style = monoLabel.copy(color = PrimaPalette.Ink3),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
                 )
             }
         } else {
@@ -89,7 +89,7 @@ private fun RecordedDocumentRow(doc: Document, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .border(1.dp, PrimaLine.CardBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -99,14 +99,14 @@ private fun RecordedDocumentRow(doc: Document, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 doc.documentNo,
-                style = monoLabel.copy(color = PrimaPalette.Ink, fontWeight = FontWeight.Bold),
+                style = monoLabel.copy(color = AppPalette.Ink, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 doc.type.localizedDisplay(),
-                style = monoLabel.copy(color = PrimaPalette.Ink3),
+                style = monoLabel.copy(color = AppPalette.Ink3),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -117,14 +117,14 @@ private fun RecordedDocumentRow(doc: Document, onClick: () -> Unit) {
                 doc.totalScans.toString(),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = GeistMono,
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                     fontWeight = FontWeight.Medium,
                 ),
             )
             if (doc.sentScans > 0) {
                 Text(
                     stringResource(R.string.recordings_sent_chip, doc.sentScans),
-                    style = monoLabel.copy(color = PrimaStatus.ExactInk),
+                    style = monoLabel.copy(color = AppStatus.ExactInk),
                 )
             }
         }

@@ -123,7 +123,7 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
          * `userId`.
          *
          * Upper case, domain removed. The same person reaches the same data whether they type
-         * `alice`, `PRIMA\alice` or `alice@prima.hr` — which they did not before: `User.id` was
+         * `alice`, `DOMAIN\alice` or `alice@example.com` — which they did not before: `User.id` was
          * the raw typed string, so one person could end up with three identities and, under
          * per-profile storage, three separate databases.
          *
@@ -144,7 +144,7 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
          */
         fun databaseName(id: String): String {
             val hash = MessageDigest.getInstance("SHA-256").digest(id.toByteArray()).toHex()
-            return "prima_${hash.take(16)}.db"
+            return "user_${hash.take(16)}.db"
         }
 
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }

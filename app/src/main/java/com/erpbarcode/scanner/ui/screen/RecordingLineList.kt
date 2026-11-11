@@ -29,8 +29,8 @@ import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.formatQty
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoCounter
 import com.erpbarcode.scanner.ui.theme.monoLabel
 
@@ -57,7 +57,7 @@ internal fun OverviewContent(
                 highlight = if (line.lineNo == highlightedLineNo) highlightAlpha() else 0f,
                 onClick = { onLineTap(line) },
             )
-            HorizontalDivider(color = PrimaLine.Divider, thickness = 1.dp)
+            HorizontalDivider(color = AppLine.Divider, thickness = 1.dp)
         }
     }
 }
@@ -103,7 +103,7 @@ internal fun BigNumberLineRow(line: Line, highlight: Float = 0f, onClick: () -> 
                 itemText,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = (15 + sizeOffset).sp,
-                    color = if (line.status == LineStatus.EMPTY) PrimaPalette.Ink2 else PrimaPalette.Ink,
+                    color = if (line.status == LineStatus.EMPTY) AppPalette.Ink2 else AppPalette.Ink,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

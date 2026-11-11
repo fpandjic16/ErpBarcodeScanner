@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 
 /**
  * Always-docked slate bar at the bottom of the Recording screen.
@@ -19,7 +19,7 @@ fun ScanBar(
     onScan: (String) -> Unit,
     onCameraTap: () -> Unit,
     modifier: Modifier = Modifier,
-    containerColor: Color = PrimaPalette.Slate,
+    containerColor: Color = AppPalette.Slate,
     showCamera: Boolean = true,
 ) {
     Column(

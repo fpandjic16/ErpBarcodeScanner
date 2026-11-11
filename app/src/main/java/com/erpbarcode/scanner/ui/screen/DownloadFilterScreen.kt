@@ -35,9 +35,9 @@ import com.erpbarcode.scanner.data.model.DownloadFilter
 import com.erpbarcode.scanner.data.model.InventoryBatch
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
-import com.erpbarcode.scanner.ui.component.PrimaTopBar
+import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
+import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import java.time.Instant
 import java.time.LocalDate
@@ -46,7 +46,7 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaLine
+import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val dlDateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -145,10 +145,10 @@ fun DownloadFilterScreen(
 
     Column(modifier = Modifier
         .fillMaxSize()
-        .background(PrimaPalette.Cream)
+        .background(AppPalette.Cream)
         .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus(); keyboardController?.hide() } }
     ) {
-        PrimaTopBar(
+        AppTopBar(
             title    = stringResource(R.string.download_title),
             subtitle = docType?.localizedDisplay() ?: stringResource(R.string.download_subtitle),
             onBack   = onCancel,
@@ -206,13 +206,13 @@ fun DownloadFilterScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (selectedLocation != null) PrimaPalette.Teal else PrimaPalette.CreamAlt),
+                                    .background(if (selectedLocation != null) AppPalette.Teal else AppPalette.CreamAlt),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.Outlined.LocationOn,
                                     contentDescription = null,
-                                    tint = if (selectedLocation != null) Color.White else PrimaPalette.Ink3,
+                                    tint = if (selectedLocation != null) Color.White else AppPalette.Ink3,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -240,13 +240,13 @@ fun DownloadFilterScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (selectedRc != null) PrimaPalette.Slate else PrimaPalette.CreamAlt),
+                                    .background(if (selectedRc != null) AppPalette.Slate else AppPalette.CreamAlt),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = selectedRc?.let { it.short ?: it.code.take(2) } ?: "—",
                                     style = monoLabel.copy(
-                                        color = if (selectedRc != null) Color.White else PrimaPalette.Ink3,
+                                        color = if (selectedRc != null) Color.White else AppPalette.Ink3,
                                         fontWeight = FontWeight.Medium,
                                     ),
                                 )
@@ -283,7 +283,7 @@ fun DownloadFilterScreen(
                 // Signed out, OK is how the sign-in is reached, so it stays enabled.
                 enabled = !stockCount || !signedIn || selectedBatchNo != null,
                 modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaPalette.Coral),
+                colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Coral),
             ) { Text(stringResource(R.string.btn_ok), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium)) }
         }
     }
@@ -372,7 +372,7 @@ fun DownloadFilterScreen(
 @Composable
 private fun DlFilterSection(label: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = monoLabel.copy(color = PrimaPalette.Ink3, fontWeight = FontWeight.Medium))
+        Text(label, style = monoLabel.copy(color = AppPalette.Ink3, fontWeight = FontWeight.Medium))
         content()
     }
 }
@@ -399,13 +399,13 @@ private fun InventoryBatchAvatar(selected: Boolean) {
         modifier = Modifier
             .size(40.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) PrimaPalette.Teal else PrimaPalette.CreamAlt),
+            .background(if (selected) AppPalette.Teal else AppPalette.CreamAlt),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             Icons.Outlined.Inventory,
             contentDescription = null,
-            tint = if (selected) Color.White else PrimaPalette.Ink3,
+            tint = if (selected) Color.White else AppPalette.Ink3,
             modifier = Modifier.size(20.dp),
         )
     }
@@ -461,7 +461,7 @@ private fun InventoryBatchSelector(
             )
         }
         if (error != null) {
-            Text(error, style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Coral))
+            Text(error, style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Coral))
             OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
         }
     }
@@ -497,7 +497,7 @@ private fun InventoryBatchPickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = PrimaPalette.Cream,
+        containerColor = AppPalette.Cream,
     ) {
         Column(
             modifier = Modifier
@@ -520,7 +520,7 @@ private fun InventoryBatchPickerSheet(
                             Icon(
                                 Icons.Outlined.Refresh,
                                 contentDescription = stringResource(R.string.lrc_refresh_list),
-                                tint = PrimaPalette.Ink2,
+                                tint = AppPalette.Ink2,
                             )
                         }
                     }
@@ -530,7 +530,7 @@ private fun InventoryBatchPickerSheet(
             if (error != null) {
                 Text(
                     error,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = PrimaPalette.Coral),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Coral),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -542,7 +542,7 @@ private fun InventoryBatchPickerSheet(
                     Text(
                         if (batches.isEmpty()) stringResource(R.string.download_inventory_batches_empty)
                         else stringResource(R.string.lrc_no_results),
-                        style = monoLabel.copy(color = PrimaPalette.Ink3),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
                     )
                 }
             } else {
@@ -565,7 +565,7 @@ private fun InventoryBatchPickerSheet(
                         if (index < filtered.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                color = PrimaLine.Divider,
+                                color = AppLine.Divider,
                             )
                         }
                     }
@@ -591,16 +591,16 @@ private fun InventoryBatchSelectRow(batch: InventoryBatch, selected: Boolean, on
                 batch.title,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    color = PrimaPalette.Ink,
+                    color = AppPalette.Ink,
                 ),
             )
-            Text(batch.details(), style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(batch.details(), style = monoLabel.copy(color = AppPalette.Ink3))
         }
         if (selected) {
             Icon(
                 Icons.Outlined.Check,
                 contentDescription = null,
-                tint = PrimaPalette.Teal,
+                tint = AppPalette.Teal,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -619,7 +619,7 @@ private fun DlDateChip(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
-            .border(1.dp, PrimaLine.InputBorder, RoundedCornerShape(8.dp))
+            .border(1.dp, AppLine.InputBorder, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             // 48 dp tall, and no right padding: the clear button below brings its own 48 dp.
             // Until 3.6.29 this was 10 dp all round, about 36 dp tall, with a 14 dp clear icon.
@@ -628,10 +628,10 @@ private fun DlDateChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(Icons.Outlined.CalendarMonth, null, tint = PrimaPalette.Ink3, modifier = Modifier.size(15.dp))
+        Icon(Icons.Outlined.CalendarMonth, null, tint = AppPalette.Ink3, modifier = Modifier.size(15.dp))
         Text(
             text = value ?: label,
-            style = monoLabel.copy(color = if (value != null) PrimaPalette.Ink else PrimaPalette.Ink3),
+            style = monoLabel.copy(color = if (value != null) AppPalette.Ink else AppPalette.Ink3),
             modifier = Modifier.weight(1f),
         )
         if (value != null) {
@@ -646,7 +646,7 @@ private fun DlDateChip(
                 Icon(
                     Icons.Outlined.Clear,
                     contentDescription = stringResource(R.string.cd_clear),
-                    tint = PrimaPalette.Ink3,
+                    tint = AppPalette.Ink3,
                     modifier = Modifier.size(14.dp),
                 )
             }

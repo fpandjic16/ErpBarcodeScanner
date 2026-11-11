@@ -19,9 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.PrimaLine
-import com.erpbarcode.scanner.ui.theme.PrimaPalette
-import com.erpbarcode.scanner.ui.theme.PrimaSignal
+import com.erpbarcode.scanner.ui.theme.AppLine
+import com.erpbarcode.scanner.ui.theme.AppPalette
+import com.erpbarcode.scanner.ui.theme.AppSignal
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import com.erpbarcode.scanner.ui.theme.uppercased
 
@@ -38,7 +38,7 @@ internal fun SettingsSectionHeader(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
-        style = monoLabel.copy(color = PrimaPalette.Ink3),
+        style = monoLabel.copy(color = AppPalette.Ink3),
     )
 }
 
@@ -48,10 +48,10 @@ internal fun SettingsIcon(icon: ImageVector) {
         modifier = Modifier
             .size(40.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(PrimaPalette.CreamAlt),
+            .background(AppPalette.CreamAlt),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = PrimaPalette.Slate, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = AppPalette.Slate, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -59,7 +59,7 @@ internal fun SettingsIcon(icon: ImageVector) {
 internal fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 74.dp),
-        color = PrimaLine.Divider,
+        color = AppLine.Divider,
     )
 }
 
@@ -70,13 +70,13 @@ internal fun SettingsRowText(label: String, description: String, modifier: Modif
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                color = PrimaPalette.Ink,
+                color = AppPalette.Ink,
                 fontWeight = FontWeight.Normal,
             ),
         )
         Text(
             description,
-            style = monoLabel.copy(color = PrimaPalette.Ink3),
+            style = monoLabel.copy(color = AppPalette.Ink3),
         )
     }
 }
@@ -112,7 +112,7 @@ internal fun SettingsNavRow(icon: ImageVector, label: String, description: Strin
         Icon(
             Icons.Outlined.ChevronRight,
             contentDescription = null,
-            tint = PrimaPalette.Ink4,
+            tint = AppPalette.Ink4,
             modifier = Modifier.size(18.dp),
         )
     }
@@ -132,23 +132,23 @@ internal fun SettingsDangerRow(label: String, description: String, onClick: () -
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(PrimaSignal.DangerBg),
+                .background(AppSignal.DangerBg),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = PrimaSignal.Danger, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = AppSignal.Danger, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 label,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = PrimaSignal.Danger,
+                    color = AppSignal.Danger,
                     fontWeight = FontWeight.Medium,
                 ),
             )
             Text(
                 description,
-                style = monoLabel.copy(color = PrimaPalette.Ink3),
+                style = monoLabel.copy(color = AppPalette.Ink3),
             )
         }
     }
@@ -166,7 +166,7 @@ internal fun SettingsChoiceChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) PrimaPalette.Slate else PrimaPalette.CreamAlt)
+            .background(if (selected) AppPalette.Slate else AppPalette.CreamAlt)
             .clickable(onClick = onClick)
             .padding(contentPadding),
         contentAlignment = Alignment.Center,
@@ -174,7 +174,7 @@ internal fun SettingsChoiceChip(
         Text(
             label,
             style = monoLabel.copy(
-                color = if (selected) Color.White else PrimaPalette.Ink2,
+                color = if (selected) Color.White else AppPalette.Ink2,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             ),
         )
@@ -208,7 +208,7 @@ internal fun SettingsToggleRow(
                 Text(
                     label,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = PrimaPalette.Ink,
+                        color = AppPalette.Ink,
                         fontWeight = FontWeight.Normal,
                     ),
                 )
@@ -216,20 +216,20 @@ internal fun SettingsToggleRow(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(PrimaPalette.CreamAlt)
+                            .background(AppPalette.CreamAlt)
                             .padding(horizontal = 5.dp, vertical = 2.dp),
                     ) {
                         Text(
                             stringResource(R.string.settings_coming_soon),
                             style = monoLabel.copy(
-                                color = PrimaPalette.Ink3,
+                                color = AppPalette.Ink3,
                                 fontWeight = FontWeight.Medium,
                             ),
                         )
                     }
                 }
             }
-            Text(description, style = monoLabel.copy(color = PrimaPalette.Ink3))
+            Text(description, style = monoLabel.copy(color = AppPalette.Ink3))
         }
         Spacer(Modifier.width(12.dp))
         Switch(
@@ -237,7 +237,7 @@ internal fun SettingsToggleRow(
             onCheckedChange = onCheckedChange,
             enabled = !comingSoon,
             colors = SwitchDefaults.colors(
-                checkedTrackColor = PrimaPalette.Slate,
+                checkedTrackColor = AppPalette.Slate,
                 checkedThumbColor = Color.White,
             ),
         )
@@ -254,7 +254,7 @@ internal fun SettingsConfirmDialog(title: String, text: String, onConfirm: () ->
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(contentColor = PrimaSignal.Danger),
+                colors = ButtonDefaults.textButtonColors(contentColor = AppSignal.Danger),
             ) { Text(stringResource(R.string.btn_clear)) }
         },
         dismissButton = {

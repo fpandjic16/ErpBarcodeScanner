@@ -12,7 +12,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class PrimaBarcodeApplication : Application() {
+class BarcodeApplication : Application() {
 
     @Inject lateinit var appSettingsStore: AppSettingsStore
 
@@ -20,27 +20,9 @@ class PrimaBarcodeApplication : Application() {
         super.onCreate()   // Hilt injects appSettingsStore here, before it's read below.
         Timber.plant(Timber.DebugTree())
         applySavedLanguage()
-        discardPreSplitDatabase()
-    }
-
-    /**
-     * Removes the single database this app had before its data was split per operator.
-     *
-     * Everything used to live in `prima_barcode.db`. Operators now get one file each, named from
-     * a hash of their id, so nothing opens that name any more: the migration chain never runs on
-     * it and every row in it is unreachable. Left alone it would sit on every upgraded device for
-     * good, and the next person reading the databases directory would have to work out which of
-     * the files still counts.
-     *
-     * Deliberately a delete and not a rescue. Nothing shipped under the old shape, so a new
-     * version starts from a clean slate — a decision, not an oversight. If that file ever holds
-     * work worth keeping, this is the wrong function and it has to become a carry-over instead.
-     *
-     * Off the main thread, and self-limiting: after the first launch there is nothing left to
-     * delete. `deleteDatabase` takes the `-wal` and `-shm` files with it.
-     */
-    private fun discardPreSplitDatabase() {
-        Thread { deleteDatabase(PRE_SPLIT_DATABASE) }.start()
+        // The cleanup of the single pre-operator database that used to run here went with the
+        // change of application id in 3.6.48: a new id starts with an empty data directory, so
+        // that file can no longer exist.
     }
 
     /**
@@ -75,10 +57,5 @@ class PrimaBarcodeApplication : Application() {
             if (!AppCompatDelegate.getApplicationLocales().isEmpty) return
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language.tag))
         }
-    }
-
-    private companion object {
-        /** The one database this app had before `DatabaseProvider` gave every operator their own. */
-        const val PRE_SPLIT_DATABASE = "prima_barcode.db"
     }
 }
