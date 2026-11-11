@@ -86,6 +86,7 @@ import com.prima.barcode.ui.viewmodel.AppViewModel
 import com.prima.barcode.ui.viewmodel.RecordingViewModel
 import com.prima.barcode.ui.viewmodel.RecordingsTreeViewModel
 import com.prima.barcode.navigation.DebugUrlsDialog
+import com.prima.barcode.navigation.Routes
 import com.prima.barcode.navigation.DownloadErrorDialog
 import com.prima.barcode.navigation.ProcessingDialog
 import com.prima.barcode.navigation.SwitchBlockedDialog
@@ -563,11 +564,11 @@ private fun PrimaBarcodeApp(
     // of operator. Without this the next person lands wherever the last one left off — typically a
     // document route they have no copy of, which renders as a blank screen.
     LaunchedEffect(profile?.id) {
-        nav.popBackStack("main", inclusive = false)
+        nav.popBackStack(Routes.MAIN, inclusive = false)
     }
 
-    NavHost(navController = nav, startDestination = "main") {
-        composable("main") {
+    NavHost(navController = nav, startDestination = Routes.MAIN) {
+        composable(Routes.MAIN) {
             MainMenuScreen(
                 user = user,
                 location = location,
@@ -580,23 +581,23 @@ private fun PrimaBarcodeApp(
                 shiftReady = readyDocs.size,
                 shiftPartial = partialDocs.size,
                 shiftOver = overDocs.size,
-                onChangeLocationRc = { nav.navigate("location_rc_pick") },
-                onOpenSettings = { nav.navigate("settings") },
-                onOpenExtSystemConfig = { nav.navigate("ext_system_config") },
+                onChangeLocationRc = { nav.navigate(Routes.LOCATION_RC_PICK) },
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+                onOpenExtSystemConfig = { nav.navigate(Routes.EXT_SYSTEM_CONFIG) },
                 onTypeTap = { type ->
                     selectedDocType = type
-                    nav.navigate("docs")
+                    nav.navigate(Routes.DOCS)
                 },
-                onDocumentOverview = { nav.navigate("dashboard?tab=1") },
-                onShowErrors = { nav.navigate("dashboard") },
+                onDocumentOverview = { nav.navigate(Routes.DASHBOARD_OVERVIEW) },
+                onShowErrors = { nav.navigate(Routes.DASHBOARD_ERRORS) },
                 onUserInfoTap = {
-                    if (appVm.hasCredentials()) nav.navigate("user_info")
+                    if (appVm.hasCredentials()) nav.navigate(Routes.USER_INFO)
                     else showMainLoginSheet = true
                 },
-                onOpenRecordings = { nav.navigate("recordings_list") },
+                onOpenRecordings = { nav.navigate(Routes.RECORDINGS_LIST) },
             )
         }
-        composable("profiles") {
+        composable(Routes.PROFILES) {
             // Re-read after a deletion rather than observed: profiles change only here, and a
             // Flow over the encrypted profile store would be machinery for one screen.
             var profilesRefresh by remember { mutableStateOf(0) }
@@ -608,14 +609,14 @@ private fun PrimaBarcodeApp(
                 onDelete = { id -> appVm.deleteProfile(id) { profilesRefresh++ } },
             )
         }
-        composable("recordings_list") {
+        composable(Routes.RECORDINGS_LIST) {
             RecordingsListScreen(
                 docs = recordedDocs,
                 onBack = { nav.popBackStack() },
-                onDocumentTap = { doc -> nav.navigate("recordings/${doc.documentNo}/${doc.type.key}") },
+                onDocumentTap = { doc -> nav.navigate(Routes.recordings(doc.documentNo, doc.type.key)) },
             )
         }
-        composable("user_info") {
+        composable(Routes.USER_INFO) {
             UserInfoScreen(
                 user = user,
                 location = location,
@@ -624,7 +625,7 @@ private fun PrimaBarcodeApp(
                 onSignOut = { requestSignOut() },
             )
         }
-        composable("location_rc_pick") {
+        composable(Routes.LOCATION_RC_PICK) {
             val isRefreshing by appVm.isRefreshingLocations.collectAsState()
             val lastSyncedAt by appVm.lastLocationSyncAt.collectAsState()
             LocationRcPickScreen(
@@ -661,7 +662,7 @@ private fun PrimaBarcodeApp(
                 onBack = { nav.popBackStack() },
             )
         }
-        composable("ext_system_config") {
+        composable(Routes.EXT_SYSTEM_CONFIG) {
             ExtSystemConfigScreen(
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,
@@ -691,7 +692,7 @@ private fun PrimaBarcodeApp(
                 onImportJson = { json -> appVm.parseExtSystemConfigJson(json) },
             )
         }
-        composable("settings") {
+        composable(Routes.SETTINGS) {
             val initialSettingsSnapshot = AppSettings(
                 textSize = textSize,
                 uppercaseText = uppercaseText,
@@ -725,16 +726,16 @@ private fun PrimaBarcodeApp(
                 },
                 onClearCache = { appVm.clearCache() },
                 onDeleteAllDocuments = { appVm.deleteAllDocuments() },
-                onChangeLocation = { nav.navigate("location_rc_pick") },
-                onOpenExtSystemConfig = { nav.navigate("ext_system_config") },
-                onOpenProfiles = { nav.navigate("profiles") },
+                onChangeLocation = { nav.navigate(Routes.LOCATION_RC_PICK) },
+                onOpenExtSystemConfig = { nav.navigate(Routes.EXT_SYSTEM_CONFIG) },
+                onOpenProfiles = { nav.navigate(Routes.PROFILES) },
                 onSignOut = { requestSignOut() },
                 onSignInTap = { requireCredentials {} },
                 environment = extSystemConfig.environment,
                 companyName = extSystemConfig.companyName,
             )
         }
-        composable("docs") {
+        composable(Routes.DOCS) {
             // Same rule as `filteredDocs`, for the same reason: nothing is exempt because it has
             // been scanned into. This is also the only mode-aware filter on this path, so
             // `DocumentListScreen` does not narrow by location again.
@@ -753,19 +754,19 @@ private fun PrimaBarcodeApp(
                 docTypeCode = extSystemConfig.docTypeCodeFor(selectedDocType),
                 documents = typeDocs,
                 onBack = { nav.popBackStack() },
-                onDocTap = { selected -> nav.navigate("recording/${selected.documentNo}/${selected.type.key}") },
-                onDownload = { nav.navigate("download_filter") },
+                onDocTap = { selected -> nav.navigate(Routes.recording(selected.documentNo, selected.type.key)) },
+                onDownload = { nav.navigate(Routes.DOWNLOAD_FILTER) },
                 onUpload = { docs ->
                     requireCredentials {
                         if (backgroundSync) {
                             launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
                                 appVm.uploadInBackground(docs)
-                                nav.popBackStack("main", false)
+                                nav.popBackStack(Routes.MAIN, false)
                             }
                         } else {
                             val cb: (Int) -> Unit = { failures ->
                                 processingMessage = null
-                                nav.popBackStack("main", false)
+                                nav.popBackStack(Routes.MAIN, false)
                                 if (failures > 0) showSyncErrorDialog = true
                             }
                             launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
@@ -775,14 +776,14 @@ private fun PrimaBarcodeApp(
                         }
                     }
                 },
-                onErrorTap = { doc -> nav.navigate("upload_error/${doc.documentNo}") },
+                onErrorTap = { doc -> nav.navigate(Routes.uploadError(doc.documentNo)) },
                 onClearErrors = { appVm.clearErrorDocs() },
                 filter = docFilter,
-                onOpenFilter = { nav.navigate("filter") },
+                onOpenFilter = { nav.navigate(Routes.FILTER) },
             )
         }
         composable(
-            route = "dashboard?tab={tab}",
+            route = Routes.DASHBOARD,
             arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
         ) { backStackEntry ->
             val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
@@ -793,7 +794,7 @@ private fun PrimaBarcodeApp(
                 rcCode = rc?.code ?: "",
                 documents = documents,
                 onBack = { nav.popBackStack() },
-                onDocTap = { selected -> nav.navigate("recording/${selected.documentNo}/${selected.type.key}") },
+                onDocTap = { selected -> nav.navigate(Routes.recording(selected.documentNo, selected.type.key)) },
                 onClearErrors = { appVm.clearErrorDocs() },
                 onUpload = { docs ->
                     requireCredentials {
@@ -813,18 +814,18 @@ private fun PrimaBarcodeApp(
                         }
                     }
                 },
-                onErrorTap = { doc -> nav.navigate("upload_error/${doc.documentNo}") },
+                onErrorTap = { doc -> nav.navigate(Routes.uploadError(doc.documentNo)) },
                 filter = overviewFilter,
                 onOpenFilter = { src, rc ->
                     overviewLockedSource = src
                     overviewLockedRc = rc
-                    nav.navigate("overview_filter")
+                    nav.navigate(Routes.OVERVIEW_FILTER)
                 },
                 docTypeFilters = docTypeFilters,
                 initialTab = initialTab,
             )
         }
-        composable("filter") {
+        composable(Routes.FILTER) {
             DocumentFilterScreen(
                 initialFilter = docFilter,
                 showDocTypeFilter = false,
@@ -835,7 +836,7 @@ private fun PrimaBarcodeApp(
                 onBack = { nav.popBackStack() },
             )
         }
-        composable("overview_filter") {
+        composable(Routes.OVERVIEW_FILTER) {
             DocumentFilterScreen(
                 initialFilter = overviewFilter,
                 lockedSourceCode = overviewLockedSource,
@@ -847,7 +848,7 @@ private fun PrimaBarcodeApp(
                 onBack = { nav.popBackStack() },
             )
         }
-        composable("download_filter") {
+        composable(Routes.DOWNLOAD_FILTER) {
             val dlFilterMode = docTypeFilters[selectedDocType.key] ?: selectedDocType.defaultFilterMode
             // For the debugger's list of addresses; DocumentType.display is the English constant.
             val docTypeLabel = selectedDocType.localizedDisplay()
@@ -905,7 +906,7 @@ private fun PrimaBarcodeApp(
             )
         }
         composable(
-            route = "recording/{documentNo}/{type}",
+            route = Routes.RECORDING,
             arguments = listOf(
                 navArgument("documentNo") { type = NavType.StringType },
                 navArgument("type") { type = NavType.StringType },
@@ -932,12 +933,12 @@ private fun PrimaBarcodeApp(
                             if (backgroundSync) {
                                 launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
                                     appVm.uploadInBackground(listOf(currentDoc))
-                                    nav.popBackStack("main", false)
+                                    nav.popBackStack(Routes.MAIN, false)
                                 }
                             } else {
                                 val cb: (Int) -> Unit = { failures ->
                                     processingMessage = null
-                                    nav.popBackStack("main", false)
+                                    nav.popBackStack(Routes.MAIN, false)
                                     if (failures > 0) showSyncErrorDialog = true
                                 }
                                 launchWithDebug(listOf(appVm.getRecordingSyncUrl())) {
@@ -955,7 +956,7 @@ private fun PrimaBarcodeApp(
             }
         }
         composable(
-            route = "recordings/{documentNo}/{type}",
+            route = Routes.RECORDINGS,
             arguments = listOf(
                 navArgument("documentNo") { type = NavType.StringType },
                 navArgument("type") { type = NavType.StringType },
@@ -974,7 +975,7 @@ private fun PrimaBarcodeApp(
             }
         }
         composable(
-            route = "upload_error/{documentNo}",
+            route = Routes.UPLOAD_ERROR,
             arguments = listOf(navArgument("documentNo") { type = NavType.StringType }),
         ) { backStackEntry ->
             val docNo = backStackEntry.arguments?.getString("documentNo") ?: ""
@@ -1067,7 +1068,7 @@ private fun PrimaBarcodeApp(
 
     if (showSyncErrorDialog) {
         SyncErrorDialog(
-            onSeeErrors = { showSyncErrorDialog = false; nav.navigate("dashboard") },
+            onSeeErrors = { showSyncErrorDialog = false; nav.navigate(Routes.DASHBOARD_ERRORS) },
             onDismiss = { showSyncErrorDialog = false },
         )
     }
