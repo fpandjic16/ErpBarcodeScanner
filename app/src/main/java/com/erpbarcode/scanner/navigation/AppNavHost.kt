@@ -290,36 +290,8 @@ internal fun BarcodeApp(
     }
 
     NavHost(navController = nav, startDestination = Routes.MAIN) {
+        mainMenuRoute(shell)
         with(shell) {
-        composable(Routes.MAIN) {
-            MainMenuScreen(
-                user = user,
-                location = location,
-                rc = rc,
-                environment = extSystemConfig.environment,
-                docTypes = docTypes,
-                recordedDocs = recordedDocs,
-                shiftScans = shiftScans,
-                shiftErrors = errorDocs.size,
-                shiftReady = readyDocs.size,
-                shiftPartial = partialDocs.size,
-                shiftOver = overDocs.size,
-                onChangeLocationRc = { nav.navigate(Routes.LOCATION_RC_PICK) },
-                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
-                onOpenExtSystemConfig = { nav.navigate(Routes.EXT_SYSTEM_CONFIG) },
-                onTypeTap = { type ->
-                    selectedDocType = type
-                    nav.navigate(Routes.DOCS)
-                },
-                onDocumentOverview = { nav.navigate(Routes.DASHBOARD_OVERVIEW) },
-                onShowErrors = { nav.navigate(Routes.DASHBOARD_ERRORS) },
-                onUserInfoTap = {
-                    if (appVm.hasCredentials()) nav.navigate(Routes.USER_INFO)
-                    else showMainLoginSheet = true
-                },
-                onOpenRecordings = { nav.navigate(Routes.RECORDINGS_LIST) },
-            )
-        }
         composable(Routes.PROFILES) {
             // Re-read after a deletion rather than observed: profiles change only here, and a
             // Flow over the encrypted profile store would be machinery for one screen.
