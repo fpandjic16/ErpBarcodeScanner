@@ -171,75 +171,16 @@ internal fun BarcodeApp(
     val documents by appVm.documents.collectAsState()
     val extSystemConfig by appVm.extSystemConfig.collectAsState()
 
-    // No exemption for work already started. A document scanned into at one location used to
-    // bypass this filter for good, so moving from CS165 to CS175 still showed CS165's documents —
-    // the filter stopped meaning anything as soon as a shift got going.
-    //
-    // That escape existed because in-progress work was otherwise unreachable from another
-    // location. The RECORDINGS section removed the reason: it lists every document carrying a
-    // scan, deliberately unfiltered by location, and is where unsent work is found now.
-    //
-    // `DocumentOverviewScreen`'s own `atLocation` has always been strict, so this brings the rest
-    // of the app in line with the dashboard rather than inventing a rule.
-    //
-    // A type scoped by responsibility centre needs one selected, the same as a location-scoped
-    // type needs a location. No centre used to mean every centre, so an operator who had chosen
-    // nothing saw — and counted — every complaint in the company.
-    val filteredDocs = documents.filter { doc ->
-        when (docTypeFilters[doc.type.key] ?: doc.type.defaultFilterMode) {
-            DocTypeFilterMode.LOCATION -> location != null && doc.sourceCode == location.code
-            DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null && doc.rcCode == rc.code
-        }
-    }
-
-    val docTypes = DocumentType.entries.map { type ->
-        val filterMode = docTypeFilters[type.key] ?: type.defaultFilterMode
-        // Blocked until the operator has selected what this type is scoped by — not merely until
-        // the device has a list to select from. The old test was the list: once any operator had
-        // refreshed locations, the next one could open every list with nothing selected. The
-        // location-scoped ones then showed nothing, and their download went out with no
-        // location at all and fetched every location's documents. `location` and `rc` are null
-        // both when nothing is selected and when the selected code is no longer on the list, and
-        // a list never fetched leaves nothing to select, so this one test covers all three.
-        val blocked = when (filterMode) {
-            DocTypeFilterMode.LOCATION -> location == null
-            DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc == null
-        }
-        DocTypeSummary(
-            type = type,
-            count = filteredDocs.count { it.type == type },
-            statusMini = filteredDocs.filter { it.type == type }.mapNotNull { doc ->
-                when {
-                    doc.state is DocState.UploadFailed -> LineStatus.EMPTY
-                    doc.state == DocState.Downloaded   -> null
-                    else -> doc.scanStatus().takeIf { it != LineStatus.EMPTY }
-                }
-            },
-            blocked = blocked,
-        )
-    }.filter { it.type.key !in disabledDocTypes }
-
-    // The ZAPISI section: work in progress across every type, newest document first. Deliberately
-    // not filtered by disabledDocTypes — a type switched off mid-job would otherwise take the
-    // operator's only view of those scans with it.
-    //
-    // **It must stay built from `documents`.** Now that the location filter above admits no
-    // exceptions, this is the only place in the app that shows an operator work they started
-    // somewhere else. Narrowing it by location, by type, or by anything else would leave unsent
-    // scans with nowhere to be seen — and unsent scans exist on this device and nowhere else.
-    // Built from documents rather than filteredDocs, and on totalScans rather than hasProgress:
-    // both of those narrowings key off a line's scanned quantity, and a scan whose line the ERP
-    // has since removed adds to no line at all. A document whose scans were all orphaned would
-    // drop out of the one list that is supposed to hold everything the operator has scanned.
-    val recordedDocs = documents
-        .filter { it.totalScans > 0 }
-        .sortedByDescending { it.documentDate ?: it.creationDateTime }
-
-    val shiftScans  = filteredDocs.sumOf { d -> d.lines.count { it.scanned > 0 } }
-    val errorDocs   = filteredDocs.filter { it.state is DocState.UploadFailed }
-    val readyDocs   = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.EXACT }
-    val partialDocs = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.PARTIAL }
-    val overDocs    = filteredDocs.filter { it.state !is DocState.UploadFailed && it.scanStatus() == LineStatus.OVER }
+    // What the menu and the lists show. The rules — the strict location scope, the blocked types,
+    // the unfiltered RECORDINGS list — are in ShellData.kt, where they are tested on their own.
+    val data = shellData(documents, location, rc, docTypeFilters, disabledDocTypes)
+    val docTypes     = data.docTypes
+    val recordedDocs = data.recordedDocs
+    val shiftScans   = data.shiftScans
+    val errorDocs    = data.errorDocs
+    val readyDocs    = data.readyDocs
+    val partialDocs  = data.partialDocs
+    val overDocs     = data.overDocs
     var selectedDocType by remember { mutableStateOf(DocumentType.WAREHOUSE_SHIPMENT) }
     var docFilter by remember { mutableStateOf(DocumentFilter()) }
     var overviewFilter by remember { mutableStateOf(DocumentFilter()) }
@@ -640,11 +581,7 @@ internal fun BarcodeApp(
             // been scanned into. This is also the only mode-aware filter on this path, so
             // `DocumentListScreen` does not narrow by location again.
             val typeDocs = documents.filter { doc ->
-                doc.type == selectedDocType &&
-                    when (docTypeFilters[selectedDocType.key] ?: selectedDocType.defaultFilterMode) {
-                        DocTypeFilterMode.LOCATION -> location != null && doc.sourceCode == location.code
-                        DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null && doc.rcCode == rc.code
-                    }
+                doc.type == selectedDocType && doc.isInScope(docTypeFilters, location, rc)
             }
             DocumentListScreen(
                 hapticEnabled = hapticEnabled,
