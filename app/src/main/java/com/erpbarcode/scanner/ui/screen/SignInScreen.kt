@@ -62,7 +62,7 @@ import com.erpbarcode.scanner.ui.theme.AppSignal
  * the name. The hardware trigger and the camera both feed the same [parseLoginQr].
  *
  * The one thing reachable from here without signing in is the external-system configuration — see
- * [onOpenConfig].
+ * [onOpenConfig] — and only on a device that has no server address yet.
  */
 @Composable
 fun SignInScreen(
@@ -75,7 +75,9 @@ fun SignInScreen(
     // Opens the external-system configuration without signing in first; null hides the button.
     // The chicken and egg it breaks: signing in asks the server whether the password is good,
     // and a device out of the box has no server URL to ask, so without a way through from here
-    // a fresh install could never be configured and so could never be signed into either.
+    // a fresh install could never be configured and so could never be signed into either. The
+    // caller passes null once a server address is saved: from then on whoever could change it
+    // here could also choose who the server says may sign in.
     onOpenConfig: (() -> Unit)? = null,
     // Opens the app info (version, Android, ERP system and company) without signing in; null
     // hides the button. What support asks first, and often of someone who cannot sign in.

@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PrimaBarcode"
+rootProject.name = "ErpBarcodeScanner"
 include(":app")

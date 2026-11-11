@@ -1,4 +1,4 @@
-# PrimaBarcode — Technical & Consultant Guide
+# Prima Barcode — Technical & Consultant Guide
 
 **Audience:** functional consultants configuring/supporting the app, and developers maintaining or extending it.
 
@@ -15,7 +15,7 @@ For the end-user manual (how warehouse staff use the app day to day), see `docs/
 
 ## A.1 What the App Does, End to End
 
-PrimaBarcode is a native Android app that lets warehouse/store staff scan barcodes against documents (shipments, receipts, transfers) sourced from a Dynamics NAV 2018 / Business Central–family ERP system, and sync results back. There is no offline "queue and forget" — every download and upload is a direct, synchronous OData call to the ERP over the local network (or VPN), authenticated per-user with the user's own Windows credentials via NTLM.
+Prima Barcode is a native Android app (repository and Gradle project `ErpBarcodeScanner`) that lets warehouse/store staff scan barcodes against documents (shipments, receipts, transfers) sourced from a Dynamics NAV 2018 / Business Central–family ERP system, and sync results back. There is no offline "queue and forget" — every download and upload is a direct, synchronous OData call to the ERP over the local network (or VPN), authenticated per-user with the user's own Windows credentials via NTLM.
 
 The functional loop:
 
@@ -708,7 +708,9 @@ Holds the NAV password in the clear, because NTLM computes its response from the
 
 ### The gate, and the doors through it
 
-`MainActivity.BarcodeApp` early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
+**The setup door is for first setup only (3.6.52).** `onOpenConfig` is passed only while `ExtSystemConfig.serverBaseUrl` is blank, and the configuration screen behind it renders only then. The server decides whether a password is good, so changing it before signing in let anyone holding a configured device point it at a server that accepts everything and sign in as any enrolled operator, opening that person's database. Once an address is saved, the configuration changes only after signing in (Settings → Server & endpoints). A device with a wrong saved address, or whose server moved, is reset by clearing the app's data or reinstalling. Binding each profile's data to the server it was enrolled on is the second half of this, proposed but not built yet.
+
+`BarcodeApp` (`navigation/AppNavHost.kt`) early-returns into `SignInScreen` whenever `currentProfile` is null — an early return rather than a branch around the `NavHost`, so no route is reachable signed-out, not even via a back stack left by the previous operator.
 
 That gate had a chicken and egg in it. Signing in asks the server whether the password is good (`testConnection`), and a device out of the box has no `serverBaseUrl` to ask; with no server there is nothing to ask and the sign-in simply fails. A fresh install could not be configured, and so could not be signed into either.
 
@@ -1164,7 +1166,7 @@ A systematic sweep for orphaned files/functions/fields found and removed:
   - `androidx.security:security-crypto:1.1.0-alpha06` — still on an alpha release; watch for a stable release when upgrading.
 
 ### `settings.gradle.kts`
-Single module `:app`. Repositories: `google()`, `mavenCentral()`, `gradlePluginPortal()`. `rootProject.name = "PrimaBarcode"`.
+Single module `:app`. Repositories: `google()`, `mavenCentral()`, `gradlePluginPortal()`. `rootProject.name = "ErpBarcodeScanner"` (`PrimaBarcode` until 3.6.52).
 
 ### `build.gradle.kts` (root) — built-in Kotlin and why a `buildscript` block exists
 AGP 9 compiles Kotlin itself, so there is **no `org.jetbrains.kotlin.android` plugin** in this project, and adding one back would break the build — that plugin is incompatible with AGP 9's DSL. The consequence is that nothing in the `plugins` block declares the Kotlin version: AGP pins KGP to its own runtime dependency (2.2.10 for AGP 9.x) unless a newer one is put on the buildscript classpath, which is [the documented way](https://developer.android.com/r/tools/built-in-kotlin) to raise it. Hence:

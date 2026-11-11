@@ -335,7 +335,15 @@ internal fun BarcodeApp(
         //
         // Not wrapped in launchWithDebug the way the signed-in route is — that dialog composes
         // below this return and so would never appear.
-        if (configuringAtSignIn) {
+        //
+        // **Only until a server address is saved** (3.6.52). The server is what decides whether a
+        // password is good, so whoever can change it before signing in can point the device at a
+        // server that accepts anything and sign in as any operator enrolled here, opening that
+        // person's documents and unsent scans. Once configured, the configuration is changed after
+        // signing in (Settings). A device whose saved address is wrong, or whose server has moved,
+        // has to be reset (clear the app's data, or reinstall) — the price of closing that door.
+        val firstSetup = extSystemConfig.serverBaseUrl.isBlank()
+        if (configuringAtSignIn && firstSetup) {
             ExtSystemConfigScreen(
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,
@@ -372,7 +380,7 @@ internal fun BarcodeApp(
             return
         }
         SignInScreen(
-            onOpenConfig = { configuringAtSignIn = true },
+            onOpenConfig = if (firstSetup) ({ configuringAtSignIn = true }) else null,
             onOpenAppInfo = { appInfoAtSignIn = true },
             loginQrKey = extSystemConfig.loginQrKey,
             hapticEnabled = hapticEnabled,

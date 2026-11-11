@@ -1,6 +1,6 @@
-# PrimaBarcode — User Guide
+# Prima Barcode — User Guide
 
-**Audience:** warehouse and store staff who use the PrimaBarcode app day-to-day to scan and record inventory movements (shipments, receipts, transfers).
+**Audience:** warehouse and store staff who use the Prima Barcode app day-to-day to scan and record inventory movements (shipments, receipts, transfers).
 
 This guide explains what every screen does, what every button and toggle means, and what to do when something looks wrong. It assumes no technical background — if you can use a smartphone, you can use this guide.
 
@@ -35,7 +35,7 @@ This guide explains what every screen does, what every button and toggle means, 
 
 ## 1. What This App Does
 
-PrimaBarcode is a handheld scanning app used to record what's physically been picked, received, or moved in a warehouse or store, and to send that information back to the company's central business system (Dynamics NAV / Business Central) once you're done.
+Prima Barcode is a handheld scanning app used to record what's physically been picked, received, or moved in a warehouse or store, and to send that information back to the company's central business system (Dynamics NAV / Business Central) once you're done.
 
 The everyday cycle looks like this:
 
@@ -91,7 +91,7 @@ If you scan a barcode that isn't listed as an expected item on the current docum
 
 Two of you can work the same document at the same time. Each of you has your own copy with your own scans, and both go to the central system, where the quantities add up — which is what you want when you are splitting one job.
 
-**Setting up a brand-new device comes before all of this.** A device fresh out of the box does not know where the central system is, and the sign-in screen cannot confirm a password without it. So the sign-in screen has an **External system setup** button that opens the connection settings without signing in — normally IT or a consultant picks the company there once, which fills in every address, and from then on everyone just signs in. The same screen is where the site switches on the document types it works with; a new installation starts with none. Beside it, **About the app** shows the app's details (see [§16](#16-settings--every-option-explained), System Info), also without signing in.
+**Setting up a brand-new device comes before all of this.** A device fresh out of the box does not know where the central system is, and the sign-in screen cannot confirm a password without it. So the sign-in screen has an **External system setup** button that opens the connection settings without signing in — normally IT or a consultant picks the company there once, which fills in every address, and from then on everyone just signs in. **The button is there only until the server address is saved.** After that the connection settings are changed only after signing in, from Settings: otherwise anyone holding the device could point it at another server and open other people's work. If the saved address is wrong, or the server moves, the app's data has to be cleared (or the app reinstalled) and the device set up again. The same screen is where the site switches on the document types it works with; a new installation starts with none. Beside it, **About the app** shows the app's details (see [§16](#16-settings--every-option-explained), System Info), also without signing in.
 
 **Every sign-in needs the central system to be reachable**, because only it can confirm your password. If it is down, nobody can open the app — including you, and including work you have already scanned. That work is not lost: it stays on the device and is waiting when the system answers again.
 

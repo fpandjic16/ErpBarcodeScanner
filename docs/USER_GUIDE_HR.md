@@ -1,6 +1,6 @@
-# PrimaBarcode — Korisnički priručnik
+# Prima Barcode — Korisnički priručnik
 
-**Za koga je:** skladišno i prodajno osoblje koje svakodnevno koristi aplikaciju PrimaBarcode za skeniranje i bilježenje kretanja robe (otpreme, primke, prijenosi).
+**Za koga je:** skladišno i prodajno osoblje koje svakodnevno koristi aplikaciju Prima Barcode za skeniranje i bilježenje kretanja robe (otpreme, primke, prijenosi).
 
 Ovaj priručnik objašnjava čemu služi svaki ekran, što znači svaki gumb i prekidač te što učiniti kad nešto ne izgleda kako treba. Ne pretpostavlja nikakvo tehničko predznanje — ako znate koristiti pametni telefon, znate koristiti i ovaj priručnik.
 
@@ -37,7 +37,7 @@ Nazivi gumba i ekrana navedeni su onako kako ih aplikacija prikazuje na hrvatsko
 
 ## 1. Što aplikacija radi
 
-PrimaBarcode je aplikacija za ručne terminale kojom se bilježi što je fizički izuzeto, zaprimljeno ili premješteno u skladištu ili trgovini. Kad završite, ti se podaci šalju u središnji poslovni sustav tvrtke (Dynamics NAV / Business Central). U aplikaciji se on zove **vanjski sustav**, pa ga tako zovemo i ovdje.
+Prima Barcode je aplikacija za ručne terminale kojom se bilježi što je fizički izuzeto, zaprimljeno ili premješteno u skladištu ili trgovini. Kad završite, ti se podaci šalju u središnji poslovni sustav tvrtke (Dynamics NAV / Business Central). U aplikaciji se on zove **vanjski sustav**, pa ga tako zovemo i ovdje.
 
 Svakodnevni rad izgleda ovako:
 
@@ -93,7 +93,7 @@ Ako skenirate barkod koji nije naveden kao očekivani artikl na trenutnom dokume
 
 Dvoje vas može istovremeno raditi na istom dokumentu. Svatko ima svoju kopiju sa svojim skeniranjima, oboje ide u vanjski sustav i ondje se količine zbrajaju — a to i želite kad dijelite jedan posao.
 
-**Postavljanje potpuno novog uređaja dolazi prije svega ovoga.** Uređaj tek izvađen iz kutije ne zna gdje je vanjski sustav, a ekran za prijavu bez njega ne može provjeriti lozinku. Zato ekran za prijavu ima gumb **Postava vanjskog sustava**, koji otvara postavke veze bez prijave. Obično IT ili konzultant ondje jednom odabere tvrtku, čime se popune sve adrese, a od tada se svi samo prijavljuju. Na istom se ekranu uključuju vrste dokumenata s kojima lokacija radi; nova instalacija nema nijednu uključenu. Uz njega je gumb **O aplikaciji**, koji također bez prijave prikazuje podatke o aplikaciji (vidi [§16](#16-postavke--objašnjenje-svake-opcije), Informacije o sustavu).
+**Postavljanje potpuno novog uređaja dolazi prije svega ovoga.** Uređaj tek izvađen iz kutije ne zna gdje je vanjski sustav, a ekran za prijavu bez njega ne može provjeriti lozinku. Zato ekran za prijavu ima gumb **Postava vanjskog sustava**, koji otvara postavke veze bez prijave. Obično IT ili konzultant ondje jednom odabere tvrtku, čime se popune sve adrese, a od tada se svi samo prijavljuju. **Gumb postoji samo dok adresa poslužitelja nije spremljena.** Nakon toga se postavke veze mijenjaju samo nakon prijave, iz Postavki: inače bi svatko s uređajem u ruci mogao uređaj usmjeriti na drugi poslužitelj i otvoriti tuđi rad. Ako je spremljena adresa kriva ili se poslužitelj preseli, podatke aplikacije treba obrisati (ili aplikaciju ponovno instalirati) i uređaj postaviti iznova. Na istom se ekranu uključuju vrste dokumenata s kojima lokacija radi; nova instalacija nema nijednu uključenu. Uz njega je gumb **O aplikaciji**, koji također bez prijave prikazuje podatke o aplikaciji (vidi [§16](#16-postavke--objašnjenje-svake-opcije), Informacije o sustavu).
 
 **Svaka prijava traži da je vanjski sustav dostupan**, jer samo on može potvrditi vašu lozinku. Ako ne radi, nitko ne može ući u aplikaciju — ni vi, pa ni do posla koji ste već skenirali. Taj posao nije izgubljen: ostaje na uređaju i čeka da sustav ponovno odgovori.
 

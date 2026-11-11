@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-Generates an encrypted PrimaBarcode login QR code.
+Generates an encrypted Prima Barcode login QR code.
 
 The app decrypts these with `loginQrKey` from its external system configuration — shipped in
 the bundled assets/ext_system_defaults_*.json and stored on the device once a configuration is
