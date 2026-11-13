@@ -60,8 +60,8 @@ class DownloadCoordinator @Inject constructor(
         val creds  = savedCreds ?: return inAppText(R.string.ext_error_not_signed_in)
         if (!config.isConfigured) return inAppText(R.string.ext_error_not_configured)
         if (config.locationsUrl.isBlank()) return inAppText(R.string.ext_error_locations_url_missing)
-        extSystemClient.configure(config, creds)
-        return when (val result = extSystemClient.downloadRaw(config.locationsUrl)) {
+        val result = extSystemClient.transfer(config, creds) { it.downloadRaw(config.locationsUrl) }
+        return when (result) {
             is ExtSystemResult.Success -> {
                 val typeToken = object : TypeToken<ODataList<ErpLocationRow>>() {}.type
                 val odata = gson.fromJson<ODataList<ErpLocationRow>>(result.data, typeToken)
@@ -125,14 +125,13 @@ class DownloadCoordinator @Inject constructor(
         if (config.inventoryBatchesUrl.isBlank()) {
             return ExtSystemResult.Failure(inAppText(R.string.ext_error_inventory_batches_url_missing))
         }
-        extSystemClient.configure(config, creds)
         val clauses = buildList {
             if (filter.sourceCode.isNotBlank()) add("Barcode_Location_Code eq ${odataLiteral(filter.sourceCode)}")
             if (filter.rcCode.isNotBlank()) add("Barcode_Resp_Center eq ${odataLiteral(filter.rcCode)}")
         }
         val url = if (clauses.isEmpty()) config.inventoryBatchesUrl
             else appendODataFilter(config.inventoryBatchesUrl, clauses.joinToString(" and "))
-        return when (val result = extSystemClient.downloadRaw(url)) {
+        return when (val result = extSystemClient.transfer(config, creds) { it.downloadRaw(url) }) {
             is ExtSystemResult.Success -> {
                 val typeToken = object : TypeToken<ODataList<ErpInventoryBatchRow>>() {}.type
                 val odata = gson.fromJson<ODataList<ErpInventoryBatchRow>>(result.data, typeToken)
@@ -189,7 +188,17 @@ class DownloadCoordinator @Inject constructor(
         if (config.documentLinesUrl.isBlank()) {
             return 1 to listOf(inAppText(R.string.ext_error_document_lines_url_missing))
         }
-        extSystemClient.configure(config, creds)
+        // One connection for every type of this download, closed when the last one is in.
+        return extSystemClient.transfer(config, creds) { erp -> downloadTypes(erp, filter, docType, config) }
+    }
+
+    /** The loop of [downloadDocuments]: each type in turn, on the one connection the download holds. */
+    private suspend fun downloadTypes(
+        erp: ExtSystemODataClient.ErpConnection,
+        filter: DownloadFilter,
+        docType: DocumentType?,
+        config: ExtSystemConfig,
+    ): Pair<Int, List<String>> {
         val typesToDownload = if (docType != null) listOf(docType) else DocumentType.entries
         var failures = 0
         val errorMessages = mutableListOf<String>()
@@ -197,7 +206,7 @@ class DownloadCoordinator @Inject constructor(
             val typeCode = config.docTypeCodeFor(type)
             val filterStr = buildODataFilterString(filter, typeCode, type)
             val finalUrl = if (filterStr != null) appendODataFilter(config.documentLinesUrl, filterStr) else config.documentLinesUrl
-            val result = extSystemClient.downloadRaw(finalUrl)
+            val result = erp.downloadRaw(finalUrl)
             when (result) {
                 is ExtSystemResult.Success -> {
                     val now = Instant.now()

@@ -333,7 +333,6 @@
     <string name="ext_error_not_configured">The external system is not configured.</string>
     <string name="ext_error_locations_url_missing">The locations URL is not configured.</string>
     <string name="ext_error_document_lines_url_missing">The document lines URL is not configured.</string>
-    <string name="ext_error_client_not_ready">The connection to the external system is not set up yet.</string>
     <string name="ext_error_no_challenge_ok">The server answered without asking for a Windows sign-in, so the password was not checked. Enable Windows Authentication on this OData endpoint.</string>
     <string name="ext_error_no_challenge">The server did not ask for a Windows sign-in (no NTLM challenge). Check that Windows Authentication is enabled on this OData endpoint.</string>
     <string name="ext_error_credentials_rejected">The external system rejected the user name or password. Check the user name (with its domain, e.g. DOMAIN\\name) and the password.</string>

@@ -68,24 +68,54 @@ class ExtSystemODataClient @Inject constructor(
             else -> error.message ?: text(R.string.ext_error_unknown)
         }
     }
-    /**
-     * The client every transfer uses, built for the signed-in operator's saved credentials.
-     *
-     * Only [configure] replaces it, and only the transfers call that, each with those same saved
-     * credentials. Trying out a sign-in is not a transfer and never touches it: see
-     * [checkCredentials].
-     */
-    private var httpClient: HttpClient? = null
-    private var clientKey: Triple<String, String, String>? = null  // domain, rawUsername, pass
 
-    fun configure(config: ExtSystemConfig, creds: ExtSystemCredentials): ExtSystemODataClient {
-        val key = Triple(config.domain, creds.username, creds.password)
-        if (clientKey != key) {
-            httpClient?.close()
-            httpClient = buildClient(config.domain, creds.username, creds.password).first
-            clientKey = key
+    /**
+     * Runs one transfer on a connection of its own.
+     *
+     * A client is built for [creds] when the transfer starts, handed to [block] as its
+     * [ErpConnection] and closed when the block ends, however it ends. Every request the transfer
+     * makes goes through that one client, so a transfer runs from its first request to its last
+     * under the credentials and the domain it started with.
+     *
+     * Until 3.6.82 there was one client for all of them, replaced by whichever transfer started
+     * with other credentials or another configured domain, and read anew at every request. A
+     * transfer that was already running (a background upload is the one that leaves the screen
+     * free for it) carried on, from its next request, on the client the later one had built: in
+     * the middle of a document, under whatever that one had been given. With the saved sign-in
+     * typed again in another form that changed nothing anyone could see; with a domain changed in
+     * the configuration and not yet right, every row still to go was refused. Closing a client
+     * does not cut off a request already on its way, but one that began as the old client closed
+     * failed with "Client already closed".
+     *
+     * The price is one sign-in handshake per transfer, where a client kept from the last transfer
+     * could sometimes reuse a connection: three round trips on the local network.
+     */
+    suspend fun <T> transfer(
+        config: ExtSystemConfig,
+        creds: ExtSystemCredentials,
+        block: suspend (ErpConnection) -> T,
+    ): T {
+        val (client, _) = buildClient(config.domain, creds.username, creds.password)
+        return try {
+            block(ErpConnection(client))
+        } finally {
+            client.close()
         }
-        return this
+    }
+
+    /** One transfer's connection to the ERP. Only [transfer] makes one, and closes it. */
+    inner class ErpConnection internal constructor(private val client: HttpClient) {
+
+        /** One recording, as one OData POST. */
+        suspend fun uploadRecording(url: String, row: ErpRecordingRow): ExtSystemResult<Unit> =
+            postRecording(client, url, row)
+
+        /** Every recording of one document in a single SOAP call: all of them, or none. */
+        suspend fun uploadDocument(url: String, rows: List<ErpRecordingRow>): ExtSystemResult<Unit> =
+            postDocument(client, url, rows)
+
+        /** A GET that follows the ERP's paging to the end and returns every row as one list. */
+        suspend fun downloadRaw(url: String): ExtSystemResult<String> = getAllPages(client, url)
     }
 
     /** A client and the authenticator that answers for it; the two are only ever built together. */
@@ -128,12 +158,12 @@ class ExtSystemODataClient @Inject constructor(
     /**
      * Asks the ERP whether [creds] are accepted at [baseUrl]: the connection test and the sign-in.
      *
-     * On a client built for this one question and closed after it. It used to go through
-     * [configure], which rebuilds the shared client whenever the credentials differ, and a
-     * transfer reads that client anew at every request. A test run while an upload was sending
-     * in the background, or while the locations were refreshing, therefore switched the rest of
-     * that transfer to whatever had just been typed: somebody else's account, or a mistyped
-     * password that failed every row still to go.
+     * On a client built for this one question and closed after it, as every transfer has had
+     * since ([transfer]). It used to go through the one client all of them shared, which was
+     * rebuilt whenever the credentials differed and read anew at every request. A test run while
+     * an upload was sending in the background, or while the locations were refreshing, therefore
+     * switched the rest of that transfer to whatever had just been typed: somebody else's account,
+     * or a mistyped password that failed every row still to go.
      */
     suspend fun checkCredentials(
         config: ExtSystemConfig,
@@ -184,8 +214,7 @@ class ExtSystemODataClient @Inject constructor(
         }
     }
 
-    suspend fun uploadRecording(url: String, row: ErpRecordingRow): ExtSystemResult<Unit> {
-        val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
+    private suspend fun postRecording(client: HttpClient, url: String, row: ErpRecordingRow): ExtSystemResult<Unit> {
         return runCatching {
             val body = gson.toJson(row)
             val response = client.post(url) {
@@ -218,8 +247,11 @@ class ExtSystemODataClient @Inject constructor(
      * is the most precise thing there is to show, so it is shown. The read timeout is the client's
      * usual minute; a document of a few hundred scans is one insert pass on the server.
      */
-    suspend fun uploadDocument(url: String, rows: List<ErpRecordingRow>): ExtSystemResult<Unit> {
-        val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
+    private suspend fun postDocument(
+        client: HttpClient,
+        url: String,
+        rows: List<ErpRecordingRow>,
+    ): ExtSystemResult<Unit> {
         return runCatching {
             val response = client.post(url) {
                 header("SOAPAction", DocumentUploadSoap.SOAP_ACTION)
@@ -243,8 +275,7 @@ class ExtSystemODataClient @Inject constructor(
         }
     }
 
-    suspend fun downloadRaw(url: String): ExtSystemResult<String> {
-        val client = httpClient ?: return ExtSystemResult.Failure(text(R.string.ext_error_client_not_ready))
+    private suspend fun getAllPages(client: HttpClient, url: String): ExtSystemResult<String> {
         return runCatching {
             val allValues = com.google.gson.JsonArray()
             var nextUrl: String? = url
@@ -271,12 +302,6 @@ class ExtSystemODataClient @Inject constructor(
             Timber.e(it, "ERP download error: $url")
             ExtSystemResult.Failure(describe(it))
         }
-    }
-
-    fun close() {
-        httpClient?.close()
-        httpClient = null
-        clientKey = null
     }
 
     companion object {

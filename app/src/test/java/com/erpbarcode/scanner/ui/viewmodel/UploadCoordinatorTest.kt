@@ -68,7 +68,6 @@ class UploadCoordinatorTest {
 
     @After
     fun tearDown() {
-        client.close()
         runCatching { erp.shutdown() }
         device.close()
     }
@@ -458,5 +457,55 @@ class UploadCoordinatorTest {
         // The upload went on, on the client it started with.
         assertEquals(0, uploading.await())
         assertNull(device.document("D1"))
+    }
+
+    // ── Another transfer started while an upload is running ────────────────────
+
+    @Test
+    fun `a transfer under other credentials leaves an upload on its own connection`(): Unit = runBlocking {
+        d1WithScans(2)
+        // The ERP holds the upload's first row until the other transfer has come and gone.
+        val otherTransferOver = CountDownLatch(1)
+        val firstRow = AtomicBoolean(true)
+        erp.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.method != "POST") return MockResponse().setResponseCode(200).setBody("{\"value\":[]}")
+                if (firstRow.getAndSet(false)) otherTransferOver.await(5, TimeUnit.SECONDS)
+                return accepted()
+            }
+        }
+        val uploading = async(Dispatchers.IO) { upload("D1") }
+        assertEquals("POST", nextRequest().method)
+
+        // The same account written another way, as a connection test may have saved it since the
+        // upload began: other credentials, as far as a client can tell. Two requests, so that its
+        // connection has carried more than the upload's has.
+        val listed = client.transfer(perScan(), ExtSystemCredentials("DOMAIN\\tester", "not-a-real-password")) {
+            it.downloadRaw(address("/odata/Locations"))
+            it.downloadRaw(address("/odata/Locations"))
+        }
+        otherTransferOver.countDown()
+
+        assertTrue(listed is ExtSystemResult.Success)
+        assertEquals(0, uploading.await())
+        assertNull(device.document("D1"))
+        val rest = List(3) { nextRequest() }
+        assertEquals(listOf("GET", "GET", "POST"), rest.map { it.method })
+        // The second request on the connection the upload opened. When all transfers shared one
+        // client, the later transfer replaced it and this row went out on that one's connection,
+        // as its third request, under that one's credentials.
+        assertEquals("the upload's second row keeps to the upload's connection", 1, rest.last().sequenceNumber)
+    }
+
+    @Test
+    fun `a connection is closed when its transfer ends`(): Unit = runBlocking {
+        var kept: ExtSystemODataClient.ErpConnection? = null
+        client.transfer(perScan(), credentials) { kept = it }
+
+        val late = kept!!.downloadRaw(address("/odata/Locations"))
+
+        // Nothing is left open behind a transfer, and nothing can be sent on what it used.
+        assertTrue(late is ExtSystemResult.Failure)
+        assertEquals(0, erp.requestCount)
     }
 }

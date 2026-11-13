@@ -334,7 +334,6 @@
     <string name="ext_error_not_configured">Vanjski sustav nije konfiguriran.</string>
     <string name="ext_error_locations_url_missing">URL lokacija nije konfiguriran.</string>
     <string name="ext_error_document_lines_url_missing">URL stavki dokumenta nije konfiguriran.</string>
-    <string name="ext_error_client_not_ready">Veza s vanjskim sustavom još nije postavljena.</string>
     <string name="ext_error_no_challenge_ok">Poslužitelj je odgovorio bez traženja Windows prijave, pa lozinka nije provjerena. Na ovoj OData krajnjoj točki uključite Windows Authentication.</string>
     <string name="ext_error_no_challenge">Poslužitelj nije zatražio Windows prijavu (nema NTLM izazova). Provjerite je li na ovoj OData krajnjoj točki uključena Windows Authentication.</string>
     <string name="ext_error_credentials_rejected">Vanjski sustav je odbio korisničko ime ili lozinku. Provjerite korisničko ime (s domenom, npr. DOMENA\\ime) i lozinku.</string>

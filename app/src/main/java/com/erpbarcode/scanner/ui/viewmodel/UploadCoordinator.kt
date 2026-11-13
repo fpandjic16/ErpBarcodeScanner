@@ -84,7 +84,21 @@ class UploadCoordinator @Inject constructor(
             }
             return docs.size
         }
-        extSystemClient.configure(config, creds)
+        // One connection for the whole upload, its own: built here, closed when the last document
+        // is done, and out of reach of any other transfer that starts in the meantime.
+        return extSystemClient.transfer(config, creds) { erp ->
+            sendDocuments(erp, docs, config, url, perDocument)
+        }
+    }
+
+    /** The loop of [upload]: each document in turn, on the one connection the upload holds. */
+    private suspend fun sendDocuments(
+        erp: ExtSystemODataClient.ErpConnection,
+        docs: List<Document>,
+        config: ExtSystemConfig,
+        url: String,
+        perDocument: Boolean,
+    ): Int {
         var failures = 0
         for (doc in docs) {
             // Checked before a single row goes out. A document holding scans whose line the ERP has
@@ -133,7 +147,7 @@ class UploadCoordinator @Inject constructor(
                 // One call, one transaction on the ERP side: all of these rows are in the ERP, or none
                 // of them are. Every row carries the same outcome, so the error screen shows the
                 // one reason against each of them.
-                val result = extSystemClient.uploadDocument(
+                val result = erp.uploadDocument(
                     url, rows.map { it.toErpRecording(docTypeCode, retailLocation) },
                 )
                 when (result) {
@@ -161,7 +175,7 @@ class UploadCoordinator @Inject constructor(
             var connectionLost = false
 
             for (row in rows) {
-                val result = extSystemClient.uploadRecording(
+                val result = erp.uploadRecording(
                     url, row.toErpRecording(docTypeCode, retailLocation),
                 )
                 when (result) {
