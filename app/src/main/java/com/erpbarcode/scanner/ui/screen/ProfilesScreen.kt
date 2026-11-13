@@ -10,14 +10,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.auth.UserProfile
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -109,10 +107,16 @@ fun ProfilesScreen(
 
     pending?.let { profile ->
         val counts = footprint
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { pending = null },
-            title = { Text(stringResource(R.string.profiles_delete_title), fontWeight = FontWeight.Bold) },
-            text = {
+            title = stringResource(R.string.profiles_delete_title),
+            confirmLabel = stringResource(R.string.profiles_delete_confirm),
+            onConfirm = { onDelete(profile.key); pending = null },
+            // Not until the counts are in: see below.
+            confirmEnabled = counts != null,
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
+            content = {
                 // Counting is one database open and two reads. It is quick, but asking "delete?"
                 // before knowing the answer would be asking the operator to agree to an unknown.
                 if (counts == null) {
@@ -158,16 +162,6 @@ fun ProfilesScreen(
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { onDelete(profile.key); pending = null },
-                    enabled = counts != null,
-                    colors = ButtonDefaults.textButtonColors(contentColor = SignOutRed),
-                ) { Text(stringResource(R.string.profiles_delete_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pending = null }) { Text(stringResource(R.string.btn_cancel)) }
             },
         )
     }

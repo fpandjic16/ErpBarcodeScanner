@@ -29,6 +29,7 @@ import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.scanStatus
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.component.StatusProgressBar
@@ -228,19 +229,18 @@ fun DocumentOverviewScreen(
     }
 
     if (showClearErrorsDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showClearErrorsDialog = false },
-            title = { Text(stringResource(R.string.overview_clear_errors_title), fontWeight = FontWeight.Bold) },
-            text = { Text(if (errors.size == 1) stringResource(R.string.overview_clear_errors_text_single, errors.size) else stringResource(R.string.overview_clear_errors_text_plural, errors.size)) },
-            confirmButton = {
-                Button(
-                    onClick = { showClearErrorsDialog = false; onClearErrors() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
+            title = stringResource(R.string.overview_clear_errors_title),
+            text = if (errors.size == 1) {
+                stringResource(R.string.overview_clear_errors_text_single, errors.size)
+            } else {
+                stringResource(R.string.overview_clear_errors_text_plural, errors.size)
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showClearErrorsDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            confirmLabel = stringResource(R.string.btn_clear),
+            onConfirm = { showClearErrorsDialog = false; onClearErrors() },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
         )
     }
 }

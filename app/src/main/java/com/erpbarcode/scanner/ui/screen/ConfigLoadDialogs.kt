@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -29,6 +30,8 @@ import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.DeviceConfiguration
 import com.erpbarcode.scanner.data.auth.ExtSystemDefaultsCompany
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
+import com.erpbarcode.scanner.ui.component.DIALOG_BUTTON_HEIGHT
+import com.erpbarcode.scanner.ui.component.DialogButtonLabel
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 
@@ -75,27 +78,27 @@ internal fun ConfigLoadFlow(
                     Spacer(Modifier.height(4.dp))
                     Button(
                         onClick = { step = LoadStep.ENVIRONMENT },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(R.string.ext_config_load_builtin), fontWeight = FontWeight.SemiBold)
+                        DialogButtonLabel(stringResource(R.string.ext_config_load_builtin))
                     }
                     OutlinedButton(
                         onClick = { onClose(); onExport() },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(R.string.ext_config_export_current), fontWeight = FontWeight.SemiBold)
+                        DialogButtonLabel(stringResource(R.string.ext_config_export_current))
                     }
                     OutlinedButton(
                         onClick = { onClose(); onImport() },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(R.string.ext_config_load_from_file), fontWeight = FontWeight.SemiBold)
+                        DialogButtonLabel(stringResource(R.string.ext_config_load_from_file))
                     }
                     TextButton(
                         onClick = onClose,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(android.R.string.cancel))
+                        DialogButtonLabel(stringResource(android.R.string.cancel))
                     }
                 }
             }
@@ -139,20 +142,19 @@ internal fun ConfigLoadFlow(
                                     Toast.makeText(context, context.getString(R.string.ext_config_company_load_error, company.assetFileName), Toast.LENGTH_LONG).show()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                         ) {
-                            Text(
+                            DialogButtonLabel(
                                 if (company.isConfigured) company.label
                                 else stringResource(R.string.ext_config_company_not_configured, company.label),
-                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                     }
                     TextButton(
                         onClick = onClose,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(android.R.string.cancel))
+                        DialogButtonLabel(stringResource(android.R.string.cancel))
                     }
                 }
             }
@@ -174,16 +176,16 @@ internal fun EnvironmentPickDialog(onPick: (ExtSystemEnvironment) -> Unit, onDis
                 ExtSystemEnvironment.entries.forEach { env ->
                     OutlinedButton(
                         onClick = { onPick(env) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        Text(stringResource(env.labelRes), fontWeight = FontWeight.SemiBold)
+                        DialogButtonLabel(stringResource(env.labelRes))
                     }
                 }
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                 ) {
-                    Text(stringResource(android.R.string.cancel))
+                    DialogButtonLabel(stringResource(android.R.string.cancel))
                 }
             }
         }

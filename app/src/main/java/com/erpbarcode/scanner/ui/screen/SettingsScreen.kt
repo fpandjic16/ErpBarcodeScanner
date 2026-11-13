@@ -34,6 +34,7 @@ import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -496,38 +497,29 @@ fun SettingsScreen(
     // Said rather than left to be noticed: the operator asked for everything to go, and a
     // document still in the list afterwards would otherwise look like a delete that failed.
     keptDocuments?.let { kept ->
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { keptDocuments = null },
-            title = { Text(stringResource(R.string.settings_documents_kept_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    context.resources.getQuantityString(R.plurals.settings_documents_kept, kept, kept) +
-                        "\n\n" + stringResource(R.string.settings_documents_kept_hint)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { keptDocuments = null }) { Text(stringResource(R.string.btn_ok)) }
-            },
+            title = stringResource(R.string.settings_documents_kept_title),
+            text = context.resources.getQuantityString(R.plurals.settings_documents_kept, kept, kept) +
+                "\n\n" + stringResource(R.string.settings_documents_kept_hint),
+            confirmLabel = stringResource(R.string.btn_ok),
+            onConfirm = { keptDocuments = null },
         )
     }
 
     if (showExitDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text(stringResource(R.string.dialog_save_changes_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.settings_exit_dialog_text)) },
-            confirmButton = {
-                Button(onClick = {
-                    showExitDialog = false
-                    onSave(buildSettings())
-                    pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }
-                }) {
-                    Text(stringResource(R.string.btn_yes), fontWeight = FontWeight.SemiBold)
-                }
+            title = stringResource(R.string.dialog_save_changes_title),
+            text = stringResource(R.string.settings_exit_dialog_text),
+            confirmLabel = stringResource(R.string.btn_yes),
+            onConfirm = {
+                showExitDialog = false
+                onSave(buildSettings())
+                pendingExtSystemConfig?.let { onSaveExtSystemConfig(it) }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showExitDialog = false; onDiscard() }) { Text(stringResource(R.string.btn_no)) }
-            },
+            dismissLabel = stringResource(R.string.btn_no),
+            onDismiss = { showExitDialog = false; onDiscard() },
         )
     }
 }

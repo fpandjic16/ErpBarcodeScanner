@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.formatQty
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -343,36 +343,26 @@ fun UploadErrorScreen(
     }
 
     if (confirmDiscardFailed) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { confirmDiscardFailed = false },
-            title = { Text(stringResource(R.string.failed_discard_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.failed_discard_text, document.failedScans.size)) },
-            confirmButton = {
-                Button(
-                    onClick = { confirmDiscardFailed = false; onDiscardFailed() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.failed_discard), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                Button(onClick = { confirmDiscardFailed = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            title = stringResource(R.string.failed_discard_title),
+            text = stringResource(R.string.failed_discard_text, document.failedScans.size),
+            confirmLabel = stringResource(R.string.failed_discard),
+            onConfirm = { confirmDiscardFailed = false; onDiscardFailed() },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
         )
     }
 
     if (confirmDiscard) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text(stringResource(R.string.review_discard_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.review_discard_text, document.orphanedScans.size)) },
-            confirmButton = {
-                Button(
-                    onClick = { confirmDiscard = false; onDiscardOrphans() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.review_discard), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                Button(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            title = stringResource(R.string.review_discard_title),
+            text = stringResource(R.string.review_discard_text, document.orphanedScans.size),
+            confirmLabel = stringResource(R.string.review_discard),
+            onConfirm = { confirmDiscard = false; onDiscardOrphans() },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
         )
     }
 }

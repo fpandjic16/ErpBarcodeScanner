@@ -39,6 +39,7 @@ import androidx.core.content.ContextCompat
 import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.CameraPreview
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
@@ -359,35 +360,28 @@ fun DocumentListScreen(
     } // end Box
 
     docNotFoundError?.let { no ->
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { docNotFoundError = null },
-            title = { Text(stringResource(R.string.doc_list_create_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.doc_list_create_text, no)) },
-            confirmButton = {
-                Button(onClick = { docNotFoundError = null }) { Text(stringResource(R.string.btn_ok)) }
-            },
+            title = stringResource(R.string.doc_list_create_title),
+            text = stringResource(R.string.doc_list_create_text, no),
+            confirmLabel = stringResource(R.string.btn_ok),
+            onConfirm = { docNotFoundError = null },
         )
     }
 
     if (showClearErrorsDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showClearErrorsDialog = false },
-            title = { Text(stringResource(R.string.overview_clear_errors_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    if (errors.size == 1) stringResource(R.string.overview_clear_errors_text_single, errors.size)
-                    else stringResource(R.string.overview_clear_errors_text_plural, errors.size)
-                )
+            title = stringResource(R.string.overview_clear_errors_title),
+            text = if (errors.size == 1) {
+                stringResource(R.string.overview_clear_errors_text_single, errors.size)
+            } else {
+                stringResource(R.string.overview_clear_errors_text_plural, errors.size)
             },
-            confirmButton = {
-                Button(
-                    onClick = { showClearErrorsDialog = false; onClearErrors() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showClearErrorsDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            confirmLabel = stringResource(R.string.btn_clear),
+            onConfirm = { showClearErrorsDialog = false; onClearErrors() },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
         )
     }
 }

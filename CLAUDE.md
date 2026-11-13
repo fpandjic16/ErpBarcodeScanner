@@ -122,6 +122,8 @@ Helpers shared between screens live in their own file as `internal`, not as a pr
 
 **Touch targets are at least 48 dp** — top bar buttons are 60 × `TOP_BAR_BUTTON_HEIGHT` (48) in a 52 dp bar; a small icon that acts on its own (a chip's clear ×) sits in `minimumInteractiveComponentSize()`, and so do the scan field's two buttons (`ScanFieldButton`: a 40 dp square in a 48 dp slot).
 
+**Every dialog with buttons is an `AppAlertDialog`** (`ui/component/AppAlertDialog.kt`) — buttons across the whole width, at least `DIALOG_BUTTON_HEIGHT` (52 dp), the confirming one on top and red with `danger = true`, the other outlined; labels through `DialogButtonLabel`, which follows the text-size setting. A raw `AlertDialog` in a screen is a review failure. The icon above the title (`icon`, tinted by `accent`) is for the recording screen's dialogs only. The option lists in `ConfigLoadDialogs.kt` are plain `Dialog`s with the same button height and label.
+
 ### Data Model
 
 Domain models live in `data/model/Models.kt`; Room entities in `data/db/Entities.kt`; `data/db/Mappers.kt` converts between them.

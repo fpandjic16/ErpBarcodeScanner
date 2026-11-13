@@ -29,12 +29,12 @@ import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
-import com.erpbarcode.scanner.ui.theme.AppSignal
 import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val TTL_OPTIONS = listOf(8, 24, 48, 168)
@@ -414,20 +414,14 @@ fun ExtSystemConfigScreen(
     }
 
     if (showExitDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text(stringResource(R.string.dialog_save_changes_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.ext_config_exit_dialog_text)) },
-            confirmButton = {
-                Button(onClick = { showExitDialog = false; requestSave() }) {
-                    Text(stringResource(R.string.btn_yes), fontWeight = FontWeight.SemiBold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showExitDialog = false; onDiscard() }) {
-                    Text(stringResource(R.string.btn_no))
-                }
-            },
+            title = stringResource(R.string.dialog_save_changes_title),
+            text = stringResource(R.string.ext_config_exit_dialog_text),
+            confirmLabel = stringResource(R.string.btn_yes),
+            onConfirm = { showExitDialog = false; requestSave() },
+            dismissLabel = stringResource(R.string.btn_no),
+            onDismiss = { showExitDialog = false; onDiscard() },
         )
     }
 

@@ -39,6 +39,7 @@ import com.erpbarcode.scanner.data.auth.parseLoginQr
 import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.CameraPreview
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -330,13 +331,12 @@ fun SignInScreen(
     }
 
     error?.let { message ->
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = onErrorDismiss,
-            title = { Text(stringResource(R.string.signin_failed_title), fontWeight = FontWeight.Bold) },
-            text = { Text(message) },
-            confirmButton = {
-                Button(onClick = onErrorDismiss) { Text(stringResource(R.string.btn_ok)) }
-            },
+            title = stringResource(R.string.signin_failed_title),
+            text = message,
+            confirmLabel = stringResource(R.string.btn_ok),
+            onConfirm = onErrorDismiss,
         )
     }
 }

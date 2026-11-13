@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.theme.AppLine
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.AppSignal
@@ -247,18 +248,13 @@ internal fun SettingsToggleRow(
 /** "Are you sure?" before a destructive row does its work; the confirm button is red. */
 @Composable
 internal fun SettingsConfirmDialog(title: String, text: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(contentColor = AppSignal.Danger),
-            ) { Text(stringResource(R.string.btn_clear)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
-        },
+        title = title,
+        text = text,
+        confirmLabel = stringResource(R.string.btn_clear),
+        onConfirm = onConfirm,
+        danger = true,
+        dismissLabel = stringResource(R.string.btn_cancel),
     )
 }

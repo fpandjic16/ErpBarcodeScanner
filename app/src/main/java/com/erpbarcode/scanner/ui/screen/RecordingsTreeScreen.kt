@@ -12,13 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +41,7 @@ import com.erpbarcode.scanner.data.model.ScanRecord
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.formatQty
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
@@ -186,59 +183,44 @@ fun RecordingsTreeScreen(
     }
 
     confirmDelete?.let { scan ->
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text(stringResource(R.string.recordings_tree_delete_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Text(stringResource(R.string.recordings_tree_delete_text, scan.barcodeNo, scan.quantity.formatQty()))
-            },
-            confirmButton = {
-                Button(
-                    onClick = { confirmDelete = null; onDeleteScan(scan) },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            title = stringResource(R.string.recordings_tree_delete_title),
+            text = stringResource(R.string.recordings_tree_delete_text, scan.barcodeNo, scan.quantity.formatQty()),
+            confirmLabel = stringResource(R.string.btn_clear),
+            onConfirm = { confirmDelete = null; onDeleteScan(scan) },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
         )
     }
 
     if (showSentLocked) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showSentLocked = false },
-            title = { Text(stringResource(R.string.recordings_tree_sent), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.recordings_tree_sent_locked)) },
-            confirmButton = {
-                Button(onClick = { showSentLocked = false }) { Text(stringResource(R.string.btn_ok)) }
-            },
+            title = stringResource(R.string.recordings_tree_sent),
+            text = stringResource(R.string.recordings_tree_sent_locked),
+            confirmLabel = stringResource(R.string.btn_ok),
+            onConfirm = { showSentLocked = false },
         )
     }
 
     if (confirmDeleteAll) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { confirmDeleteAll = false },
-            title = { Text(stringResource(R.string.doc_delete_recordings_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.doc_delete_recordings_text, document.documentNo))
-                    if (document.sentScans > 0) {
-                        Text(
-                            stringResource(R.string.doc_delete_recordings_kept, document.sentScans),
-                            color = AppPalette.Ink3,
-                        )
-                    }
+            title = stringResource(R.string.doc_delete_recordings_title),
+            text = stringResource(R.string.doc_delete_recordings_text, document.documentNo),
+            confirmLabel = stringResource(R.string.btn_clear),
+            onConfirm = { confirmDeleteAll = false; onDeleteAllQueued() },
+            danger = true,
+            dismissLabel = stringResource(R.string.btn_cancel),
+            content = if (document.sentScans > 0) {
+                {
+                    Text(
+                        stringResource(R.string.doc_delete_recordings_kept, document.sentScans),
+                        color = AppPalette.Ink3,
+                    )
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { confirmDeleteAll = false; onDeleteAllQueued() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                ) { Text(stringResource(R.string.btn_clear), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { confirmDeleteAll = false }) { Text(stringResource(R.string.btn_cancel)) }
-            },
+            } else null,
         )
     }
 }

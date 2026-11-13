@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.MoveToInbox
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Store
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +45,7 @@ import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.DocumentStatsDashboard
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.TOP_BAR_BUTTON_HEIGHT
@@ -299,13 +299,12 @@ fun MainMenuScreen(
     }
 
     if (showBlockedError) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showBlockedError = false },
-            title = { Text(stringResource(R.string.main_blocked_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.main_blocked_text)) },
-            confirmButton = {
-                Button(onClick = { showBlockedError = false }) { Text(stringResource(R.string.btn_ok)) }
-            },
+            title = stringResource(R.string.main_blocked_title),
+            text = stringResource(R.string.main_blocked_text),
+            confirmLabel = stringResource(R.string.btn_ok),
+            onConfirm = { showBlockedError = false },
         )
     }
 }

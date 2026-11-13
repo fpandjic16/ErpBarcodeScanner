@@ -6,13 +6,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.erpbarcode.scanner.R
+import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.AppSignal
 
@@ -53,38 +50,26 @@ internal fun ConnectionTestingDialog() {
 
 @Composable
 internal fun ConnectionResultDialog(ok: Boolean, message: String, onDismiss: () -> Unit) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (ok) stringResource(R.string.ext_config_connection_ok) else stringResource(R.string.ext_config_connection_failed),
-                fontWeight = FontWeight.Bold,
-                color = if (ok) AppPalette.Teal else AppSignal.Danger,
-            )
-        },
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_ok)) }
-        },
+        title = if (ok) stringResource(R.string.ext_config_connection_ok) else stringResource(R.string.ext_config_connection_failed),
+        text = message,
+        accent = if (ok) AppPalette.Teal else AppSignal.Danger,
+        confirmLabel = stringResource(R.string.btn_ok),
+        onConfirm = onDismiss,
     )
 }
 
 /** Saving with a server address but no environment: [onPick] one, or [onSaveAnyway]. */
 @Composable
 internal fun EnvironmentMissingDialog(onPick: () -> Unit, onSaveAnyway: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.ext_config_env_missing_title), fontWeight = FontWeight.Bold) },
-        text = { Text(stringResource(R.string.ext_config_env_missing_text)) },
-        confirmButton = {
-            Button(onClick = onPick) {
-                Text(stringResource(R.string.ext_config_env_missing_pick), fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onSaveAnyway) {
-                Text(stringResource(R.string.ext_config_env_missing_save_anyway))
-            }
-        },
+        title = stringResource(R.string.ext_config_env_missing_title),
+        text = stringResource(R.string.ext_config_env_missing_text),
+        confirmLabel = stringResource(R.string.ext_config_env_missing_pick),
+        onConfirm = onPick,
+        dismissLabel = stringResource(R.string.ext_config_env_missing_save_anyway),
+        onDismiss = onSaveAnyway,
     )
 }
