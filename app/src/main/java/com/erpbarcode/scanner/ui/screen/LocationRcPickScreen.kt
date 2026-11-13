@@ -26,6 +26,7 @@ import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.component.TOP_BAR_BUTTON_HEIGHT
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.monoLabel
@@ -95,13 +96,16 @@ fun LocationRcPickScreen(
                     Row(
                         modifier = Modifier
                             .padding(end = 8.dp)
+                            // As tall as the back button across the bar. About 35 dp until
+                            // 3.6.78, when only the padding around the label gave it a height.
+                            .height(TOP_BAR_BUTTON_HEIGHT)
                             .clip(RoundedCornerShape(8.dp))
                             // Coral, the palette's action colour — same fill as the upload
                             // action in the recording top bar, so top-bar actions match. The
                             // translucent white this replaced barely registered as a button.
                             .background(AppPalette.Coral)
                             .clickable(onClick = { if (hasCredentials) onRefresh() else showLoginSheet = true })
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                            .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {

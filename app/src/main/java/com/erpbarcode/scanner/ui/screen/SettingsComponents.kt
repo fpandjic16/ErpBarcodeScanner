@@ -155,7 +155,10 @@ internal fun SettingsDangerRow(label: String, description: String, onClick: () -
     }
 }
 
-/** One option of a small set (text size, debounce time); the picked one is dark. */
+/**
+ * One option of a small set (text size, debounce time); the picked one is dark. At least 48 dp
+ * tall; about 35 until 3.6.78, when only [contentPadding] gave it a height.
+ */
 @Composable
 internal fun SettingsChoiceChip(
     label: String,
@@ -166,6 +169,7 @@ internal fun SettingsChoiceChip(
 ) {
     Box(
         modifier = modifier
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(if (selected) AppPalette.Slate else AppPalette.CreamAlt)
             .clickable(onClick = onClick)

@@ -127,6 +127,9 @@ fun DocumentFilterScreen(
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
+                                        // 48 dp; about 35 until 3.6.78, when only the 8 dp above
+                                        // and below the label gave the chip a height.
+                                        .heightIn(min = 48.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(bg)
                                         .clickable {
@@ -163,6 +166,10 @@ fun DocumentFilterScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    // 48 dp a row. Until 3.6.78 a row was its 24 dp checkbox and
+                                    // the 4 dp around it, 32 dp, and the rows lie one against the
+                                    // next, so a thumb had nowhere to miss into but a neighbour.
+                                    .heightIn(min = 48.dp)
                                     .clickable {
                                         selectedTypes = if (selected) selectedTypes - type else selectedTypes + type
                                     }

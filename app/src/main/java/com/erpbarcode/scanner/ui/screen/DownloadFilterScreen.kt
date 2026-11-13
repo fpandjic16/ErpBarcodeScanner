@@ -462,7 +462,12 @@ private fun InventoryBatchSelector(
         }
         if (error != null) {
             Text(error, style = MaterialTheme.typography.bodyMedium.copy(color = AppPalette.Coral))
-            OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.download_inventory_batches_retry)) }
+            OutlinedButton(
+                onClick = onRetry,
+                // Across the screen and 52 dp, as the screen's other buttons. Until 3.6.78 the
+                // toolkit's default: 40 dp, as wide as its label.
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            ) { Text(stringResource(R.string.download_inventory_batches_retry)) }
         }
     }
 }
