@@ -295,7 +295,12 @@ internal fun ItemQtyExtraDetails(
         }
         Spacer(Modifier.height(14.dp))
 
-        val btnText = if (typed.isEmpty()) "Set to ${line.expected.formatQty()}" else "Set to $typed"
+        // English in every language until 3.6.79, the one piece of screen text that never
+        // became a resource.
+        val btnText = stringResource(
+            R.string.keypad_set_to,
+            if (typed.isEmpty()) line.expected.formatQty() else typed,
+        )
         val btnColor = when {
             typed.isEmpty()  -> LineStatus.EXACT.inkColor
             confirmEnabled   -> previewColor

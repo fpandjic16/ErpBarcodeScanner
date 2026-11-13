@@ -98,7 +98,7 @@ internal fun ConfigLoadFlow(
                         onClick = onClose,
                         modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        DialogButtonLabel(stringResource(android.R.string.cancel))
+                        DialogButtonLabel(stringResource(R.string.btn_cancel))
                     }
                 }
             }
@@ -154,7 +154,7 @@ internal fun ConfigLoadFlow(
                         onClick = onClose,
                         modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                     ) {
-                        DialogButtonLabel(stringResource(android.R.string.cancel))
+                        DialogButtonLabel(stringResource(R.string.btn_cancel))
                     }
                 }
             }
@@ -185,7 +185,7 @@ internal fun EnvironmentPickDialog(onPick: (ExtSystemEnvironment) -> Unit, onDis
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth().heightIn(min = DIALOG_BUTTON_HEIGHT),
                 ) {
-                    DialogButtonLabel(stringResource(android.R.string.cancel))
+                    DialogButtonLabel(stringResource(R.string.btn_cancel))
                 }
             }
         }

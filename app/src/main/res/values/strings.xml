@@ -83,6 +83,7 @@
     <string name="keypad_is_empty">empty</string>
     <string name="keypad_is_partial">partial</string>
     <string name="keypad_is_exact">exact</string>
+    <string name="keypad_set_to">Set to %1$s</string>
     <string name="keypad_is_over">over</string>
     <!-- Settings -->
     <string name="settings_title">Settings</string>

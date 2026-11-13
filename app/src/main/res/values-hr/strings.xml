@@ -83,6 +83,7 @@
     <string name="keypad_is_empty">prazno</string>
     <string name="keypad_is_partial">djelomično</string>
     <string name="keypad_is_exact">točno</string>
+    <string name="keypad_set_to">Postavi na %1$s</string>
     <string name="keypad_is_over">prekoračenje</string>
     <!-- Settings -->
     <string name="settings_title">Postavke</string>

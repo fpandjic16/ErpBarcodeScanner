@@ -83,6 +83,7 @@
     <string name="keypad_is_empty">празно</string>
     <string name="keypad_is_partial">делумно</string>
     <string name="keypad_is_exact">точно</string>
+    <string name="keypad_set_to">Постави на %1$s</string>
     <string name="keypad_is_over">прекумерно</string>
     <!-- Settings -->
     <string name="settings_title">Поставки</string>

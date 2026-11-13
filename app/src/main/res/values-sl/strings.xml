@@ -83,6 +83,7 @@
     <string name="keypad_is_empty">prazno</string>
     <string name="keypad_is_partial">delno</string>
     <string name="keypad_is_exact">točno</string>
+    <string name="keypad_set_to">Nastavi na %1$s</string>
     <string name="keypad_is_over">presežek</string>
     <!-- Settings -->
     <string name="settings_title">Nastavitve</string>
