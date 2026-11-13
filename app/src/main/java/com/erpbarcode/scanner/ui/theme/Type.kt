@@ -50,6 +50,10 @@ internal val BaseAppTypography = Typography(
         fontFamily = Geist, fontWeight = FontWeight.Medium,
         fontSize = 40.sp, lineHeight = 44.sp, letterSpacing = (-0.5).sp,
     ),
+    headlineSmall = TextStyle(
+        fontFamily = Geist, fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.2).sp,
+    ),
     titleLarge = TextStyle(
         fontFamily = Geist, fontWeight = FontWeight.Medium,
         fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.2).sp,
@@ -74,16 +78,31 @@ internal val BaseAppTypography = Typography(
         fontFamily = Geist, fontWeight = FontWeight.Normal,
         fontSize = 13.sp, lineHeight = 18.sp,
     ),
+    labelLarge = TextStyle(
+        fontFamily = Geist, fontWeight = FontWeight.Medium,
+        fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp,
+    ),
     labelSmall = TextStyle(
         fontFamily = GeistMono, fontWeight = FontWeight.Medium,
         fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 1.1.sp,
     ),
 )
 
+/*
+ * A style left out here is not absent: the toolkit fills it in with its own, in the system
+ * typeface and at a fixed size, and its components go on using it. Until 3.6.77 that was the case
+ * for the two below that the app meets most. headlineSmall is a dialog's title. labelLarge is the
+ * label of every button, menu item and date-picker control: 14 sp whatever the text-size setting
+ * said, under body text of 16 or 18 sp.
+ */
 internal fun scaledTypography(offset: Int) = Typography(
     displayLarge = TextStyle(
         fontFamily = Geist, fontWeight = FontWeight.Medium,
         fontSize = (40 + offset).sp, lineHeight = (44 + offset).sp, letterSpacing = (-0.5).sp,
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = Geist, fontWeight = FontWeight.SemiBold,
+        fontSize = (22 + offset).sp, lineHeight = (28 + offset).sp, letterSpacing = (-0.2).sp,
     ),
     titleLarge = TextStyle(
         fontFamily = Geist, fontWeight = FontWeight.Medium,
@@ -108,6 +127,10 @@ internal fun scaledTypography(offset: Int) = Typography(
     bodySmall = TextStyle(
         fontFamily = Geist, fontWeight = FontWeight.Normal,
         fontSize = (13 + offset).sp, lineHeight = (18 + offset).sp,
+    ),
+    labelLarge = TextStyle(
+        fontFamily = Geist, fontWeight = FontWeight.Medium,
+        fontSize = (14 + offset).sp, lineHeight = (20 + offset).sp, letterSpacing = 0.1.sp,
     ),
     labelSmall = TextStyle(
         fontFamily = GeistMono, fontWeight = FontWeight.Medium,

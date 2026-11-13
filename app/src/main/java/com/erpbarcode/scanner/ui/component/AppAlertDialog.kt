@@ -33,9 +33,10 @@ val DIALOG_BUTTON_HEIGHT = 52.dp
 private val DIALOG_ICON_SIZE = 36.dp
 
 /**
- * The label of a dialog's button, in the size of the dialog's own text, so that it follows the
- * text-size setting. Left to itself a button label is 14 sp whatever that setting says, which
- * made the one thing to be tapped the smallest text in the dialog.
+ * The label of a dialog's button, in the size of the dialog's own text and a little heavier, so
+ * that it follows the text-size setting. Named here rather than left to the theme's button label:
+ * until 3.6.77 the theme had none, and the toolkit's own is 14 sp whatever that setting says,
+ * which made the one thing to be tapped the smallest text in the dialog.
  */
 @Composable
 fun DialogButtonLabel(text: String) {
