@@ -25,6 +25,14 @@ import javax.inject.Singleton
  * **Never hold a DAO, or the database, in a field.** Read [current] at the moment of use, or
  * observe [database] and re-subscribe. A reference captured before a profile switch writes into
  * the previous operator's file — the one failure mode this design has, and it is silent.
+ *
+ * **Opening, switching and deleting hold this object's lock** (3.6.81), so they may be called from
+ * any thread. The map of open files used to be a plain one: two threads asking for one profile at
+ * the same moment could each find it missing and each open the file, leaving two Room instances
+ * over one file, each telling only its own screens what it had written. Every caller ran on the
+ * main thread, so it could not happen yet; it was one background caller away from happening. The
+ * same lock keeps a deletion from landing between "this is not the signed-in profile" and the
+ * removal of its file, with a sign-in to that very profile in between.
  */
 @Singleton
 class DatabaseProvider @Inject constructor(
@@ -63,12 +71,14 @@ class DatabaseProvider @Inject constructor(
     fun current(): AppDatabase =
         _database.value ?: error("No profile is signed in; there is no database to use")
 
+    @Synchronized
     fun switchTo(profile: UserProfile) {
         profileStore.setCurrent(profile)
         _database.value = openFor(profile.key)
     }
 
     /** Signs out without touching a byte of anyone's data. */
+    @Synchronized
     fun release() {
         profileStore.clearCurrent()
         _database.value = null
@@ -92,12 +102,14 @@ class DatabaseProvider @Inject constructor(
      * `deleteDatabase` takes the `-wal` and `-shm` files with it, which a plain file delete would
      * leave behind to be found by the next database of the same name.
      */
+    @Synchronized
     fun deleteProfileData(profileKey: String) {
         if (profileKey == profileStore.currentKey()) return
         open.remove(profileKey)?.close()
         context.deleteDatabase(UserProfileStore.databaseName(profileKey))
     }
 
+    @Synchronized
     private fun openFor(profileKey: String): AppDatabase = open.getOrPut(profileKey) {
         Room.databaseBuilder(
             context,
