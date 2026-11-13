@@ -48,6 +48,7 @@ import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.model.User
 import com.erpbarcode.scanner.ui.component.DocumentStatsDashboard
 import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.component.TOP_BAR_BUTTON_HEIGHT
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.component.StatusProgressBar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -104,7 +105,8 @@ fun MainMenuScreen(
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp, top = 2.dp, bottom = 2.dp, end = 4.dp)
-                        .size(44.dp)
+                        // As tall as every other button in the bar; 44 dp until 3.6.74.
+                        .size(TOP_BAR_BUTTON_HEIGHT)
                         .clip(CircleShape)
                         .background(if (user != null) AppPalette.Coral else AppOnDark.Button)
                         .clickable(onClick = onUserInfoTap),

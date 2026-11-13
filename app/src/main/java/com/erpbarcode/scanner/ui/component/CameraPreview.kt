@@ -9,7 +9,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
@@ -146,8 +146,9 @@ fun CameraPreview(
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(end = 16.dp, top = 8.dp)
-                .size(44.dp)
-                .clip(RoundedCornerShape(22.dp))
+                // 48 dp, the smallest target a gloved thumb reliably hits; 44 until 3.6.74.
+                .size(48.dp)
+                .clip(CircleShape)
                 .background(AppCamera.Scrim)
                 .clickable(onClick = { latestOnClose.value() }),
             contentAlignment = Alignment.Center,

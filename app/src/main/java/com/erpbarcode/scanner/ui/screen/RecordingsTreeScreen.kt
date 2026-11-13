@@ -498,7 +498,7 @@ private fun ScanLeafRow(
         // dropping the control entirely just left the operator wondering why this one row differs.
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(48.dp)
                 .clickable(onClick = if (scan.sent) onSentTap else onDelete),
             contentAlignment = Alignment.Center,
         ) {

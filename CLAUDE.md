@@ -120,7 +120,7 @@ Helpers shared between screens live in their own file as `internal`, not as a pr
 
 **Colours come only from `ui/theme/Color.kt`** — `AppPalette` (brand), `AppStatus` (the four states), `AppSignal` (danger/warning, which share the red and orange with Empty and Partial but mean something else), `AppLine` (hairlines and borders on light surfaces), `AppOnDark` (the same on Slate) and `AppCamera`. A `Color(0x…)` literal in a screen or component is a review failure; add a token instead. `Color.White`/`Color.Transparent` are fine. The look before the token, 48 dp and status-colour changes is tagged `pre-design-tokens` in git, and each of those three changes is its own commit so it can be reverted alone.
 
-**Touch targets are at least 48 dp** — top bar buttons are 60 × `TOP_BAR_BUTTON_HEIGHT` (48) in a 52 dp bar; a small icon that acts on its own (a chip's clear ×) sits in `minimumInteractiveComponentSize()`.
+**Touch targets are at least 48 dp** — top bar buttons are 60 × `TOP_BAR_BUTTON_HEIGHT` (48) in a 52 dp bar; a small icon that acts on its own (a chip's clear ×) sits in `minimumInteractiveComponentSize()`, and so do the scan field's two buttons (`ScanFieldButton`: a 40 dp square in a 48 dp slot).
 
 ### Data Model
 

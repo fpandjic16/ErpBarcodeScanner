@@ -20,12 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -148,49 +150,66 @@ fun ScanField(
             .clip(RoundedCornerShape(10.dp))
             .background(bg)
             .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            // 2 dp around the buttons' 48 dp slots. The text keeps the 10 dp it always had above
+            // and below (8 here, 2 from this), so the field is exactly as tall as it was.
+            .padding(start = 12.dp, top = 2.dp, end = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AndroidView(
             factory = { editText },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).padding(vertical = 8.dp),
             update = { field ->
                 field.setTextColor(textColor)
                 field.setHintTextColor(hintColor)
                 field.hint = placeholder
             },
         )
-        Spacer(Modifier.width(8.dp))
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (dark) AppOnDark.Button else AppPalette.CreamAlt)
-                .clickable { showKeyboard() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Keyboard,
-                contentDescription = stringResource(R.string.cd_show_keyboard),
-                tint = if (dark) Color.White else AppPalette.Slate,
+        // With the 4 dp the slot keeps around its square, the 8 dp between text and button.
+        Spacer(Modifier.width(4.dp))
+        ScanFieldButton(
+            icon = Icons.Outlined.Keyboard,
+            description = stringResource(R.string.cd_show_keyboard),
+            background = if (dark) AppOnDark.Button else AppPalette.CreamAlt,
+            tint = if (dark) Color.White else AppPalette.Slate,
+            onClick = { showKeyboard() },
+        )
+        if (showCamera) {
+            ScanFieldButton(
+                icon = Icons.Outlined.PhotoCamera,
+                description = stringResource(R.string.cd_open_camera),
+                background = if (dark) AppPalette.Coral else AppPalette.Slate,
+                tint = Color.White,
+                onClick = onCameraTap,
             )
         }
-        if (showCamera) {
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (dark) AppPalette.Coral else AppPalette.Slate)
-                    .clickable(onClick = onCameraTap),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.PhotoCamera,
-                    contentDescription = stringResource(R.string.cd_open_camera),
-                    tint = Color.White,
-                )
-            }
-        }
+    }
+}
+
+/**
+ * One of the field's buttons: a 40 dp square in a 48 dp slot.
+ *
+ * The slot is the target, the square is what is drawn. Until 3.6.74 the squares were 32 dp with
+ * 8 dp between them and no slot, so the two targets met halfway across that gap: 44 dp wide at
+ * best, and a thumb landing between them got whichever happened to be nearer. The slots now
+ * stand side by side, which leaves the same 8 dp between the squares.
+ */
+@Composable
+private fun ScanFieldButton(
+    icon: ImageVector,
+    description: String,
+    background: Color,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(background)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(imageVector = icon, contentDescription = description, tint = tint)
     }
 }
