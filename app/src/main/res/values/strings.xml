@@ -203,9 +203,13 @@
     <string name="ext_config_import_parse_error">Could not parse JSON file</string>
     <string name="ext_config_import_read_error">Could not read file</string>
     <!-- Document recordings -->
-    <string name="doc_delete_recordings_title">Delete recordings?</string>
-    <string name="doc_delete_recordings_text">All unsent recordings for %s will be deleted.</string>
+    <plurals name="doc_delete_recordings_title">
+        <item quantity="one">Delete %d unsent recording?</item>
+        <item quantity="other">Delete %d unsent recordings?</item>
+    </plurals>
+    <string name="doc_delete_recordings_text">The recordings of %s that have not been sent will be deleted. This cannot be undone. The document stays, and its lines can be scanned again.</string>
     <string name="doc_delete_recordings_kept">%d recordings have already been sent to the external system and stay as they are.</string>
+    <string name="doc_delete_recordings_button">Delete unsent recordings (%d)</string>
     <string name="doc_being_sent_title">The document is being sent</string>
     <string name="doc_being_sent_body">Its recordings cannot be deleted or reduced until the sending has finished. Wait for it and try again.</string>
         <!-- Accessibility -->
@@ -299,7 +303,6 @@
     <string name="recordings_tree_delete_title">Delete recording?</string>
     <string name="recordings_tree_delete_text">The recording of %1$s, quantity %2$s, will be removed from the line.</string>
     <string name="recordings_tree_sent_locked">Already sent to the external system — it can no longer be deleted here.</string>
-    <string name="recordings_tree_hold_hint">Hold this row for 5 s to delete all unsent recordings.</string>
     <string name="recordings_tree_orphans">Recordings without a line</string>
     <string name="recordings_tree_orphans_desc">Their line was removed in the external system. Upload the document to review them.</string>
     <!-- Sent-quantity floor on a manual edit -->

@@ -225,9 +225,11 @@ Every line of the document appears, including ones you haven't touched — seein
 
 A scan that has already been **Sent** shows a padlock instead of a bin. It cannot be deleted here: it is already recorded in the central system, and removing it from the device would only make the device forget what it sent. Correct it in the central system instead.
 
-**Deleting every unsent scan on the document**: press and hold the summary card at the top for about 5 seconds (a progress ring fills in; releasing early cancels). The confirmation tells you how many scans have already been sent — those stay.
+**Deleting every unsent scan on the document**: tap the red **Delete unsent recordings (n)** button in the summary card at the top. The number on it is how many scans will go, and the confirmation repeats it, names the document and tells you how many scans have already been sent — those stay, and cannot be deleted from the device. **The document itself stays as well**, with all its lines, so you can scan it again; if nothing on it had been sent, the app returns you to the RECORDINGS list, where the document no longer appears, and you open it from its document type as usual. The button is not shown when there is nothing unsent.
 
-If the central system removed a line *after* you scanned it, those scans appear at the bottom under **Recordings without a line**. You cannot delete them here — press UPLOAD on the document and the review will ask you what to do with them.
+**While a document is being sent in the background**, its scans cannot be deleted and its quantities cannot be lowered: the app says *The document is being sent* and asks you to wait. Those scans are on their way to the central system at that moment. Try again once the sending has finished.
+
+If the central system removed a line *after* you scanned it, those scans appear at the bottom under **Recordings without a line**. You cannot delete them one by one here — press UPLOAD on the document and the review will ask you what to do with them. (**Delete unsent recordings** does take them, along with every other unsent scan.)
 
 ---
 
@@ -480,7 +482,7 @@ It stays on **Orders** all the way through, including while it's being sent and 
 Open the document from the **Errors** tab to read the exact reason, then tap **Retry Upload**. If the message isn't clear (e.g. a technical server error), relay the exact text to IT support.
 
 ### 18.6 "I want to start a document completely over"
-Open it from **RECORDINGS** on the Main Menu, then press and hold the summary card at the top for ~5 seconds and confirm. This wipes every scan that hasn't been sent yet. Scans already accepted by the central system stay — they're recorded there, and the confirmation tells you how many there are.
+Open it from **RECORDINGS** on the Main Menu, tap **Delete unsent recordings** in the card at the top and confirm. This wipes every scan that hasn't been sent yet. Scans already accepted by the central system stay — they're recorded there, and the confirmation tells you how many there are. The document stays on the device with all its lines, ready to be scanned again.
 
 ### 18.7 "The barcode scanned as garbage/wrong characters"
 If it's a special `Barcode|UoM|Qty` label, verify with the office that it was printed as **Code 128** — the older Code 39 symbology cannot represent the `|` character correctly and will scan as gibberish.

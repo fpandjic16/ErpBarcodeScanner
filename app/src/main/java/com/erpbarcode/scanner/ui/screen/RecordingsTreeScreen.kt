@@ -1,9 +1,9 @@
 package com.erpbarcode.scanner.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,22 +12,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,18 +42,16 @@ import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.formatQty
 import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
+import com.erpbarcode.scanner.ui.component.DialogButtonLabel
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
 import com.erpbarcode.scanner.ui.theme.AppPalette
 import com.erpbarcode.scanner.ui.theme.AppStatus
 import com.erpbarcode.scanner.ui.theme.monoLabel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.erpbarcode.scanner.ui.theme.AppSignal
 import com.erpbarcode.scanner.ui.theme.AppLine
-import com.erpbarcode.scanner.ui.theme.AppOnDark
 
 private val scanTimeFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM. HH:mm").withZone(ZoneId.systemDefault())
@@ -82,8 +79,9 @@ fun RecordingsTreeScreen(
 
     // Scans whose line the ERP has since removed. They have no branch to hang from, and leaving
     // them out would make this screen quietly disagree with the count it shows at the top. Not
-    // deletable here: discarding an orphan is a decision the upload review asks for explicitly,
-    // with the whole picture in front of it.
+    // deletable one by one: discarding an orphan is a decision the upload review asks for
+    // explicitly, with the whole picture in front of it. Clearing the document takes the unsent
+    // ones along with every other unsent scan.
     val orphans = remember(document) {
         document.orphanedScans.map { it to false } + document.sentOrphanedScans.map { it to true }
     }
@@ -97,7 +95,7 @@ fun RecordingsTreeScreen(
 
         DocumentScanSummary(
             document = document,
-            onLongHold = { confirmDeleteAll = true },
+            onClearUnsent = { confirmDeleteAll = true },
         )
 
         if (tree.isEmpty() && orphans.isEmpty()) {
@@ -207,7 +205,10 @@ fun RecordingsTreeScreen(
     if (confirmDeleteAll) {
         AppAlertDialog(
             onDismissRequest = { confirmDeleteAll = false },
-            title = stringResource(R.string.doc_delete_recordings_title),
+            // How many, in the title: the number on the button, said once more before it happens.
+            title = LocalContext.current.resources.getQuantityString(
+                R.plurals.doc_delete_recordings_title, document.pendingScans, document.pendingScans,
+            ),
             text = stringResource(R.string.doc_delete_recordings_text, document.documentNo),
             confirmLabel = stringResource(R.string.btn_clear),
             onConfirm = { confirmDeleteAll = false; onDeleteAllQueued() },
@@ -226,77 +227,53 @@ fun RecordingsTreeScreen(
 }
 
 /**
- * Totals for the document, and the only way to clear its scans.
+ * Totals for the document, and the way to clear what has not been sent.
  *
- * The 5-second hold used to live on the RECORDINGS tab of the document list; that tab is gone, so
- * the gesture moved here, where the operator can see exactly what it would remove. Unlike the old
- * one it takes only the queued scans — see `DocumentRepository.deleteDocumentRecordings`.
+ * The button took the place of a five-second hold on this card (3.6.84), which had itself moved
+ * here from the old RECORDINGS tab of the document list: nobody found a gesture explained only by
+ * a line of small grey text. It takes the unsent scans alone, says how many that is, and is there
+ * only while there are any; see `DocumentRepository.deleteDocumentRecordings`.
  */
 @Composable
-private fun DocumentScanSummary(document: Document, onLongHold: () -> Unit) {
+private fun DocumentScanSummary(document: Document, onClearUnsent: () -> Unit) {
     val sizeOffset = LocalTextSizeOffset.current
-    val coroutineScope = rememberCoroutineScope()
-    var holdProgress by remember { mutableFloatStateOf(0f) }
 
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color.White)
-                .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
-                .pointerInput(onLongHold) {
-                    detectTapGestures(
-                        onPress = {
-                            val job = coroutineScope.launch {
-                                var elapsed = 0L
-                                while (elapsed < 5000L) {
-                                    delay(16L)
-                                    elapsed += 16L
-                                    holdProgress = elapsed / 5000f
-                                }
-                                holdProgress = 0f
-                                onLongHold()
-                            }
-                            tryAwaitRelease()
-                            job.cancel()
-                            holdProgress = 0f
-                        },
-                    )
-                }
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    document.totalScans.toString(),
-                    style = monoLabel.copy(
-                        color = AppPalette.Ink,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = (20 + sizeOffset).sp,
-                    ),
-                )
-                Spacer(Modifier.width(10.dp))
-                if (document.sentScans > 0) {
-                    SentChip(document.sentScans)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .border(1.dp, AppLine.CardBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.recordings_tree_hold_hint),
-                style = monoLabel.copy(color = AppPalette.Ink4, fontSize = (11 + sizeOffset).sp),
+                document.totalScans.toString(),
+                style = monoLabel.copy(
+                    color = AppPalette.Ink,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = (20 + sizeOffset).sp,
+                ),
             )
+            Spacer(Modifier.width(10.dp))
+            if (document.sentScans > 0) {
+                SentChip(document.sentScans)
+            }
         }
-        if (holdProgress > 0f) {
-            Box(
-                modifier = Modifier.matchParentSize().background(AppLine.Overlay, RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
+        // Not shown with nothing to take back: a sent scan cannot be deleted, and a button that
+        // would delete nothing reads as a button that does not work.
+        if (document.pendingScans > 0) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onClearUnsent,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                border = BorderStroke(1.dp, AppSignal.Danger),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppSignal.Danger),
             ) {
-                CircularProgressIndicator(
-                    progress = { holdProgress },
-                    color = AppPalette.Coral,
-                    trackColor = AppOnDark.Track,
-                    modifier = Modifier.size(40.dp),
-                )
+                Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                DialogButtonLabel(stringResource(R.string.doc_delete_recordings_button, document.pendingScans))
             }
         }
     }

@@ -205,9 +205,15 @@
     <string name="ext_config_import_parse_error">Datoteke JSON ni bilo mogoče razčleniti</string>
     <string name="ext_config_import_read_error">Datoteke ni bilo mogoče prebrati</string>
     <!-- Document recordings -->
-    <string name="doc_delete_recordings_title">Izbrisati snemanja?</string>
-    <string name="doc_delete_recordings_text">Vsi neposlani zapisi za %s bodo izbrisani.</string>
+    <plurals name="doc_delete_recordings_title">
+        <item quantity="one">Izbrisati %d neposlani zapis?</item>
+        <item quantity="two">Izbrisati %d neposlana zapisa?</item>
+        <item quantity="few">Izbrisati %d neposlane zapise?</item>
+        <item quantity="other">Izbrisati %d neposlanih zapisov?</item>
+    </plurals>
+    <string name="doc_delete_recordings_text">Zapisi dokumenta %s, ki še niso poslani, bodo izbrisani. Tega ni mogoče razveljaviti. Dokument ostane in vrstice je mogoče znova skenirati.</string>
     <string name="doc_delete_recordings_kept">%d zapisov je že poslanih v zunanji sistem in ostanejo nespremenjeni.</string>
+    <string name="doc_delete_recordings_button">Izbriši neposlane zapise (%d)</string>
     <string name="doc_being_sent_title">Dokument se pravkar pošilja</string>
     <string name="doc_being_sent_body">Njegovih zapisov ni mogoče brisati ali zmanjševati, dokler se pošiljanje ne konča. Počakajte, da se konča, in poskusite znova.</string>
         <!-- Accessibility -->
@@ -301,7 +307,6 @@
     <string name="recordings_tree_delete_title">Izbrisati zapis?</string>
     <string name="recordings_tree_delete_text">Zapis %1$s, količina %2$s, bo odstranjen iz vrstice.</string>
     <string name="recordings_tree_sent_locked">Že poslano v zunanji sistem — od tu ga ni več mogoče izbrisati.</string>
-    <string name="recordings_tree_hold_hint">Držite to vrstico 5 s za izbris vseh neposlanih zapisov.</string>
     <string name="recordings_tree_orphans">Zapisi brez vrstice</string>
     <string name="recordings_tree_orphans_desc">Njihova vrstica je bila odstranjena v zunanjem sistemu. Pošljite dokument, da jih pregledate.</string>
     <!-- Sent-quantity floor on a manual edit -->

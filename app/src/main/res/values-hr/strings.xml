@@ -204,9 +204,14 @@
     <string name="ext_config_import_parse_error">JSON datoteka nije valjana</string>
     <string name="ext_config_import_read_error">Datoteka se ne može pročitati</string>
     <!-- Document recordings -->
-    <string name="doc_delete_recordings_title">Obrisati snimanja?</string>
-    <string name="doc_delete_recordings_text">Svi neposlani zapisi za %s bit će obrisani.</string>
+    <plurals name="doc_delete_recordings_title">
+        <item quantity="one">Obrisati %d neposlani zapis?</item>
+        <item quantity="few">Obrisati %d neposlana zapisa?</item>
+        <item quantity="other">Obrisati %d neposlanih zapisa?</item>
+    </plurals>
+    <string name="doc_delete_recordings_text">Zapisi dokumenta %s koji još nisu poslani bit će obrisani. To se ne može poništiti. Dokument ostaje i stavke se mogu ponovno skenirati.</string>
     <string name="doc_delete_recordings_kept">%d zapisa je već poslano u vanjski sustav i ostaju nepromijenjeni.</string>
+    <string name="doc_delete_recordings_button">Obriši neposlane zapise (%d)</string>
     <string name="doc_being_sent_title">Dokument se upravo šalje</string>
     <string name="doc_being_sent_body">Njegovi se zapisi ne mogu brisati ni smanjivati dok slanje ne završi. Pričekajte da završi i pokušajte ponovno.</string>
         <!-- Accessibility -->
@@ -300,7 +305,6 @@
     <string name="recordings_tree_delete_title">Obrisati zapis?</string>
     <string name="recordings_tree_delete_text">Zapis %1$s, količina %2$s, bit će uklonjen sa stavke.</string>
     <string name="recordings_tree_sent_locked">Već je poslano u vanjski sustav — odavde se više ne može obrisati.</string>
-    <string name="recordings_tree_hold_hint">Držite ovaj redak 5 s za brisanje svih neposlanih zapisa.</string>
     <string name="recordings_tree_orphans">Zapisi bez stavke</string>
     <string name="recordings_tree_orphans_desc">Njihova je stavka uklonjena u vanjskom sustavu. Pošaljite dokument da ih pregledate.</string>
     <!-- Sent-quantity floor on a manual edit -->

@@ -79,6 +79,7 @@ Outside the app:
 
 - **MainMenuScreen** — Document type list with counts/status bars; context strip for location/RC switching; a single RECORDINGS row opening `RecordingsListScreen`
 - **RecordingsListScreen** — Every document carrying a scan, newest first; a row opens its recordings tree
+- **RecordingsTreeScreen** — One document's lines with the individual scans under each. An unsent scan is deleted by its bin; **Delete unsent recordings (n)** in the summary card clears every unsent scan of the document after a confirmation that says how many. Sent scans, the document and its lines stay, so it can be scanned again; with nothing sent left the screen returns to the list. The button is hidden when nothing is unsent
 - **RecordingScreen** — Core scanning interface: per-line progress, docked ScanBar, hardware wedge + camera fallback, keypad entry, over-scan/UoM-mismatch warnings. On a stock count, an unlisted item is confirmed and added as a line of the device's own, a `BARCODE|UOM|QTY` label matches on its plain barcode, and a line expecting 0 or less gives no over-scan warning. An accepted scan scrolls the list to the line it landed on (only when that line is off screen) and deepens its status tint for five seconds before fading back
 - **DocumentListScreen** — Per-doc-type list with tabs, create/delete, filter, upload
 - **DocumentOverviewScreen** — Cross-type dashboard (errors/ready/partial/over tabs)

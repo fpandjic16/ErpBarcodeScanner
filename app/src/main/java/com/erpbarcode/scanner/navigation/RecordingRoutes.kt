@@ -89,7 +89,15 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                     tree = treeState.tree,
                     onBack = { nav.popBackStack() },
                     onDeleteScan = { scan -> vm.deleteScan(scan, onBeingSent = { showDocumentBeingSent = true }) },
-                    onDeleteAllQueued = { vm.deleteAllQueued(onBeingSent = { showDocumentBeingSent = true }) },
+                    onDeleteAllQueued = {
+                        vm.deleteAllQueued(
+                            onBeingSent = { showDocumentBeingSent = true },
+                            // With nothing sent, nothing is left, and the document is no longer
+                            // among the recordings: back to their list. It stays under its type,
+                            // where it can be scanned again.
+                            onDeleted = { if (currentDoc.sentScans == 0) nav.popBackStack() },
+                        )
+                    },
                 )
             }
         }

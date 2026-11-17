@@ -227,9 +227,11 @@ Prikazuje se svaka stavka dokumenta, i one koje niste dirali — upravo je poant
 
 Skeniranje koje je već **Poslano** umjesto kante prikazuje lokot. Ovdje se ne može obrisati: već je zabilježeno u vanjskom sustavu, a brisanjem s uređaja uređaj bi samo zaboravio što je poslao. Umjesto toga ispravite ga u vanjskom sustavu.
 
-**Brisanje svih neposlanih skeniranja na dokumentu**: pritisnite i držite karticu sažetka na vrhu oko 5 sekundi (puni se kružić napretka; ako pustite ranije, radnja se otkazuje). Potvrda vam kaže koliko je skeniranja već poslano — ta ostaju.
+**Brisanje svih neposlanih skeniranja na dokumentu**: dodirnite crveni gumb **Obriši neposlane zapise (n)** u kartici sažetka na vrhu. Broj na njemu kaže koliko će skeniranja biti obrisano, a potvrda ga ponavlja, navodi dokument i kaže vam koliko je skeniranja već poslano — ta ostaju i s uređaja se ne mogu obrisati. **Ostaje i sam dokument**, sa svim stavkama, pa ga možete ponovno skenirati; ako s njega ništa nije bilo poslano, aplikacija vas vraća na popis ZAPISA, na kojem dokumenta više nema, a otvarate ga iz njegove vrste dokumenta kao i inače. Gumb se ne prikazuje kad nema neposlanih skeniranja.
 
-Ako je vanjski sustav uklonio stavku *nakon* što ste je skenirali, ta se skeniranja pojavljuju na dnu, pod **Zapisi bez stavke**. Ovdje ih ne možete obrisati — na dokumentu pritisnite POŠALJI i pregled će vas pitati što s njima.
+**Dok se dokument šalje u pozadini**, njegova se skeniranja ne mogu brisati niti se količine mogu smanjivati: aplikacija javlja *Dokument se upravo šalje* i traži da pričekate. Ta su skeniranja u tom trenutku na putu u vanjski sustav. Pokušajte ponovno kad slanje završi.
+
+Ako je vanjski sustav uklonio stavku *nakon* što ste je skenirali, ta se skeniranja pojavljuju na dnu, pod **Zapisi bez stavke**. Ovdje ih ne možete brisati jedno po jedno — na dokumentu pritisnite POŠALJI i pregled će vas pitati što s njima. (**Obriši neposlane zapise** briše i njih, zajedno sa svim ostalim neposlanim skeniranjima.)
 
 ---
 
@@ -487,7 +489,7 @@ Dokument ostaje na **Nalozima** cijelo vrijeme, i dok se šalje i nakon neuspjel
 Otvorite dokument s kartice **Greške**, pročitajte točan razlog i dodirnite **Pokušaj ponovo**. Ako poruka nije jasna (npr. tehnička greška poslužitelja), proslijedite točan tekst IT podršci.
 
 ### 18.6 „Želim dokument početi potpuno ispočetka”
-Otvorite ga iz **ZAPISA** na glavnom izborniku, pritisnite i držite karticu sažetka na vrhu oko 5 sekundi i potvrdite. Time se brišu sva skeniranja koja još nisu poslana. Skeniranja koja je vanjski sustav već prihvatio ostaju — ondje su zabilježena, a potvrda vam kaže koliko ih je.
+Otvorite ga iz **ZAPISA** na glavnom izborniku, dodirnite **Obriši neposlane zapise** u kartici na vrhu i potvrdite. Time se brišu sva skeniranja koja još nisu poslana. Skeniranja koja je vanjski sustav već prihvatio ostaju — ondje su zabilježena, a potvrda vam kaže koliko ih je. Dokument ostaje na uređaju sa svim stavkama, spreman za ponovno skeniranje.
 
 ### 18.7 „Barkod se skenirao kao besmislica ili s krivim znakovima”
 Ako je riječ o posebnoj etiketi `Barkod|JM|Količina`, provjerite s uredom je li tiskana kao **Code 128** — starija simbologija Code 39 ne može ispravno prikazati znak `|` i skenira se kao besmislica.

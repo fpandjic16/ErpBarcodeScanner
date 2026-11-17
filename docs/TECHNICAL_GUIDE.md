@@ -421,7 +421,7 @@ Writing:
 Deleting (every one except the first two is limited to queued rows in its `WHERE` clause):
 - `deleteByPk(...)` — used only to move a row to another line (delete + insert, the line is part of the key)
 - `deleteAllForDoc(documentNo, type)`
-- `deleteQueuedByPk(...)`, `deleteQueuedForDoc(...)` — the recordings tree's single delete and its 5-second hold
+- `deleteQueuedByPk(...)`, `deleteQueuedForDoc(...)` — the recordings tree's single delete and its **Delete unsent recordings** button
 - `deleteFailedByDoc(...)`, `deleteOrphansByDoc(...)` — the two discards on `UploadErrorScreen`
 
 ### `LocationDao`
@@ -457,7 +457,7 @@ On `SharedDatabase`, not `AppDatabase`: reached through `SharedDatabaseProvider.
 | `recoverStalePendingUploads()` (suspend, transactional) | At start-up: a `PendingUpload` left by a background upload whose process died goes back to `InProgress` (rows remain) or `Downloaded` (none). Never deletes |
 | `deleteQueuedRecording(documentNo, type, documentLine, recordingLineNo)` (suspend, transactional) | Single-row delete from the recordings tree, `sentAt IS NULL` only; recomputes state. False, with nothing removed, while the document is being sent |
 | `deleteDocumentsWithNothingUnsent(): Int` (suspend, transactional) | The same rule for every document in *this* file, so the signed-in operator's and nobody else's: those without an unsent scan are removed, and the number that had to stay is returned. Behind both "Clear cache" and "Delete downloaded documents" in Settings, which show that number. Replaced `clearAll()`, which took unsent scans with it |
-| `deleteDocumentRecordings(documentNo, type)` (suspend, transactional) | Deletes a document's **queued** recordings and recomputes state from what remains — the 5s-hold action on the recordings tree. "Queued" is every scan not yet accepted: waiting, refused, or left without a line. The document and its lines stay. False, with nothing removed, while the document is being sent |
+| `deleteDocumentRecordings(documentNo, type)` (suspend, transactional) | Deletes a document's **queued** recordings and recomputes state from what remains — the **Delete unsent recordings** button on the recordings tree (a five-second hold until 3.6.84). "Queued" is every scan not yet accepted: waiting, refused, or left without a line. The document and its lines stay. False, with nothing removed, while the document is being sent |
 
 **"Never delete recordings" — where deletions actually happen and why each is safe:**
 - `setLineScanned`, `deleteQueuedRecording`, `deleteDocumentRecordings`, `discardOrphanedScans`, `discardFailedScans` — explicit, user-initiated corrections, and every one of them is scoped to `sentAt IS NULL`. Nothing the ERP has accepted is ever deleted except with its whole document.
@@ -953,7 +953,7 @@ Its source either way is `ShellData.recordedDocs` (`navigation/ShellData.kt`), b
 ### `DocumentListScreen.kt`
 Two tabs — **Orders** (`Downloaded`/`InProgress`/`PendingUpload`/`UploadFailed`) and **Errors** (`UploadFailed`). Client-side filters: `DocumentFilter` only. It does **not** re-check location — the caller hands it `typeDocs`, already filtered by the type's `DocTypeFilterMode`, and the check that used to live here compared `sourceCode` unconditionally, so on a responsibility-centre-scoped type it cut by location as well. `locationCode` is still a parameter, for the subtitle. Dark `ScanField` (`handleDocScan`) reports a document it cannot find; there is no doc creation. Bottom bar varies per tab (Download+Upload / Clear-errors+Upload), and UPLOAD is dimmed and inert unless something is actually queued.
 
-The third tab, **Recordings**, was removed along with the 5-second long-press that lived on it: the tab listed documents Orders already held, and the thing it was really for — seeing what has been scanned — is now the main menu's RECORDINGS section, which shows individual scans rather than the documents carrying them. The long-press moved to `RecordingsTreeScreen`'s summary card.
+The third tab, **Recordings**, was removed along with the 5-second long-press that lived on it: the tab listed documents Orders already held, and the thing it was really for — seeing what has been scanned — is now the main menu's RECORDINGS section, which shows individual scans rather than the documents carrying them. The long-press moved to `RecordingsTreeScreen`'s summary card, where it became a visible button in 3.6.84.
 
 ### `DocumentOverviewScreen.kt` (the "Dashboard")
 Cross-type view, 3 tabs: **Errors**, **My Location** (per-type `DocTypeFilterMode` match; with nothing selected it shows nothing, and the two complaint types only once a centre is selected), **All**. Opening the filter from the "My Location" tab locks source/RC to the current selection. Empty-state green checkmark + "No issues" shown on any empty tab, not just Errors.
@@ -1074,9 +1074,10 @@ The scans do not come from `Document`. `Mappers.toDomain` sums recordings into e
 
 Deletion, two levels:
 - **One scan** — only while `sentAt IS NULL`. A sent row shows a lock instead of a bin, and tapping it explains why: the row is in the ERP, so deleting it locally changes nothing there and only makes the device forget what it has sent. `deleteQueuedRecording` → `deleteQueuedByPk`, then state recomputed from what remains.
-- **All queued scans** — the 5-second hold on the summary card, inherited from the old Recordings tab. `deleteDocumentRecordings` now takes only queued rows (see §B.6), and the dialog says how many are already sent and staying.
+- **All unsent scans** — the red outlined **Delete unsent recordings (n)** button in the summary card (`DocumentScanSummary`), across the card and 52 dp tall, shown only while `document.pendingScans > 0`; n is that count, which is every row with `sentAt IS NULL`: waiting, refused, and left without a line. Until 3.6.84 this was a five-second hold on the card, inherited from the old Recordings tab and explained only by a line of small grey text, which nobody found. The confirmation's title carries the count as a plural (`R.plurals.doc_delete_recordings_title`), its text names the document and says that the document stays and can be scanned again, and it says how many scans are already sent and staying. `deleteDocumentRecordings` takes only unsent rows (see §B.6) and leaves the document and its lines. When it has gone through and the document had nothing sent, the route pops back to the recordings list, where the document no longer is; it remains under its type, in state `Downloaded`.
+- **Neither while the document is being sent**: the repository refuses (§B.6) and the shell shows `DocumentBeingSentDialog`.
 
-Orphans get their own branch at the bottom rather than being left out: the screen shows a total at the top, and omitting them would make it quietly disagree with itself. They are read-only here — discarding an orphan is the decision `UploadErrorScreen` asks for explicitly.
+Orphans get their own branch at the bottom rather than being left out: the screen shows a total at the top, and omitting them would make it quietly disagree with itself. They cannot be deleted one by one here — discarding an orphan is the decision `UploadErrorScreen` asks for explicitly — but the unsent ones go with everything else unsent when the document is cleared.
 
 ### `UserInfoScreen.kt`
 Route `user_info`, behind the avatar on the main menu. Shows the signed-in operator, the working location and responsibility centre, and **Sign out**, which goes through `Shell.requestSignOut` and so waits for a running transfer (§B.11.2).

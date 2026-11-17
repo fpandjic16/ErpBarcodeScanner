@@ -203,9 +203,13 @@
     <string name="ext_config_import_parse_error">JSON датотеката не можеше да се обработи</string>
     <string name="ext_config_import_read_error">Датотеката не можеше да се прочита</string>
     <!-- Document recordings -->
-    <string name="doc_delete_recordings_title">Да се избришат снимањата?</string>
-    <string name="doc_delete_recordings_text">Сите неиспратени записи за %s ќе бидат избришани.</string>
+    <plurals name="doc_delete_recordings_title">
+        <item quantity="one">Да се избрише %d неиспратен запис?</item>
+        <item quantity="other">Да се избришат %d неиспратени записи?</item>
+    </plurals>
+    <string name="doc_delete_recordings_text">Записите на документот %s што сè уште не се испратени ќе бидат избришани. Ова не може да се врати. Документот останува и ставките може повторно да се скенираат.</string>
     <string name="doc_delete_recordings_kept">%d записи се веќе испратени во надворешниот систем и остануваат непроменети.</string>
+    <string name="doc_delete_recordings_button">Избриши ги неиспратените записи (%d)</string>
     <string name="doc_being_sent_title">Документот токму се испраќа</string>
     <string name="doc_being_sent_body">Неговите записи не може да се бришат ниту да се намалуваат додека испраќањето не заврши. Почекајте да заврши и обидете се повторно.</string>
         <!-- Accessibility -->
@@ -299,7 +303,6 @@
     <string name="recordings_tree_delete_title">Да се избрише записот?</string>
     <string name="recordings_tree_delete_text">Записот %1$s, количина %2$s, ќе биде отстранет од ставката.</string>
     <string name="recordings_tree_sent_locked">Веќе е испратено во надворешниот систем — оттука повеќе не може да се избрише.</string>
-    <string name="recordings_tree_hold_hint">Држете го овој ред 5 с за бришење на сите неиспратени записи.</string>
     <string name="recordings_tree_orphans">Записи без ставка</string>
     <string name="recordings_tree_orphans_desc">Нивната ставка е отстранета во надворешниот систем. Испратете го документот за да ги прегледате.</string>
     <!-- Sent-quantity floor on a manual edit -->
