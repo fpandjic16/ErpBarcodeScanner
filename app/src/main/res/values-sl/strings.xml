@@ -208,6 +208,8 @@
     <string name="doc_delete_recordings_title">Izbrisati snemanja?</string>
     <string name="doc_delete_recordings_text">Vsi neposlani zapisi za %s bodo izbrisani.</string>
     <string name="doc_delete_recordings_kept">%d zapisov je že poslanih v zunanji sistem in ostanejo nespremenjeni.</string>
+    <string name="doc_being_sent_title">Dokument se pravkar pošilja</string>
+    <string name="doc_being_sent_body">Njegovih zapisov ni mogoče brisati ali zmanjševati, dokler se pošiljanje ne konča. Počakajte, da se konča, in poskusite znova.</string>
         <!-- Accessibility -->
     <string name="cd_filter">Filter</string>
     <string name="cd_clear">Počisti</string>

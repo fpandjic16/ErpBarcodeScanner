@@ -35,6 +35,11 @@ sealed interface SetQuantityResult {
     data object Applied : SetQuantityResult
     /** Refused — [sent] of this line is already in the ERP and cannot be taken back from here. */
     data class BelowSent(val sent: Double) : SetQuantityResult
+    /**
+     * Refused — the edit would take back scans of a document that a background upload is sending
+     * at this moment. Only a reduction is refused for that; an increase is a new scan.
+     */
+    data object BeingSent : SetQuantityResult
 }
 
 interface DocumentRepository {
@@ -97,9 +102,18 @@ interface DocumentRepository {
         error: String,
     )
     suspend fun discardOrphanedScans(documentNo: String, type: String)
-    suspend fun discardFailedScans(documentNo: String, type: String)
-    suspend fun deleteQueuedRecording(documentNo: String, type: String, documentLine: Int, recordingLineNo: Int)
-    suspend fun deleteDocumentRecordings(documentNo: String, type: String)
+    /**
+     * The three ways an operator takes queued scans off a document: the ones the ERP keeps
+     * refusing, one scan, or every unsent scan, so that the document can be scanned again.
+     *
+     * Each says whether it was allowed to. False, with nothing removed, while a background upload
+     * is sending the document (`DocState.PendingUpload`): the upload has read those rows and is
+     * sending them, so a row deleted here would reach the ERP all the same. A scan the ERP has
+     * accepted is never removed by any of them, and the document itself always stays.
+     */
+    suspend fun discardFailedScans(documentNo: String, type: String): Boolean
+    suspend fun deleteQueuedRecording(documentNo: String, type: String, documentLine: Int, recordingLineNo: Int): Boolean
+    suspend fun deleteDocumentRecordings(documentNo: String, type: String): Boolean
     suspend fun recoverStalePendingUploads()
 }
 
@@ -359,6 +373,9 @@ class DocumentRepositoryImpl @Inject constructor(
      * the operator a number they didn't ask for and leave them thinking the correction went
      * through. It returns [SetQuantityResult.BelowSent] with the floor, and the caller explains it.
      *
+     * A reduction is refused as well, as [SetQuantityResult.BeingSent], while a background upload
+     * is sending the document: see [isBeingSent].
+     *
      * Within the queued part the edit is a delta, not a rewrite. Going up appends one row, the way
      * a scan would. Going down consumes the queued rows newest-first and stops, trimming the last
      * one it only partly needs; everything older survives with its own timestamp, user and GUID.
@@ -384,6 +401,13 @@ class DocumentRepositoryImpl @Inject constructor(
         val queuedRows = db.recordingDao().getQueuedForLineNewestFirst(documentNo, type, lineNo)
         val currentQueued = queuedRows.sumOf { it.quantity }
         val delta = targetQueued - currentQueued
+
+        // Going down deletes queued rows, and a background upload may have read those very rows
+        // and be sending them. Going up is a new row, as a scan is, and a scan made while its
+        // document is on its way is already provided for.
+        if (delta < -QTY_EPSILON && isBeingSent(db, documentNo, type)) {
+            return@withTransaction SetQuantityResult.BeingSent
+        }
 
         when {
             // Going up appends, exactly as a scan would — the existing rows are somebody's work
@@ -531,11 +555,13 @@ class DocumentRepositoryImpl @Inject constructor(
      * a field too long, a wrong type — fails identically on every retry, and with the send no
      * longer stopping at the first failure it is the only thing left holding the document open.
      */
-    override suspend fun discardFailedScans(documentNo: String, type: String) {
+    override suspend fun discardFailedScans(documentNo: String, type: String): Boolean {
         val db = provider.current()
-        db.withTransaction {
+        return db.withTransaction {
+            if (isBeingSent(db, documentNo, type)) return@withTransaction false
             db.recordingDao().deleteFailedByDoc(documentNo, type)
             refreshStateFromRecordings(db, documentNo, type)
+            true
         }
     }
 
@@ -548,17 +574,22 @@ class DocumentRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Removes a single scan the operator judged wrong. Refuses silently if it has already gone. */
+    /**
+     * Removes a single scan the operator judged wrong. A scan that has already gone to the ERP
+     * stays, silently; false is only for a document that is being sent.
+     */
     override suspend fun deleteQueuedRecording(
         documentNo: String,
         type: String,
         documentLine: Int,
         recordingLineNo: Int,
-    ) {
+    ): Boolean {
         val db = provider.current()
-        db.withTransaction {
+        return db.withTransaction {
+            if (isBeingSent(db, documentNo, type)) return@withTransaction false
             db.recordingDao().deleteQueuedByPk(documentNo, type, documentLine, recordingLineNo)
             refreshStateFromRecordings(db, documentNo, type)
+            true
         }
     }
 
@@ -570,14 +601,37 @@ class DocumentRepositoryImpl @Inject constructor(
      * confirmed them — there was nothing else to take. Now that they are kept, wiping them would
      * mean the device forgets what it has already sent, while the ERP still holds it. The state is
      * recomputed from whatever remains rather than assumed.
+     *
+     * "Queued" here is every scan not yet accepted: the ones waiting, the ones the ERP refused and
+     * the ones whose line the ERP has removed. The document and its lines stay, so every line can
+     * be scanned again from what the ERP already holds.
      */
-    override suspend fun deleteDocumentRecordings(documentNo: String, type: String) {
+    override suspend fun deleteDocumentRecordings(documentNo: String, type: String): Boolean {
         val db = provider.current()
-        db.withTransaction {
+        return db.withTransaction {
+            if (isBeingSent(db, documentNo, type)) return@withTransaction false
             db.recordingDao().deleteQueuedForDoc(documentNo, type)
             refreshStateFromRecordings(db, documentNo, type)
+            true
         }
     }
+
+    /**
+     * True while a background upload holds the document: marked [DocState.PendingUpload], its
+     * queued rows read or about to be, and on their way to the ERP.
+     *
+     * Nothing queued may be taken off such a document. The upload has its own copy of the rows: one
+     * deleted here still reaches the ERP, the mark that it was sent then finds no row to mark, and
+     * the document is removed as sent in full while the ERP holds a scan the operator believes was
+     * deleted. Every delete also recomputes the state, which would take the PendingUpload mark off
+     * and offer the document to a second upload.
+     *
+     * A blocking upload sets no such mark and needs none: its dialog covers the screen until it is
+     * done. A mark left behind by a process that died is cleared at the next start
+     * ([recoverStalePendingUploads]), so this never refuses for good.
+     */
+    private suspend fun isBeingSent(db: AppDatabase, documentNo: String, type: String): Boolean =
+        db.documentHeaderDao().getByKey(documentNo, type)?.docState == DocState.PendingUpload.toDbString()
 
     /**
      * A device-added line exists only to carry its scans. Once they are all gone it is a red line

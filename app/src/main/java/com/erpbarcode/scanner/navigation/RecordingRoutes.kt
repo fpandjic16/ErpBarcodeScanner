@@ -50,7 +50,10 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                         vm.recordScanNotOnDocument(barcode, uom, activeProfile.id, quantity)
                     },
                     onLineUpdate = { lineNo, newScanned, onRefused ->
-                        vm.setLineScanned(lineNo, newScanned, activeProfile.id, onRefused)
+                        vm.setLineScanned(
+                            lineNo, newScanned, activeProfile.id, onRefused,
+                            onBeingSent = { showDocumentBeingSent = true },
+                        )
                     },
                     onUpload = {
                         upload(
@@ -85,8 +88,8 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                     document = currentDoc,
                     tree = treeState.tree,
                     onBack = { nav.popBackStack() },
-                    onDeleteScan = { scan -> vm.deleteScan(scan) },
-                    onDeleteAllQueued = { vm.deleteAllQueued() },
+                    onDeleteScan = { scan -> vm.deleteScan(scan, onBeingSent = { showDocumentBeingSent = true }) },
+                    onDeleteAllQueued = { vm.deleteAllQueued(onBeingSent = { showDocumentBeingSent = true }) },
                 )
             }
         }
@@ -106,8 +109,8 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                         }
                     },
                     onDiscardFailed = {
-                        appVm.discardFailedScans(currentDoc.documentNo, currentDoc.type) {
-                            nav.popBackStack()
+                        appVm.discardFailedScans(currentDoc.documentNo, currentDoc.type) { discarded ->
+                            if (discarded) { nav.popBackStack() } else { showDocumentBeingSent = true }
                         }
                     },
                     // Leaves this screen once the upload is handed over or has gone through; a

@@ -61,6 +61,9 @@ internal class AppShellState {
 
     var showSwitchBlocked by mutableStateOf(false)
     var pendingServerChange by mutableStateOf<ExtSystemConfig?>(null)
+
+    // A delete or a reduction was refused because a background upload is sending that document.
+    var showDocumentBeingSent by mutableStateOf(false)
 }
 
 /**
@@ -153,6 +156,9 @@ internal class Shell(
     var showMainLoginSheet: Boolean
         get() = state.showMainLoginSheet
         set(value) { state.showMainLoginSheet = value }
+    var showDocumentBeingSent: Boolean
+        get() = state.showDocumentBeingSent
+        set(value) { state.showDocumentBeingSent = value }
 
     // ── What routes ask the shell to do ───────────────────────────────────────
 

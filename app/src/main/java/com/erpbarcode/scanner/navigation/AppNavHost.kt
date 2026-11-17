@@ -185,6 +185,10 @@ internal fun BarcodeApp(
         SwitchBlockedDialog(onDismiss = { state.showSwitchBlocked = false })
     }
 
+    if (state.showDocumentBeingSent) {
+        DocumentBeingSentDialog(onDismiss = { state.showDocumentBeingSent = false })
+    }
+
     // Asked by Shell.requestConfigSave when a configuration being saved names another installation.
     state.pendingServerChange?.let { config ->
         ServerChangeDialog(

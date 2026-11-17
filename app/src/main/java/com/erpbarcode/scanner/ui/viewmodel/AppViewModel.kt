@@ -561,11 +561,13 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    /** Operator has given up on rows the ERP keeps refusing, so the document can be closed. */
-    fun discardFailedScans(documentNo: String, type: DocumentType, onDone: () -> Unit = {}) {
+    /**
+     * Operator has given up on rows the ERP keeps refusing, so the document can be closed.
+     * [onDone] is told whether they went: they do not while a background upload is sending it.
+     */
+    fun discardFailedScans(documentNo: String, type: DocumentType, onDone: (discarded: Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            repository.discardFailedScans(documentNo, type.key)
-            onDone()
+            onDone(repository.discardFailedScans(documentNo, type.key))
         }
     }
 

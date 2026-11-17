@@ -41,11 +41,23 @@ class RecordingViewModel @Inject constructor(
      * [onRefused] is handed the quantity the ERP already holds for this line, when the edit asked
      * to go below it. The repository refuses rather than clamps, so somebody has to say why —
      * silently snapping the number back would look like the app had simply ignored the operator.
+     *
+     * [onBeingSent] is the other refusal: a reduction on a document that a background upload is
+     * sending at this moment.
      */
-    fun setLineScanned(lineNo: Int, scanned: Double, userId: String, onRefused: (Double) -> Unit = {}) {
+    fun setLineScanned(
+        lineNo: Int,
+        scanned: Double,
+        userId: String,
+        onRefused: (Double) -> Unit = {},
+        onBeingSent: () -> Unit = {},
+    ) {
         viewModelScope.launch {
-            val result = repository.setLineScanned(documentNo, type, lineNo, scanned, userId)
-            if (result is SetQuantityResult.BelowSent) onRefused(result.sent)
+            when (val result = repository.setLineScanned(documentNo, type, lineNo, scanned, userId)) {
+                is SetQuantityResult.BelowSent -> onRefused(result.sent)
+                is SetQuantityResult.BeingSent -> onBeingSent()
+                is SetQuantityResult.Applied -> Unit
+            }
         }
     }
 }

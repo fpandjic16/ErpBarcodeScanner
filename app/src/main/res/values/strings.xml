@@ -206,6 +206,8 @@
     <string name="doc_delete_recordings_title">Delete recordings?</string>
     <string name="doc_delete_recordings_text">All unsent recordings for %s will be deleted.</string>
     <string name="doc_delete_recordings_kept">%d recordings have already been sent to the external system and stay as they are.</string>
+    <string name="doc_being_sent_title">The document is being sent</string>
+    <string name="doc_being_sent_body">Its recordings cannot be deleted or reduced until the sending has finished. Wait for it and try again.</string>
         <!-- Accessibility -->
     <string name="cd_filter">Filter</string>
     <string name="cd_clear">Clear</string>

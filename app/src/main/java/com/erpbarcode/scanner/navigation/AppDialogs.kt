@@ -119,3 +119,18 @@ internal fun SwitchBlockedDialog(onDismiss: () -> Unit) {
         onConfirm = onDismiss,
     )
 }
+
+/**
+ * A scan was to be deleted, or a quantity lowered, on a document that a background upload is
+ * sending at this moment. The repository refused; this says why and what to do.
+ */
+@Composable
+internal fun DocumentBeingSentDialog(onDismiss: () -> Unit) {
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.doc_being_sent_title),
+        text = stringResource(R.string.doc_being_sent_body),
+        confirmLabel = stringResource(R.string.btn_ok),
+        onConfirm = onDismiss,
+    )
+}

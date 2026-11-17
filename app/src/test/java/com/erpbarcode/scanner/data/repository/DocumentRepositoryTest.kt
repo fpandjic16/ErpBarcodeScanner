@@ -299,6 +299,81 @@ class DocumentRepositoryTest {
         assertEquals(listOf(1, 3), device.recordings("D1").map { it.recordingLineNo })
     }
 
+    @Test
+    fun `clearing a document that sent nothing returns it to downloaded`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 10000, "111")
+        device.scan("D1", 20000, "222")
+
+        assertTrue(repository.deleteDocumentRecordings("D1", shipment))
+
+        assertTrue(device.recordings("D1").isEmpty())
+        assertEquals(DocState.Downloaded, device.state("D1"))
+        assertEquals("the document and its lines stay", 2, device.document("D1")!!.lines.size)
+    }
+
+    @Test
+    fun `clearing a document takes every unsent scan and leaves it to be scanned again`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 10000, "111")
+        device.scan("D1", 10000, "111")
+        device.scan("D1", 20000, "222")
+        // The first was accepted, the second refused, and the ERP has since removed line 20000,
+        // which leaves the third without a line.
+        repository.markRecordingSent("D1", shipment, 10000, 1)
+        repository.recordRecordingFailure("D1", shipment, 10000, 2, "HTTP 400")
+        device.download(d1(listOf(testLine("D1", 10000, "111", 2.0))))
+        assertEquals(1, device.document("D1")!!.orphanedScans.size)
+        assertEquals(2, device.document("D1")!!.pendingScans)
+
+        assertTrue(repository.deleteDocumentRecordings("D1", shipment))
+
+        // Only what the ERP already holds is left.
+        val left = device.recordings("D1").single()
+        assertEquals(1, left.recordingLineNo)
+        assertNotNull(left.sentAt)
+        val cleared = device.document("D1")!!
+        assertEquals(0, cleared.pendingScans)
+        assertTrue(cleared.orphanedScans.isEmpty())
+        assertTrue(cleared.failedScans.isEmpty())
+        // And the line takes a new scan like any other.
+        device.scan("D1", 10000, "111")
+        assertEquals(1, device.document("D1")!!.pendingScans)
+    }
+
+    @Test
+    fun `nothing queued can be taken off a document a background upload is sending`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 10000, "111")
+        device.scan("D1", 10000, "111")
+        repository.recordRecordingFailure("D1", shipment, 10000, 2, "HTTP 400")
+        repository.updateDocState("D1", shipment, DocState.PendingUpload)
+        val before = device.recordings("D1")
+
+        // One scan, every scan, the refused ones, a lower quantity: each is refused, and says so.
+        assertFalse(repository.deleteQueuedRecording("D1", shipment, 10000, 1))
+        assertFalse(repository.deleteDocumentRecordings("D1", shipment))
+        assertFalse(repository.discardFailedScans("D1", shipment))
+        assertEquals(SetQuantityResult.BeingSent, repository.setLineScanned("D1", shipment, 10000, 1.0, TEST_USER))
+
+        assertEquals(before, device.recordings("D1"))
+        // The mark stays too: taking it off would offer the document to a second upload.
+        assertEquals(DocState.PendingUpload, device.state("D1"))
+    }
+
+    @Test
+    fun `a quantity can still be raised on a document that is being sent`(): Unit = runBlocking {
+        device.download(d1())
+        device.scan("D1", 10000, "111")
+        repository.updateDocState("D1", shipment, DocState.PendingUpload)
+
+        // A new row, as a scan would be: the upload does not have it and will not miss it.
+        assertEquals(SetQuantityResult.Applied, repository.setLineScanned("D1", shipment, 10000, 2.0, TEST_USER))
+
+        assertEquals(2, device.recordings("D1").size)
+        assertEquals(DocState.PendingUpload, device.state("D1"))
+    }
+
     // ── Removing documents ─────────────────────────────────────────────────────
 
     @Test

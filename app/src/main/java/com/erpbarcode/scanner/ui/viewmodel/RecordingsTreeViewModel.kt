@@ -68,15 +68,22 @@ class RecordingsTreeViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecordingsTreeState())
 
-    /** No-op for a scan already accepted by the ERP — the repository refuses it either way. */
-    fun deleteScan(scan: ScanRecord) {
+    /**
+     * No-op for a scan already accepted by the ERP — the repository refuses it either way.
+     * [onBeingSent] when nothing was deleted because a background upload is sending the document.
+     */
+    fun deleteScan(scan: ScanRecord, onBeingSent: () -> Unit = {}) {
         if (scan.sent) return
         viewModelScope.launch {
-            repository.deleteQueuedRecording(documentNo, type, scan.lineNo, scan.recordingLineNo)
+            val deleted = repository.deleteQueuedRecording(documentNo, type, scan.lineNo, scan.recordingLineNo)
+            if (!deleted) onBeingSent()
         }
     }
 
-    fun deleteAllQueued() {
-        viewModelScope.launch { repository.deleteDocumentRecordings(documentNo, type) }
+    /** Every unsent scan of the document; the sent ones and the document itself stay. */
+    fun deleteAllQueued(onBeingSent: () -> Unit = {}, onDeleted: () -> Unit = {}) {
+        viewModelScope.launch {
+            if (repository.deleteDocumentRecordings(documentNo, type)) onDeleted() else onBeingSent()
+        }
     }
 }
