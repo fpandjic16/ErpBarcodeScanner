@@ -35,6 +35,7 @@ import com.erpbarcode.scanner.data.model.DownloadFilter
 import com.erpbarcode.scanner.data.model.InventoryBatch
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -269,22 +270,26 @@ fun DownloadFilterScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            OutlinedButton(
+            // The same two buttons as under the document list and its filter. They were Material
+            // buttons until 3.6.86: 52 dp and pill-shaped, beside 64 dp everywhere else.
+            ActionBarButton(
+                label = stringResource(R.string.btn_reset),
                 onClick = {
                     dateFrom = null; dateTo = null
                     sourceCode = fixedSourceCode ?: ""
                     rcCode = fixedRcCode ?: ""
                     selectedBatchNo = null
                 },
-                modifier = Modifier.weight(1f).height(52.dp),
-            ) { Text(stringResource(R.string.btn_reset), style = monoLabel.copy(fontWeight = FontWeight.Medium)) }
-            Button(
+                modifier = Modifier.weight(1f),
+            )
+            ActionBarButton(
+                label = stringResource(R.string.btn_ok),
                 onClick = ::onOkClick,
+                modifier = Modifier.weight(1f),
+                primary = true,
                 // Signed out, OK is how the sign-in is reached, so it stays enabled.
                 enabled = !stockCount || !signedIn || selectedBatchNo != null,
-                modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Coral),
-            ) { Text(stringResource(R.string.btn_ok), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium)) }
+            )
         }
     }
 
