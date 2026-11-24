@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.erpbarcode.scanner.data.model.DocState
@@ -310,10 +311,10 @@ fun UploadErrorScreen(
             if (document.orphanedScans.isNotEmpty()) {
                 Button(
                     onClick = { confirmDiscard = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Warning),
                 ) {
-                    Text(stringResource(R.string.review_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
+                    Text(stringResource(R.string.review_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
                 }
             } else {
                 // Retry stays available alongside the discard: a refused row might have been
@@ -321,21 +322,21 @@ fun UploadErrorScreen(
                 // try again before giving up on it.
                 Button(
                     onClick = onRetryUpload,
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Coral),
                 ) {
                     Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.btn_retry_upload), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
+                    Text(stringResource(R.string.btn_retry_upload), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
                 }
                 if (document.failedScans.isNotEmpty()) {
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = { confirmDiscardFailed = true },
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
                     ) {
-                        Text(stringResource(R.string.failed_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
+                        Text(stringResource(R.string.failed_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
                     }
                 }
             }

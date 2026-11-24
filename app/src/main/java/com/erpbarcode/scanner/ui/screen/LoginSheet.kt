@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -235,7 +236,7 @@ fun LoginSheet(
                                 }
                             },
                             enabled = !testing,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         ) {
                             Icon(
                                 Icons.Outlined.QrCodeScanner,
@@ -243,7 +244,7 @@ fun LoginSheet(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.login_scan_qr), fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.login_scan_qr), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
                         }
                     }
 
@@ -256,7 +257,7 @@ fun LoginSheet(
 
                     Button(
                         onClick = ::submit,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         enabled = username.isNotBlank() && password.isNotBlank() && !testing,
                     ) {
                         if (testing) {
@@ -267,7 +268,7 @@ fun LoginSheet(
                             )
                             return@Button
                         }
-                        Text(ctaLabel, fontWeight = FontWeight.SemiBold)
+                        Text(ctaLabel, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(

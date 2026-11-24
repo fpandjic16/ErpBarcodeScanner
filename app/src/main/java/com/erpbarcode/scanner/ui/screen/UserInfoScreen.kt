@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
@@ -79,12 +80,12 @@ fun UserInfoScreen(
         ) {
             Button(
                 onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SignOutRed),
             ) {
                 Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.settings_sign_out), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.settings_sign_out), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
             }
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -200,8 +201,8 @@ fun DocumentOverviewScreen(
                 ) {
                     OutlinedButton(
                         onClick = { showClearErrorsDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text(stringResource(R.string.overview_clear_errors), style = monoLabel.copy(fontWeight = FontWeight.Medium)) }
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    ) { Text(stringResource(R.string.overview_clear_errors), style = monoLabel.copy(fontWeight = FontWeight.Medium), textAlign = TextAlign.Center) }
                 }
             }
             selectedTab != 0 && uploadableDocs.isNotEmpty() -> {

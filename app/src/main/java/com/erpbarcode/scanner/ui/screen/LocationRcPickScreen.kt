@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.Location
@@ -187,11 +188,11 @@ fun LocationRcPickScreen(
         ) {
             Button(
                 onClick = { onSelect(selectedRcCode, selectedLocationCode) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 enabled = true,
                 colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Slate),
             ) {
-                Text(stringResource(R.string.btn_apply), fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.btn_apply), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             }
         }
     }

@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
@@ -257,9 +258,9 @@ fun MainMenuScreen(
                         Spacer(Modifier.height(12.dp))
                         Button(
                             onClick = onOpenExtSystemConfig,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         ) {
-                            Text(stringResource(R.string.ext_config_title), fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.ext_config_title), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                         }
                     }
                 }

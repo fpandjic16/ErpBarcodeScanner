@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -228,9 +229,9 @@ fun ExtSystemConfigScreen(
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                     Button(
                         onClick = { showLoadDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
-                        Text(stringResource(R.string.ext_config_load_title), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.ext_config_load_title), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     }
                     Text(
                         stringResource(R.string.ext_config_load_desc),
@@ -256,9 +257,9 @@ fun ExtSystemConfigScreen(
                         OutlinedButton(
                             onClick = { showLoginSheet = true },
                             enabled = serverBaseUrl.isNotBlank() && !testing,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         ) {
-                            Text(stringResource(R.string.btn_test_connection), fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.btn_test_connection), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                         }
                         Text(
                             stringResource(R.string.ext_config_test_connection_desc),

@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import androidx.core.content.ContextCompat
@@ -234,7 +235,7 @@ fun SignInScreen(
                         },
                         enabled = !busy,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     ) {
                         Icon(
                             Icons.Outlined.QrCodeScanner,
@@ -246,6 +247,7 @@ fun SignInScreen(
                         Text(
                             stringResource(R.string.login_scan_qr),
                             style = monoLabel.copy(color = AppPalette.Ink),
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -261,7 +263,7 @@ fun SignInScreen(
                     OutlinedButton(
                         onClick = open,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Settings,
@@ -273,6 +275,7 @@ fun SignInScreen(
                         Text(
                             stringResource(R.string.signin_open_config),
                             style = monoLabel.copy(color = AppPalette.Ink),
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -281,7 +284,7 @@ fun SignInScreen(
                     OutlinedButton(
                         onClick = open,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Info,
@@ -293,6 +296,7 @@ fun SignInScreen(
                         Text(
                             stringResource(R.string.app_info_title),
                             style = monoLabel.copy(color = AppPalette.Ink),
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
