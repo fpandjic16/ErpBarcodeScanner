@@ -368,8 +368,10 @@ private fun DocumentTypeList(summary: DocTypeSummary, onClick: () -> Unit) {
         DocumentType.WAREHOUSE_RECEIPT                                -> Icons.Outlined.MoveToInbox
         DocumentType.RETAIL_RECEIPT                                   -> Icons.Outlined.Store
         DocumentType.TRANSPORT_SHEET                                  -> Icons.Outlined.Description
-        DocumentType.COMPLAINT_SHIPMENT                               -> Icons.AutoMirrored.Outlined.AssignmentReturn
-        DocumentType.COMPLAINT_RECEIPT                                -> Icons.Outlined.AssignmentReturned
+        // A vendor's complaint shipment is the same movement as the company's own, so it has the
+        // same picture; the name beside it tells the two apart.
+        DocumentType.COMPLAINT_SHIPMENT, DocumentType.VENDOR_COMPLAINT_SHIPMENT -> Icons.AutoMirrored.Outlined.AssignmentReturn
+        DocumentType.COMPLAINT_RECEIPT, DocumentType.VENDOR_COMPLAINT_RECEIPT   -> Icons.Outlined.AssignmentReturned
         DocumentType.INVENTORY                                        -> Icons.Outlined.Inventory
     }
 

@@ -65,6 +65,8 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
         val CODES_OF_TYPES_ADDED_LATER = mapOf(
             DocumentType.COMPLAINT_SHIPMENT to "REKOTPR",
             DocumentType.COMPLAINT_RECEIPT  to "REKZAPR",
+            DocumentType.VENDOR_COMPLAINT_SHIPMENT to "REKOTPRDOB",
+            DocumentType.VENDOR_COMPLAINT_RECEIPT  to "REKZAPRDOB",
         )
     }
 }

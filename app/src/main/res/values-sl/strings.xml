@@ -30,6 +30,8 @@
     <string name="doctype_transport_sheet">Transportni list</string>
     <string name="doctype_complaint_shipment">Odprema reklamacij</string>
     <string name="doctype_complaint_receipt">Prevzem reklamacij</string>
+    <string name="doctype_vendor_complaint_shipment">Odprema reklamacije dobavitelju</string>
+    <string name="doctype_vendor_complaint_receipt">Prevzem odpreme dobavitelja</string>
     <string name="doctype_inventory">Inventura</string>
     <!-- Doc list screen -->
     <string name="doc_list_tab_orders">NAROČILA</string>

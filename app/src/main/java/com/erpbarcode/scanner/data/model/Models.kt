@@ -31,9 +31,10 @@ enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
  * alone no longer identifies a bucket. Every download filter and every uploaded recording for
  * these four carries `Retail_Location` alongside the code to disambiguate.
  *
- * Null means the type doesn't participate: transport sheets, complaint shipments and receipts, and
- * inventory each carry their own `Document_Type` code, so there is nothing to disambiguate — they
- * get no `Retail_Location` clause on download nor the field on upload.
+ * Null means the type doesn't participate: transport sheets, complaint shipments and receipts (the
+ * company's own and a vendor's) and inventory each carry their own `Document_Type` code, so there
+ * is nothing to disambiguate — they get no `Retail_Location` clause on download nor the field on
+ * upload.
  *
  * [defaultFilterMode] is the scope a type falls back to until the user sets one in Settings.
  * Location suits the document types that move goods between two places; complaints are tracked
@@ -65,6 +66,10 @@ enum class DocumentType(
     TRANSPORT_SHEET(   "TRANSPORT", "Transport Sheet"),
     COMPLAINT_SHIPMENT("CPL_SHIP",  "Complaint Shipment",    defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     COMPLAINT_RECEIPT( "CPL_RCPT",  "Complaint Receipt",     defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
+    // A complaint shipment that goes to a vendor, in the same two phases as the one above: sent,
+    // then received. Each has a code of its own and is scoped by responsibility centre likewise.
+    VENDOR_COMPLAINT_SHIPMENT("VCPL_SHIP", "Vendor Complaint Shipment", defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
+    VENDOR_COMPLAINT_RECEIPT( "VCPL_RCPT", "Vendor Complaint Receipt",  defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     // One inventory journal batch (Phys. Inventory Journal) per document. Counted against the
     // calculated quantity the ERP supplies, the same as the types above. An item the ERP didn't send is
     // added on the device instead of being rejected (see isStockCount).

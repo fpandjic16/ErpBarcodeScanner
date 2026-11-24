@@ -30,6 +30,8 @@
     <string name="doctype_transport_sheet">Транспортен лист</string>
     <string name="doctype_complaint_shipment">Испорака на рекламации</string>
     <string name="doctype_complaint_receipt">Прием на рекламации</string>
+    <string name="doctype_vendor_complaint_shipment">Испорака на рекламација до добавувач</string>
+    <string name="doctype_vendor_complaint_receipt">Прием на испорака на добавувач</string>
     <string name="doctype_inventory">Инвентура</string>
     <!-- Doc list screen -->
     <string name="doc_list_tab_orders">НАРАЧКИ</string>

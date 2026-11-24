@@ -114,11 +114,11 @@ Ovo je početni ekran na koji dolazite svaki put kad otvorite aplikaciju.
 - **Gornja traka**: prikazuje vaše ime. Okrugli gumb s vašim inicijalima gore lijevo otvara **Podatke o korisniku** — ID korisnika, ime, centar odgovornosti, lokaciju i gumb za odjavu. Ikona zupčanika ⚙️ gore desno otvara **Postavke**.
 - **Kartica DANAS** (dodirnite bilo gdje na njoj): sažetak današnje aktivnosti — ukupan broj skeniranih stavki te broj dokumenata u stanju Gotovo / Djelomično / Prekoračenje / Greška. Dodir na karticu otvara **Pregled**.
 - **Traka lokacije i CC-a**: dvije oznake jedna uz drugu, sa šifrom trenutnog centra odgovornosti i šifrom lokacije. Dodirnite **bilo koju** da otvorite odabir lokacije i CC-a i promijenite ih. Uz njih, kad je uređaj postavljen za neki sustav, piše s kojim radi: **Test** (narančasto) ili **Produkcija**. Na Testu skeniranja idu u testnu tvrtku, a ne na stvarnu robu.
-- **Popis vrsta dokumenata**: jedan redak po vrsti dokumenta koja je na ovom uređaju uključena (Skladišna otpremnica, Skladišna primka, MP skladišna otpremnica, MP skladišna primka, Transportni list, Otprema reklamacija, Zaprimanje reklamacija, Inventura). Svaki redak prikazuje:
+- **Popis vrsta dokumenata**: jedan redak po vrsti dokumenta koja je na ovom uređaju uključena (Skladišna otpremnica, Skladišna primka, MP skladišna otpremnica, MP skladišna primka, Transportni list, Otprema reklamacija, Zaprimanje reklamacija, Otprema reklamacije dobavljaču, Zaprimanje otpreme dobavljača, Inventura). Svaki redak prikazuje:
   - ikonu i naziv vrste,
   - tanku traku u bojama (ako ima aktivnosti) koja pokazuje omjer statusa dokumenata te vrste,
   - broj dokumenata te vrste koje trenutno imate.
-  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Otprema reklamacija i Zaprimanje reklamacija traže centar odgovornosti, a sve ostale vrste lokaciju.
+  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Četiri vrste reklamacija (Otprema reklamacija, Zaprimanje reklamacija i dvije vrste za dobavljača) traže centar odgovornosti, a sve ostale vrste lokaciju.
   - **Na novoj instalaciji sve su vrste isključene.** Popis to kaže i nudi gumb za konfiguraciju vanjskog sustava, gdje svaka vrsta ima svoj prekidač. Uređaj nadograđen sa starije verzije zadržava vrste koje je imao; dvije vrste reklamacija i ondje su na početku isključene.
 - **Redak ZAPISI**, pod vlastitim naslovom: otvara popis svih dokumenata u koje ste išta skenirali, svih vrsta. Kad niste ništa skenirali, pokazuje nulu. Vidi [§7a](#7a-odjeljak-zapisi).
 
@@ -149,6 +149,8 @@ Ovaj ekran otvarate dodirom na bilo koju od dvije oznake na glavnom izborniku.
 | **Transportni list** | Dokumenti prijenosa između lokacija |
 | **Otprema reklamacija** | Paketi reklamacija koji izlaze na otpremi reklamacija (zadano se filtrira po centru odgovornosti) |
 | **Zaprimanje reklamacija** | Zaprimanje paketa iste otpreme reklamacija (zadano se filtrira po centru odgovornosti) |
+| **Otprema reklamacije dobavljaču** | Paketi reklamacija koji izlaze dobavljaču na otpremi reklamacije dobavljaču (zadano se filtrira po centru odgovornosti) |
+| **Zaprimanje otpreme dobavljača** | Zaprimanje paketa iste otpreme dobavljaču (zadano se filtrira po centru odgovornosti) |
 | **Inventura** | Brojanje zaliha: jedna serija temeljnice inventure iz vanjskog sustava |
 
 Koje od njih vidite (i filtriraju li se po lokaciji ili po centru odgovornosti) ovisi o tome kako je vaša tvrtka postavila aplikaciju. Ako se neka vrsta ponaša neočekivano, pitajte administratora ili konzultanta.
@@ -161,6 +163,15 @@ Obje su ista otprema reklamacija u vanjskom sustavu, u dvije faze.
 - **Jedan redak po reklamaciji** na otpremi. Broj retka je broj reklamacije, a očekivana količina je broj njezinih **paketa**. Naljepnicu svakog paketa skenirajte jednom.
 - **Svaki paket mora biti skeniran.** Vanjski sustav skeniranje označava završenim tek kad su skenirani svi paketi svih reklamacija, a otprema reklamacija ne može se zaprimiti prije toga. Ako paket nije stigao, za njega se otvara nova reklamacija; otprema se ne zaprima djelomično.
 - Centri odgovornosti koji rade preko cross-dock skladišta ne koriste ove dvije vrste.
+
+### Otprema reklamacije dobavljaču i Zaprimanje otpreme dobavljača
+
+Ove dvije vrste rade jednako kao dvije iznad, za otpremu reklamacija koja ide dobavljaču umjesto između vlastitih lokacija tvrtke.
+
+- **Otprema reklamacije dobavljaču** prikazuje otpremu dobavljaču dok je otpuštena i čeka slanje. **Zaprimanje otpreme dobavljača** prikazuje je kad je otpremljena i čeka zaprimanje. Najprije odaberite centar odgovornosti; ni jedna od ovih vrsta ne koristi lokaciju.
+- **Jedan redak po reklamaciji**, s brojem njezinih paketa kao očekivanom količinom. Naljepnicu svakog paketa skenirajte jednom.
+- **Svaki paket mora biti skeniran** prije nego se otprema može zaprimiti; ne zaprima se djelomično.
+- Kao i svaka vrsta dokumenta, obje su isključene dok ih administrator ne uključi u Konfiguraciji vanjskog sustava.
 
 ### Inventura
 
@@ -453,7 +464,7 @@ Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde)
 ## 18. Česte situacije i što učiniti
 
 ### 18.1 „Dodir na vrstu dokumenta kaže da treba odabrati lokaciju”
-Svaka vrsta dokumenta traži da najprije nešto odaberete: **Otprema reklamacija** i **Zaprimanje reklamacija** centar odgovornosti, a sve ostale vrste lokaciju. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
+Svaka vrsta dokumenta traži da najprije nešto odaberete: četiri vrste reklamacija (**Otprema reklamacija**, **Zaprimanje reklamacija** i dvije vrste za dobavljača) centar odgovornosti, a sve ostale vrste lokaciju. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
 
 ### 18.2 „Skenirana je pogrešna količina”
 Dodirnite stavku pa upotrijebite −1/+1 ili dodirnite broj i izravno upišite točnu ukupnu količinu — ona zamjenjuje zabilježenu količinu stavke, ne dodaje joj se. Ne možete ići ispod onoga što je već poslano u vanjski sustav; vidi [§9.3](#93-ručna-izmjena-stavke).

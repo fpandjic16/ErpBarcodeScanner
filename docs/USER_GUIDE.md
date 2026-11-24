@@ -112,11 +112,11 @@ This is the home screen you land on every time you open the app.
 - **Top bar**: shows your name. The round button top-left with your initials opens your **User Info** — user ID, name, Responsibility Center, Location, and a sign-out button. A gear ⚙️ icon top-right opens **Settings**.
 - **Today card** (tap it anywhere): a summary of today's activity — total lines scanned, and counts of Ready / Partial / Over / Error documents. Tapping this card opens the **Dashboard**.
 - **Location/RC bar**: two side-by-side pills showing your current Responsibility Center code and Location code. Tap **either one** to open the Location & RC picker and change them. Beside them, once the device has been set up for one, the system it works with: **Test** (in amber) or **Production**. On Test, scans go to the test company, not to real stock.
-- **Document type list**: one row per document type that is switched on for this device (Warehouse Shipment, Warehouse Receipt, Retail Shipment, Retail Whse. Receipt, Transport Sheet, Complaint Shipment, Complaint Receipt, Inventory), each showing:
+- **Document type list**: one row per document type that is switched on for this device (Warehouse Shipment, Warehouse Receipt, Retail Shipment, Retail Whse. Receipt, Transport Sheet, Complaint Shipment, Complaint Receipt, Vendor Complaint Shipment, Vendor Complaint Receipt, Inventory), each showing:
   - An icon and the type's name.
   - A thin colored mini-bar (if there's any activity) previewing the mix of statuses across that type's documents.
   - A count of how many documents of that type you currently have.
-  - Tapping a row opens that type's **Document List**. If the type can't be opened yet — no location or responsibility centre selected — the tap tells you so instead of doing nothing. Complaint Shipment and Complaint Receipt need a responsibility centre; every other type needs a location.
+  - Tapping a row opens that type's **Document List**. If the type can't be opened yet — no location or responsibility centre selected — the tap tells you so instead of doing nothing. The four complaint types (Complaint Shipment, Complaint Receipt and the two vendor ones) need a responsibility centre; every other type needs a location.
   - **On a new installation every type is switched off**, and the list says so, with a button to the External System Configuration, where each type has its own switch. A device updated from an older version keeps the types it had; the two complaint types start switched off there too.
 - **RECORDINGS row**, under its own heading: opens the list of every document you have scanned anything into, across all types. Reads zero when you have scanned nothing. See [§7a](#7a-the-recordings-section).
 
@@ -147,6 +147,8 @@ Open this screen by tapping either pill on the Main Menu.
 | **Transport Sheet** | Inter-location transfer documents |
 | **Complaint Shipment** | Complaint packages going out on a complaint shipment (scoped by responsibility centre by default) |
 | **Complaint Receipt** | The same complaint shipment's packages being received (scoped by responsibility centre by default) |
+| **Vendor Complaint Shipment** | Complaint packages going out to a vendor on a vendor complaint shipment (scoped by responsibility centre by default) |
+| **Vendor Complaint Receipt** | The same vendor complaint shipment's packages being received (scoped by responsibility centre by default) |
 | **Inventory** | Counting stock: one inventory journal batch from the central system |
 
 Which of these you see (and whether they're filtered by Location or by Responsibility Center) depends on how your company has configured the app — ask your administrator/consultant if a type behaves unexpectedly.
@@ -159,6 +161,15 @@ Both are the same complaint shipment in the central system, at two points in its
 - **One line per complaint** on the shipment. The line's number is the complaint number, and the expected quantity is its number of **packages**. Scan each package's label once.
 - **Every package has to be scanned.** The central system marks the scanning complete only when all packages of all complaints are scanned, and a complaint shipment cannot be received before that. If a package did not arrive, a new complaint is opened for it; the shipment is not received in part.
 - Responsibility centres that work through a cross-dock warehouse do not use these two types.
+
+### Vendor Complaint Shipment and Vendor Complaint Receipt
+
+These two work exactly as the two above, for a complaint shipment that goes to a vendor (supplier) instead of between the company's own sites.
+
+- **Vendor Complaint Shipment** lists a vendor complaint shipment while it is released and waiting to go. **Vendor Complaint Receipt** lists it once it has been shipped and is waiting to be received. Choose the responsibility centre first; neither type uses a location.
+- **One line per complaint**, with its number of packages as the expected quantity. Scan each package's label once.
+- **Every package has to be scanned** before the shipment can be received; it is not received in part.
+- Like every document type, both are switched off until your administrator switches them on in External System Configuration.
 
 ### Inventory
 
@@ -451,7 +462,7 @@ Shows who's currently signed in, and a **Sign out** option (immediate, no confir
 ## 18. Common Situations & What To Do
 
 ### 18.1 "Tapping a document type says I need a location"
-Every document type needs something selected first: **Complaint Shipment** and **Complaint Receipt** a responsibility centre, every other type a location. Pick them on the location and RC screen ([§5](#5-choosing-your-location--responsibility-center)) and try again — choosing a location fills in its responsibility centre as well. A location that has since disappeared from the list counts as none, so pick again. If there are no locations to choose from, tap **Refresh** on that screen first.
+Every document type needs something selected first: the four complaint types (**Complaint Shipment**, **Complaint Receipt** and the two vendor ones) a responsibility centre, every other type a location. Pick them on the location and RC screen ([§5](#5-choosing-your-location--responsibility-center)) and try again — choosing a location fills in its responsibility centre as well. A location that has since disappeared from the list counts as none, so pick again. If there are no locations to choose from, tap **Refresh** on that screen first.
 
 ### 18.2 "I scanned the wrong quantity"
 Tap into the line and either use −1/+1, or tap the number to type the correct total directly — this replaces the line's recorded quantity, it doesn't add to it. You cannot go below whatever has already been sent to the central system; see [§9.3](#93-editing-a-line-manually).

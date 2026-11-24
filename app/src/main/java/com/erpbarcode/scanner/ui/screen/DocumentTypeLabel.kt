@@ -22,5 +22,7 @@ internal fun DocumentType.localizedDisplay(): String = when (this) {
     DocumentType.TRANSPORT_SHEET    -> stringResource(R.string.doctype_transport_sheet)
     DocumentType.COMPLAINT_SHIPMENT -> stringResource(R.string.doctype_complaint_shipment)
     DocumentType.COMPLAINT_RECEIPT  -> stringResource(R.string.doctype_complaint_receipt)
+    DocumentType.VENDOR_COMPLAINT_SHIPMENT -> stringResource(R.string.doctype_vendor_complaint_shipment)
+    DocumentType.VENDOR_COMPLAINT_RECEIPT  -> stringResource(R.string.doctype_vendor_complaint_receipt)
     DocumentType.INVENTORY          -> stringResource(R.string.doctype_inventory)
 }
