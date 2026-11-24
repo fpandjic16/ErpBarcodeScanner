@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +38,7 @@ import androidx.core.content.ContextCompat
 import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.CameraPreview
 import com.erpbarcode.scanner.ui.component.AppTopBar
@@ -288,59 +288,35 @@ fun DocumentListScreen(
         ) {
             when (selectedTab) {
                 1 -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f).height(64.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, AppLine.Outline, RoundedCornerShape(14.dp))
-                            .background(Color.White)
-                            .clickable { showClearErrorsDialog = true },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(stringResource(R.string.overview_clear_errors).uppercased, style = monoLabel.copy(color = AppPalette.Ink, fontWeight = FontWeight.Medium))
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f).height(64.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (canUpload) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
-                            .clickable(enabled = canUpload) { onUpload(uploadableDocs) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.CloudUpload, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Text(stringResource(R.string.btn_upload).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
-                        }
-                    }
+                    ActionBarButton(
+                        label = stringResource(R.string.overview_clear_errors),
+                        onClick = { showClearErrorsDialog = true },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionBarButton(
+                        label = stringResource(R.string.btn_upload),
+                        onClick = { onUpload(uploadableDocs) },
+                        modifier = Modifier.weight(1f),
+                        primary = true,
+                        enabled = canUpload,
+                        icon = Icons.Outlined.CloudUpload,
+                    )
                 }
                 else -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f).height(64.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, AppLine.Outline, RoundedCornerShape(14.dp))
-                            .background(Color.White)
-                            .clickable(onClick = onDownload),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.CloudDownload, null, tint = AppPalette.Ink, modifier = Modifier.size(18.dp))
-                            Text(stringResource(R.string.btn_download).uppercased, style = monoLabel.copy(color = AppPalette.Ink, fontWeight = FontWeight.Medium))
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f).height(64.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (canUpload) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
-                            .clickable(enabled = canUpload) { onUpload(uploadableDocs) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.CloudUpload, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Text(stringResource(R.string.btn_upload).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
-                        }
-                    }
+                    ActionBarButton(
+                        label = stringResource(R.string.btn_download),
+                        onClick = onDownload,
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.CloudDownload,
+                    )
+                    ActionBarButton(
+                        label = stringResource(R.string.btn_upload),
+                        onClick = { onUpload(uploadableDocs) },
+                        modifier = Modifier.weight(1f),
+                        primary = true,
+                        enabled = canUpload,
+                        icon = Icons.Outlined.CloudUpload,
+                    )
                 }
             }
         }

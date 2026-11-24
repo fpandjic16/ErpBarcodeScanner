@@ -28,6 +28,7 @@ import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.bgColor
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -225,34 +226,24 @@ fun DocumentFilterScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f).height(64.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, AppLine.Outline, RoundedCornerShape(14.dp))
-                    .background(Color.White)
-                    .clickable {
-                        dateFrom = null; dateTo = null
-                        selectedStates  = emptySet()
-                        selectedTypes   = emptySet()
-                        destinationCode = ""
-                        sourceCode      = lockedSourceCode ?: ""
-                        rcCode          = lockedRcCode ?: ""
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(stringResource(R.string.btn_reset).uppercased, style = monoLabel.copy(color = AppPalette.Ink, fontWeight = FontWeight.Medium))
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f).height(64.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(AppPalette.Coral)
-                    .clickable { onApply(buildFilter()) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(stringResource(R.string.btn_apply).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
-            }
+            ActionBarButton(
+                label = stringResource(R.string.btn_reset),
+                onClick = {
+                    dateFrom = null; dateTo = null
+                    selectedStates  = emptySet()
+                    selectedTypes   = emptySet()
+                    destinationCode = ""
+                    sourceCode      = lockedSourceCode ?: ""
+                    rcCode          = lockedRcCode ?: ""
+                },
+                modifier = Modifier.weight(1f),
+            )
+            ActionBarButton(
+                label = stringResource(R.string.btn_apply),
+                onClick = { onApply(buildFilter()) },
+                modifier = Modifier.weight(1f),
+                primary = true,
+            )
         }
     }
 

@@ -30,6 +30,7 @@ import com.erpbarcode.scanner.data.model.LineStatus
 import com.erpbarcode.scanner.data.model.color
 import com.erpbarcode.scanner.data.model.inkColor
 import com.erpbarcode.scanner.data.model.scanStatus
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
@@ -211,19 +212,14 @@ fun DocumentOverviewScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth().height(64.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (uploadableDocs.isNotEmpty()) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
-                            .clickable(enabled = uploadableDocs.isNotEmpty()) { onUpload(uploadableDocs) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.CloudUpload, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Text(stringResource(R.string.btn_upload).uppercased, style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium))
-                        }
-                    }
+                    ActionBarButton(
+                        label = stringResource(R.string.btn_upload),
+                        onClick = { onUpload(uploadableDocs) },
+                        modifier = Modifier.fillMaxWidth(),
+                        primary = true,
+                        enabled = uploadableDocs.isNotEmpty(),
+                        icon = Icons.Outlined.CloudUpload,
+                    )
                 }
             }
         }
