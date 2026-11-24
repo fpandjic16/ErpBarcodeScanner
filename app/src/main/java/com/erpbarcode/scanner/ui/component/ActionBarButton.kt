@@ -36,9 +36,10 @@ val ACTION_BAR_BUTTON_HEIGHT = 64.dp
  * OK under a filter.
  *
  * [primary] is the one the screen is there for, filled in coral with white text, and paler while
- * not [enabled]; the other is white with an outline. The label follows the uppercase and the
- * text-size settings. The caller says how wide it is, usually `Modifier.weight(1f)` in a row of
- * two.
+ * not [enabled]; the other is white with an outline. [color] is the primary one's fill where coral
+ * would say the wrong thing: red for what discards or signs out, orange for a warning, slate for
+ * a plain confirmation. The label follows the uppercase and the text-size settings. The caller
+ * says how wide it is, usually `Modifier.weight(1f)` in a row of two.
  *
  * Written once here in 3.6.86. Until then each screen built it from a Box of its own, and the
  * download screen had two Material buttons instead, 52 dp tall and pill-shaped beside 64 dp
@@ -52,13 +53,14 @@ fun ActionBarButton(
     primary: Boolean = false,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    color: Color = AppPalette.Coral,
 ) {
     val shape = RoundedCornerShape(14.dp)
     val ink = if (primary) Color.White else AppPalette.Ink
     val fill = when {
         !primary -> Color.White
-        enabled -> AppPalette.Coral
-        else -> AppPalette.Coral.copy(alpha = 0.35f)
+        enabled -> color
+        else -> color.copy(alpha = 0.35f)
     }
     Row(
         modifier = modifier

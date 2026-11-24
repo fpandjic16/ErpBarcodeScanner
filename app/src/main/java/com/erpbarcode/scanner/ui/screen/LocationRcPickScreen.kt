@@ -21,11 +21,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.model.Location
 import com.erpbarcode.scanner.data.model.ResponsibilityCenter
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.component.TOP_BAR_BUTTON_HEIGHT
 import com.erpbarcode.scanner.ui.component.verticalScrollbar
@@ -186,14 +186,13 @@ fun LocationRcPickScreen(
                 .background(Color.White)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Button(
+            ActionBarButton(
+                label = stringResource(R.string.btn_apply),
                 onClick = { onSelect(selectedRcCode, selectedLocationCode) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                enabled = true,
-                colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Slate),
-            ) {
-                Text(stringResource(R.string.btn_apply), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-            }
+                modifier = Modifier.fillMaxWidth(),
+                primary = true,
+                color = AppPalette.Slate,
+            )
         }
     }
 

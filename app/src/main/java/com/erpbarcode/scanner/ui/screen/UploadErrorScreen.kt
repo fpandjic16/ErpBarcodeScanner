@@ -9,8 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -24,12 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.formatQty
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.LocalTextSizeOffset
@@ -309,35 +307,34 @@ fun UploadErrorScreen(
             // same error again — so the only action offered is the one that can actually move
             // this forward. It returns on its own once the scans are resolved.
             if (document.orphanedScans.isNotEmpty()) {
-                Button(
+                ActionBarButton(
+                    label = stringResource(R.string.review_discard),
                     onClick = { confirmDiscard = true },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Warning),
-                ) {
-                    Text(stringResource(R.string.review_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    primary = true,
+                    color = AppSignal.Warning,
+                )
             } else {
                 // Retry stays available alongside the discard: a refused row might have been
                 // refused by a server that was misbehaving, and the operator should be able to
                 // try again before giving up on it.
-                Button(
+                ActionBarButton(
+                    label = stringResource(R.string.btn_retry_upload),
                     onClick = onRetryUpload,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppPalette.Coral),
-                ) {
-                    Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.btn_retry_upload), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
-                }
+                    modifier = Modifier.weight(1f),
+                    primary = true,
+                    icon = Icons.Outlined.CloudUpload,
+                )
                 if (document.failedScans.isNotEmpty()) {
-                    Spacer(Modifier.width(8.dp))
-                    Button(
+                    // The gap every other bar of two has.
+                    Spacer(Modifier.width(10.dp))
+                    ActionBarButton(
+                        label = stringResource(R.string.failed_discard),
                         onClick = { confirmDiscardFailed = true },
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AppSignal.Danger),
-                    ) {
-                        Text(stringResource(R.string.failed_discard), style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)
-                    }
+                        modifier = Modifier.weight(1f),
+                        primary = true,
+                        color = AppSignal.Danger,
+                    )
                 }
             }
         }
