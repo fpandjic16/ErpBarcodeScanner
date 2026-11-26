@@ -1,6 +1,8 @@
 package com.erpbarcode.scanner.testing
 
 import android.content.Context
+import com.erpbarcode.scanner.data.auth.ExtSystemCredentialStore
+import com.erpbarcode.scanner.data.auth.SignInLedger
 import com.erpbarcode.scanner.data.auth.UserProfile
 import com.erpbarcode.scanner.data.auth.UserProfileStore
 import com.erpbarcode.scanner.data.db.AppDatabase
@@ -9,6 +11,7 @@ import com.erpbarcode.scanner.data.db.DocumentHeaderWithLines
 import com.erpbarcode.scanner.data.db.RecordingEntity
 import com.erpbarcode.scanner.data.db.toDocState
 import com.erpbarcode.scanner.data.db.toDomain
+import com.erpbarcode.scanner.data.extsystem.ExtSystemODataClient
 import com.erpbarcode.scanner.data.model.DocState
 import com.erpbarcode.scanner.data.model.Document
 import com.erpbarcode.scanner.data.model.DocumentType
@@ -27,13 +30,27 @@ internal const val TEST_USER = "tester"
  * the real provider, a real per-operator database file and the DAOs Room generated. Only usable
  * under Robolectric.
  *
- * Nothing here goes through the profile list or the credential store, so the Android Keystore,
- * which Robolectric does not have, is never touched.
+ * Nothing here goes through the list of enrolled profiles or the real secure storage, so the
+ * Android Keystore, which Robolectric does not have, is never touched: who is signed in is held in
+ * memory by [profileStore], and the saved sign-ins are kept in a map ([InMemorySecrets]) under a
+ * clock the test sets by hand ([clock]).
  */
 internal class TestDevice {
     val context: Context = RuntimeEnvironment.getApplication()
-    val provider = DatabaseProvider(context, UserProfileStore(context))
+    val profileStore = UserProfileStore(context)
+    val provider = DatabaseProvider(context, profileStore)
     val repository: DocumentRepository = DocumentRepositoryImpl(provider)
+
+    val clock = TestClock()
+
+    /** The saved sign-ins, as the app keeps them, without the Keystore. */
+    val savedSignIns = ExtSystemCredentialStore({ InMemorySecrets() }, clock.trusted)
+
+    /** What every transfer reports to when it ends. */
+    val ledger = SignInLedger(savedSignIns, profileStore)
+
+    /** The real ERP client, reporting to [ledger] as it does in the app. */
+    fun erpClient() = ExtSystemODataClient(context, ledger)
 
     private val signedIn = mutableListOf<UserProfile>()
 

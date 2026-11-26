@@ -134,13 +134,7 @@
     <string name="login_password">Лозинка</string>
     <string name="login_show_password">Прикажи лозинка</string>
     <string name="login_hide_password">Сокриј лозинка</string>
-    <string name="login_footer">Акредитивите се зачувани шифрирано со AES-256-GCM за %s.</string>
     <string name="login_username_hint">нпр. корисник@домен</string>
-    <plurals name="login_ttl_hours">
-        <item quantity="one">%d час</item>
-        <item quantity="other">%d часа</item>
-    </plurals>
-    <string name="login_ttl_days">%d дена</string>
     <!-- User info -->
     <string name="user_info_title">Информации за корисник</string>
     <string name="user_info_id">Кориснички ID</string>
@@ -178,14 +172,12 @@
     <string name="ext_config_title">Конфигурација на надворешен систем</string>
     <string name="ext_config_subtitle">Поврзување со сервер и крајни точки</string>
     <string name="ext_config_sec_connection">Врска</string>
-    <string name="ext_config_sec_session">Сесија на акредитиви</string>
+    <string name="ext_config_sec_session">Најава</string>
     <string name="ext_config_sec_endpoints">Крајни точки на документи (OData URL-адреси на страници)</string>
     <string name="ext_config_sec_reference">Референтни податоци</string>
     <string name="ext_config_sec_recording">Синхронизација на снимања</string>
     <string name="ext_config_server_url">Основен URL на серверот</string>
     <string name="ext_config_windows_domain">Windows домен</string>
-    <string name="ext_config_session_duration">Траење на сесијата</string>
-    <string name="ext_config_session_desc">Акредитивите се бришат од шифрираното складиште по овој период</string>
     <string name="ext_config_locations_url">URL за локации</string>
     <string name="ext_config_recording_url">URL за синхронизација на снимања</string>
     <string name="ext_config_load_title">Вчитај конфигурација</string>
@@ -287,7 +279,6 @@
     <string name="settings_delete_all">Избриши ги преземените документи</string>
     <string name="settings_delete_all_desc">Ги брише сите преземени документи што немаат неиспратени скенирања. Поставките и најавата остануваат недопрени.</string>
     <string name="settings_background_sync_desc">Испраќањето се одвива во заднина, па можете да продолжите да работите додека документите се испраќаат.</string>
-    <string name="login_scan_qr">Скенирај QR код</string>
     <string name="login_qr_invalid">Тој QR код не содржи податоци за најава.</string>
     <string name="login_connect_failed">Поврзувањето не успеа. Проверете го корисничкото име и лозинката па обидете се повторно.</string>
     <string name="main_blocked_title">Потребна е локација</string>
@@ -316,7 +307,7 @@
     <string name="signin_action">НАЈАВИ СЕ</string>
     <string name="signin_known_operators">Оператери на овој уред</string>
     <string name="signin_first_time_note">Најавата секогаш бара надворешен систем — тој ја проверува вашата лозинка.</string>
-    <string name="signin_needs_server">Надворешниот систем не е достапен, па лозинката не може да се провери. Најавата го бара секој пат.</string>
+    <string name="signin_needs_server">На уредот не е поставен надворешен систем, па лозинката не може да се провери.</string>
     <string name="signin_open_config">Поставување на надворешен систем</string>
     <string name="signin_name_too_long">Корисничкото име смее да има највеќе %d знаци.</string>
     <string name="signin_bad_username">Внесете исправно корисничко име.</string>
@@ -352,8 +343,6 @@
     <string name="ext_config_hint_locations">на пр. …/ODataV4/Company(\'Компанија\')/LocationList</string>
     <string name="ext_config_hint_recording_sync">на пр. …/ODataV4/Company(\'Компанија\')/BarcodeAppRecordings</string>
     <string name="ext_config_hint_doc_type_code">на пр. WHSE_SHIP (најмногу 20 знаци)</string>
-    <string name="ext_config_ttl_hours_short">%d ч</string>
-    <string name="ext_config_ttl_days_short">%d д</string>
     <string name="settings_app_version_value">%1$s (издание %2$d)</string>
     <string name="settings_sdk_value">Минимален API %1$d (Android %2$s) · Целен API %3$d (Android %4$s)</string>
     <!-- App info: Settings > System info, and its own screen before sign-in -->
@@ -401,4 +390,28 @@
         <item quantity="other">%d документи не се избришани бидејќи имаат неиспратени скенирања.</item>
     </plurals>
     <string name="processing_signing_in">Најавување…</string>
+    <string name="signin_scan">Скенирај најава</string>
+    <string name="signin_profile_remembered">Запаметен</string>
+    <string name="signin_remembered_toast">Најава без проверка во надворешниот систем. Ќе се провери при првиот пренос.</string>
+    <string name="login_footer_session">Најавата се чува шифрирано на овој уред до одјавата.</string>
+    <string name="ext_config_remember_days">Запаметена најава (денови)</string>
+    <string name="ext_config_remember_hint">0–%d</string>
+    <string name="ext_config_remember_desc">Толку денови откако надворешниот систем последен пат ја прифатил најавата на операторот, неговиот QR код за најава работи и без надворешниот систем. Секој пренос што системот ќе го прифати го започнува броењето одново. 0 го исклучува помнењето: секоја најава тогаш оди до надворешниот систем. Најмногу %d.</string>
+    <string name="user_info_delete_profile">Одјави ме и избриши го мојот профил</string>
+    <string name="own_profile_delete_title">Да се избрише вашиот профил?</string>
+    <string name="own_profile_delete_text">Ќе бидете одјавени, а вашите документи, скенирања, зачуваната најава и поставки ќе се избришат од овој уред. Ова не може да се врати. Дали сакате да продолжите?</string>
+    <string name="own_profile_delete_unsent_hint">Одговорете Не за да се вратите и прво да ги испратите.</string>
+    <string name="app_info_key_protection">Заштита на клучот</string>
+    <string name="app_info_key_hardware">Безбеден хардвер</string>
+    <string name="app_info_key_software">Софтверска — најавите не се помнат</string>
+    <string name="app_info_key_unknown">Непознато — најавите не се помнат</string>
+    <plurals name="signin_remember_note">
+        <item quantity="one">Внесената лозинка секогаш ја проверува надворешниот систем. QR кодот за најава што системот го прифатил работи и без него уште %d ден.</item>
+        <item quantity="other">Внесената лозинка секогаш ја проверува надворешниот систем. QR кодот за најава што системот го прифатил работи и без него уште %d дена.</item>
+    </plurals>
+    <plurals name="login_footer_remembered">
+        <item quantity="one">Најавата се чува шифрирано на овој уред и се помни %d ден.</item>
+        <item quantity="other">Најавата се чува шифрирано на овој уред и се помни %d дена.</item>
+    </plurals>
+    <string name="signin_clock_behind_note">Часовникот на овој уред е зад време што апликацијата веќе го видела, па QR кодот за најава не работи без надворешниот систем. Се поправа кога следниот пат некој ќе се најави со достапен надворешен систем; потоа сите еднаш се најавуваат преку него.</string>
 </resources>

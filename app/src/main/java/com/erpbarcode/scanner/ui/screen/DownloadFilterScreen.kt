@@ -59,6 +59,8 @@ private enum class DlDateTarget { FROM, TO }
 @Composable
 fun DownloadFilterScreen(
     hasCredentials: Boolean = false,
+    // ExtSystemConfig.rememberSignInDays, for the sign-in sheet's footer.
+    rememberDays: Int = 0,
     loginQrKey: String = "",
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
@@ -357,6 +359,7 @@ fun DownloadFilterScreen(
 
     if (showLogin) {
         LoginSheet(
+            rememberDays = rememberDays,
             loginQrKey = loginQrKey,
             hapticEnabled = hapticEnabled,
             soundEnabled = soundEnabled,

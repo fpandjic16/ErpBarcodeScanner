@@ -211,6 +211,15 @@ internal class Shell(
     }
 
     /**
+     * Signs the operator out and deletes their own profile, once they have said yes to it on the
+     * user info screen. Waits for a running transfer like [requestSignOut], and for the same
+     * reason; the rule itself is in AppViewModel.signOutAndDeleteProfile.
+     */
+    fun requestSignOutAndDeleteProfile() {
+        if (erpWorkInFlight) state.showSwitchBlocked = true else appVm.signOutAndDeleteProfile()
+    }
+
+    /**
      * Saves [config] if that can be done here and now; false when it had to ask, or refuse, first.
      *
      * A configuration that names another ERP installation (server or company) ends the session:

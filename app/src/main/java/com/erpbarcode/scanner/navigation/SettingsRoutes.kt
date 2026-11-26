@@ -48,6 +48,8 @@ internal fun NavGraphBuilder.settingsRoutes(shell: Shell) {
                 rc = rc,
                 onBack = { nav.popBackStack() },
                 onSignOut = { requestSignOut() },
+                loadOwnFootprint = { onResult -> appVm.profileFootprint(activeProfile.key, onResult) },
+                onDeleteOwnProfile = { requestSignOutAndDeleteProfile() },
             )
         }
         composable(Routes.LOCATION_RC_PICK) {
@@ -61,7 +63,7 @@ internal fun NavGraphBuilder.settingsRoutes(shell: Shell) {
                 isRefreshing = isRefreshing,
                 lastSyncedAt = lastSyncedAt,
                 hasCredentials = appVm.hasCredentials(),
-                credentialTtlHours = extSystemConfig.credentialTtlHours,
+                rememberDays = appVm.rememberDaysInEffect(),
                 loginQrKey = extSystemConfig.loginQrKey,
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,

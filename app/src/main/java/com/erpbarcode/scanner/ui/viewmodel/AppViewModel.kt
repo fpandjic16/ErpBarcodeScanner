@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erpbarcode.scanner.BuildConfig
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.AppSettings
 import com.erpbarcode.scanner.data.auth.AppSettingsStore
@@ -15,9 +16,17 @@ import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
 import com.erpbarcode.scanner.data.auth.DeviceConfiguration
 import com.erpbarcode.scanner.data.auth.ExtSystemDefaultsCompany
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
+import com.erpbarcode.scanner.data.auth.KeyProtection
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
+import com.erpbarcode.scanner.data.auth.RememberedSignIn
+import com.erpbarcode.scanner.data.auth.SecureStore
+import com.erpbarcode.scanner.data.auth.SignInCodeCheck
+import com.erpbarcode.scanner.data.auth.TrustedClock
 import com.erpbarcode.scanner.data.auth.UserProfile
 import com.erpbarcode.scanner.data.auth.UserProfileStore
+import com.erpbarcode.scanner.data.auth.checkSignInCode
+import com.erpbarcode.scanner.data.auth.rememberedSignIn
+import com.erpbarcode.scanner.data.extsystem.ntHashOf
 import com.erpbarcode.scanner.data.db.DatabaseProvider
 import com.erpbarcode.scanner.data.db.SharedDatabaseProvider
 import com.erpbarcode.scanner.data.db.LocationEntity
@@ -39,7 +48,9 @@ import com.erpbarcode.scanner.data.model.ResponsibilityCenter
 import com.erpbarcode.scanner.data.repository.DocumentRepository
 import com.erpbarcode.scanner.i18n.inAppLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -58,6 +69,7 @@ import com.erpbarcode.scanner.data.extsystem.odataLiteral
 import com.erpbarcode.scanner.data.extsystem.ErpLocationRow
 import com.erpbarcode.scanner.data.extsystem.ODataList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
@@ -78,6 +90,7 @@ class AppViewModel @Inject constructor(
     private val configController: ConfigController,
     private val uploadCoordinator: UploadCoordinator,
     private val downloadCoordinator: DownloadCoordinator,
+    private val trustedClock: TrustedClock,
 ) : ViewModel() {
 
     /**
@@ -140,6 +153,10 @@ class AppViewModel @Inject constructor(
             // finally, not after: a cancelled scope would otherwise leave the count raised and
             // lock the operator out of changing profile for the life of the process.
             _erpWorkCount.update { it - 1 }
+            // A transfer can end with the saved sign-in gone: refused for the fifth time in a
+            // row, it is removed where the transfer ends (SignInLedger). What the screens hold
+            // of it follows.
+            _credentials.value = extSystemCredentialStore.get(profileStore.currentKey())
         }
     }
 
@@ -147,6 +164,113 @@ class AppViewModel @Inject constructor(
     // the order they are written.
     private val _extSystemConfig = MutableStateFlow(extSystemConfigStore.get())
     val extSystemConfig: StateFlow<ExtSystemConfig> = _extSystemConfig
+
+    /**
+     * Where this device holds the key the saved sign-ins are encrypted with. Asked once: it
+     * means a call into the Keystore, and it cannot change while the app runs.
+     *
+     * Declared above the `init` block that reads it: properties initialise in the order they are
+     * written, and that includes the holder a lazy value sits in.
+     */
+    val keyProtection: KeyProtection by lazy { SecureStore.keyProtection() }
+
+    /**
+     * Whether a sign-in may be remembered on this device at all: only where the storage key
+     * cannot be read out of it.
+     *
+     * A debug build is let through wherever it runs. It is debuggable, so its storage can be
+     * read whatever the key is held in, and an emulator, where this has to be tried, holds keys
+     * in software.
+     */
+    private val keyIsProtected: Boolean
+        get() = keyProtection == KeyProtection.SECURE_HARDWARE || BuildConfig.DEBUG
+
+    /**
+     * For how many days this device remembers a sign-in under [config]: what the configuration
+     * says where the storage key is protected, and 0 where it is not.
+     *
+     * Everything that asks "is anything remembered here?" asks this, not the configuration: what
+     * the screens promise, whether signing out keeps the saved sign-in, what is cleared when the
+     * app starts. On a device that cannot protect its key, a saved sign-in therefore lasts until
+     * sign-out and no longer, exactly as with the setting at 0.
+     */
+    private fun rememberDaysOn(config: ExtSystemConfig): Int =
+        if (keyIsProtected) config.rememberSignInDays.coerceAtLeast(0) else 0
+
+    /** [rememberDaysOn] the configuration in effect; what the sign-in sheets say under their button. */
+    fun rememberDaysInEffect(): Int = rememberDaysOn(extSystemConfig.value)
+
+    init {
+        // Deletes the storage of earlier versions, which kept passwords, before anything else
+        // could want it.
+        extSystemCredentialStore.open()
+        // Nobody is signed in when the process starts. Where nothing is remembered, a sign-in is
+        // kept only until sign-out, and a process that was killed never signed out.
+        if (profileStore.current() == null && rememberDaysOn(_extSystemConfig.value) <= 0) {
+            forgetSavedSignIns(except = null)
+        }
+    }
+
+    /** Removes every operator's saved sign-in but [except]'s. Profiles and their data stay. */
+    private fun forgetSavedSignIns(except: String?) {
+        profileStore.profiles().map { it.key }.filter { it != except }
+            .forEach { extSystemCredentialStore.clear(it) }
+    }
+
+    /** What [rememberedSignIn] says of one profile now. A sign-in found expired is removed here. */
+    private fun rememberedState(profileKey: String, days: Int): RememberedSignIn {
+        val saved = extSystemCredentialStore.saved(profileKey)
+        val state = rememberedSignIn(
+            days = days,
+            keyInSecureHardware = keyIsProtected,
+            verifiedAt = saved?.verifiedAt,
+            trustedNow = trustedClock.now(),
+            wallNow = trustedClock.wallNow(),
+        )
+        if (state == RememberedSignIn.EXPIRED) extSystemCredentialStore.clear(profileKey)
+        return state
+    }
+
+    /** What the sign-in screen shows about remembered sign-ins; see [rememberedSignIns]. */
+    data class RememberedSignIns(
+        /** The operators whose sign-in code lets them in without the ERP right now, by profile key. */
+        val keys: Set<String> = emptySet(),
+        /** For how many days a sign-in is remembered on this device; 0 when none is. */
+        val days: Int = 0,
+        /** The device's clock stands behind a time already seen, so nothing remembered works. */
+        val clockBehind: Boolean = false,
+    )
+
+    /**
+     * Who the sign-in screen may mark as remembered, and what it says about remembering.
+     *
+     * Off the main thread: it reads one encrypted value for each operator enrolled here, and a
+     * read through the Keystore is slow enough on the older terminals to be seen on a screen
+     * that is waiting to be drawn.
+     */
+    suspend fun rememberedSignIns(): RememberedSignIns = withContext(Dispatchers.IO) {
+        val config = extSystemConfig.value
+        val days = rememberDaysOn(config)
+        if (days <= 0) return@withContext RememberedSignIns()
+        RememberedSignIns(
+            keys = profileStore.profilesOn(config.serverIdentity)
+                .map { it.key }
+                .filter { rememberedState(it, config.rememberSignInDays) == RememberedSignIn.ALLOWED }
+                .toSet(),
+            days = days,
+            clockBehind = trustedClock.deviceClockIsBehind(),
+        )
+    }
+
+    private val _profilesChanged = MutableStateFlow(0)
+
+    /**
+     * Counts up whenever the list of operators on this device changes underneath a screen that
+     * shows it. The sign-in screen reads the list once and would otherwise go on offering an
+     * operator who has just deleted their own profile, since that deletion finishes after the
+     * screen is already up.
+     */
+    val profilesChanged: StateFlow<Int> = _profilesChanged
 
     /**
      * The reference data of the ERP installation the device is pointed at, re-read whenever the
@@ -256,6 +380,9 @@ class AppViewModel @Inject constructor(
         if (endsSession) signOut()
         extSystemConfigStore.save(config)
         _extSystemConfig.value = config
+        // Remembering switched off takes effect at once for everybody who is not working right
+        // now. The signed-in operator's own sign-in goes when they sign out.
+        if (rememberDaysOn(config) <= 0) forgetSavedSignIns(except = profileStore.currentKey())
         return if (endsSession) ConfigSave.SavedAndSignedOut else ConfigSave.Saved
     }
 
@@ -274,7 +401,8 @@ class AppViewModel @Inject constructor(
     fun saveCredentials(username: String, password: String): CredentialSave {
         val current = profileStore.current() ?: return CredentialSave.NoProfile
         if (UserProfileStore.normalise(username) != current.id) return CredentialSave.WrongOperator
-        extSystemCredentialStore.save(current.key, username, password, extSystemConfig.value.credentialTtlHours)
+        // The password ends here: what is kept is its NT hash.
+        extSystemCredentialStore.save(current.key, username, ntHashOf(password))
         _credentials.value = extSystemCredentialStore.get(current.key)
         return CredentialSave.Stored
     }
@@ -289,7 +417,10 @@ class AppViewModel @Inject constructor(
      */
     enum class CredentialSave { Stored, NoProfile, WrongOperator }
 
-    /** Server access for the signed-in operator, or null once its TTL has lapsed. */
+    /**
+     * What the signed-in operator's transfers sign with, or null when they have to sign in first:
+     * nothing saved yet, or removed after the ERP refused it five times in a row.
+     */
     fun savedCredentials(): ExtSystemCredentials? = extSystemCredentialStore.get(profileStore.currentKey())
 
     fun hasCredentials(): Boolean = extSystemCredentialStore.isValid(profileStore.currentKey())
@@ -297,16 +428,57 @@ class AppViewModel @Inject constructor(
     /**
      * Leaves the app, not the data.
      *
-     * Drops this operator's server access and closes their session, returning to the sign-in
-     * screen. Their documents and recordings stay exactly where they are — signing out has never
-     * deleted work and must not start now, since those rows are the only copy until the ERP has
-     * them. Their profile stays enrolled; signing back in still goes to the ERP, like every sign-in.
+     * Closes this operator's session and returns to the sign-in screen. Their documents and
+     * recordings stay exactly where they are — signing out has never deleted work and must not
+     * start now, since those rows are the only copy until the ERP has them. Their profile stays
+     * enrolled.
+     *
+     * **The saved sign-in stays too, while this device remembers sign-ins**: it is what lets
+     * the same operator in with their sign-in code tomorrow, with or without the ERP, and it would
+     * be no use if handing the device over erased it. Where nothing is remembered
+     * (`rememberSignInDays` 0, or a device that cannot protect its storage key; see
+     * [rememberDaysOn]) it goes here, as it always did. Removing it on purpose is deleting
+     * the profile ([signOutAndDeleteProfile], or another operator in Settings → Profiles).
      */
     fun signOut() {
-        profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }
+        if (rememberDaysInEffect() <= 0) {
+            profileStore.currentKey()?.let { extSystemCredentialStore.clear(it) }
+        }
         _credentials.value = null
         _currentProfile.value = null
         databaseProvider.release()
+    }
+
+    /**
+     * Signs the operator out and removes their own profile from the device: documents, scans, the
+     * saved sign-in, their settings. [onDone] is told whether it was done.
+     *
+     * The one way to delete the profile one is signed in as. Everything underneath refuses the
+     * signed-in profile ([deleteProfile], `DatabaseProvider.deleteProfileData`,
+     * `UserProfileStore.delete`), and rightly: it is the file being written to. So the session is
+     * closed first, and what is deleted is then nobody's open database.
+     *
+     * **Unsent scans go with it.** That is the operator's decision to make, and the screen that
+     * calls this asks them with the number in front of them; answering no leaves everything as it
+     * was, so they can upload first. This is the profile exception to the rule that a document
+     * with an unsent scan is never deleted, the same one Settings → Profiles has always been.
+     *
+     * Refused while a transfer runs, as signing out is: the transfer is writing to that database.
+     */
+    fun signOutAndDeleteProfile(onDone: (deleted: Boolean) -> Unit = {}) {
+        val key = profileStore.currentKey()
+        if (key == null || _erpWorkCount.value > 0) {
+            onDone(false)
+            return
+        }
+        signOut()
+        viewModelScope.launch {
+            // One turn of the main thread first. Everything that was reading that database is
+            // told it is gone by the sign-out above, and should have let go of it before the
+            // file is closed and deleted underneath.
+            yield()
+            deleteProfile(key) { onDone(true) }
+        }
     }
 
     /**
@@ -358,30 +530,66 @@ class AppViewModel @Inject constructor(
                 appSettingsStore.deletePersonal(profile.id)
             }
             profileStore.delete(profileKey)
+            _profilesChanged.update { it + 1 }
             onDone()
         }
     }
 
     /** Result of an attempt to sign in at the launch screen. */
     sealed interface SignInResult {
+        /** The ERP was asked and accepted. */
         data object Online : SignInResult
+
+        /** Let in on a sign-in the ERP accepted earlier, without asking it now. */
+        data object Remembered : SignInResult
+
         data class Failed(val message: String) : SignInResult
+    }
+
+    /** Holds a scanned code against what is saved for [profileKey]; the rule is [checkSignInCode]. */
+    private fun checkAgainstSaved(profileKey: String, offeredHash: String, days: Int): SignInCodeCheck {
+        // The state first: finding the sign-in expired removes it, and then there is nothing saved.
+        val state = rememberedState(profileKey, days)
+        return checkSignInCode(state, extSystemCredentialStore.saved(profileKey)?.ntHash, offeredHash)
+    }
+
+    /** Opens [profile]'s data as the session, on whatever sign-in is saved for it. */
+    private fun openSession(profile: UserProfile) {
+        databaseProvider.switchTo(profile)
+        _currentProfile.value = profile
+        _credentials.value = extSystemCredentialStore.get(profile.key)
     }
 
     /**
      * Signs an operator in and opens their data.
      *
-     * **The external system is the only authority, every time.** There is no local fallback: if it
-     * cannot be reached, or refuses the password, nobody gets in. A profile is created by the same
-     * step, so an operator who has never been accepted by the ERP does not exist on this device.
+     * **The ERP decides every password it is asked about, and it is asked about every one that is
+     * typed.** If it cannot be reached, or refuses, a typed password lets nobody in. A profile is
+     * created by the ERP's acceptance, so an operator it has never accepted does not exist on this
+     * device, and a wrong password at a first sign-in leaves nothing behind.
      *
-     * That is a deliberate trade against availability, taken knowingly. A device that cannot reach
-     * the server is a device nobody can open, including an operator whose unsent scans are sitting
-     * on it — those rows stay safe on disk but are out of reach until the server answers. An
-     * earlier version unlocked offline against a stored PBKDF2 digest for exactly that reason; it
-     * was removed because signing in without the ERP is not a sign-in at all.
+     * **A scanned sign-in code ([scanned]) of an operator the ERP accepted here before is first
+     * held against what was saved then** (3.6.92). For `rememberSignInDays` days after the ERP
+     * last accepted that sign-in, a code carrying the same password lets the operator in without
+     * asking it: the device compares NT hashes, and never sees or keeps a password to compare.
+     * That is what lets a shift start where the network does not reach. Everything else still
+     * goes to the ERP: a code that does not match (the password may have changed, and the new
+     * code is right), an operator nothing is saved for, a sign-in remembered too long ago, a
+     * device whose clock or storage key cannot be trusted ([rememberedSignIn]).
+     *
+     * A code that did not match and that the ERP did not then accept counts against the saved
+     * sign-in like a refused transfer, and the fifth in a row removes it: a device left lying
+     * about is not a place to try codes on.
+     *
+     * An earlier version unlocked offline against a stored digest of a typed password. That was
+     * removed, and this is not it coming back: nothing typed is ever checked on the device.
      */
-    fun signIn(typedUsername: String, password: String, onResult: (SignInResult) -> Unit) {
+    fun signIn(
+        typedUsername: String,
+        password: String,
+        scanned: Boolean = false,
+        onResult: (SignInResult) -> Unit,
+    ) {
         val id = UserProfileStore.normalise(typedUsername)
         if (id == null) {
             onResult(SignInResult.Failed(inAppText(R.string.signin_bad_username)))
@@ -397,20 +605,39 @@ class AppViewModel @Inject constructor(
                 serverLabel = config.serverLabel,
                 environment = config.environment?.name,
             )
+            // The password ends here. What goes to the ERP, and what is kept, is its NT hash.
+            val offered = ExtSystemCredentials.fromPassword(typedUsername.trim(), password)
+
+            val code = if (scanned) checkAgainstSaved(profile.key, offered.ntHash, config.rememberSignInDays)
+                else SignInCodeCheck.NOT_REMEMBERED
+            if (code == SignInCodeCheck.MATCHES) {
+                openSession(profile)
+                onResult(SignInResult.Remembered)
+                return@launch
+            }
+
             val serverResult = if (config.serverBaseUrl.isBlank()) null else {
-                extSystemClient.checkCredentials(
-                    config, ExtSystemCredentials(typedUsername.trim(), password), config.serverBaseUrl.trim(),
-                )
+                extSystemClient.checkCredentials(config, offered, config.serverBaseUrl.trim())
             }
 
             if (serverResult is ExtSystemResult.Success) {
                 profileStore.enroll(profile)
-                databaseProvider.switchTo(profile)
-                _currentProfile.value = profile
-                extSystemCredentialStore.save(profile.key, typedUsername, password, config.credentialTtlHours)
-                _credentials.value = extSystemCredentialStore.get(profile.key)
+                // A device clock standing behind a time already seen lets nobody in on a
+                // remembered sign-in, and would go on doing so for good if the clock had once
+                // been ahead by mistake. The ERP has just vouched for this operator, so the clock
+                // is taken at its word again from here; and because that is a step back in time,
+                // nobody's saved sign-in is carried across it. Everybody else signs in through
+                // the ERP once more.
+                if (trustedClock.deviceClockIsBehind()) {
+                    forgetSavedSignIns(except = null)
+                    trustedClock.acceptDeviceClock()
+                }
+                // Replaces whatever was saved: the time starts again and the failures are forgotten.
+                extSystemCredentialStore.save(profile.key, offered.username, offered.ntHash)
+                openSession(profile)
                 onResult(SignInResult.Online)
             } else {
+                if (code == SignInCodeCheck.DIFFERS) extSystemCredentialStore.recordRefused(profile.key)
                 // `serverResult == null` means there is no server URL to ask at all, which is a
                 // configuration problem rather than a rejection — the sign-in screen's own door to
                 // the external-system setup is the way out of it.
@@ -445,7 +672,7 @@ class AppViewModel @Inject constructor(
                 onResult(ExtSystemResult.Failure(inAppText(R.string.ext_config_server_url_empty))); return@launch
             }
             val config = extSystemConfig.value.copy(serverBaseUrl = url)
-            val creds  = ExtSystemCredentials(username.trim(), password)
+            val creds  = ExtSystemCredentials.fromPassword(username.trim(), password)
             // On a client of its own: a transfer may be running, and it must go on under the
             // credentials it started with whatever is typed here.
             val result = extSystemClient.checkCredentials(config, creds, url)

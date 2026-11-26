@@ -41,6 +41,15 @@ private data class LoginQrDto(
     @SerializedName("password") val password: String? = null,
 )
 
+/**
+ * What a sign-in code carries, for as long as it takes to sign in with it.
+ *
+ * The one place a password still exists in the clear after a scan: it goes from here to the
+ * sign-in, where it is turned into its NT hash, and is kept nowhere. Not a data class, so its text
+ * form cannot print the password into a log by accident.
+ */
+class LoginQr(val username: String, val password: String)
+
 private val qrGson = Gson()
 
 private const val IV_BYTES = 12
@@ -57,7 +66,7 @@ private const val AES_KEY_BYTES = 32
  * The username is trimmed the way typed input is; the password deliberately isn't, since leading
  * or trailing whitespace can be a genuine part of it.
  */
-fun parseLoginQr(raw: String, keyB64: String): ExtSystemCredentials? {
+fun parseLoginQr(raw: String, keyB64: String): LoginQr? {
     val key = decodeKey(keyB64) ?: return null
     return runCatching {
         val blob = Base64.getDecoder().decode(raw.trim())
@@ -73,7 +82,7 @@ fun parseLoginQr(raw: String, keyB64: String): ExtSystemCredentials? {
         val dto = qrGson.fromJson(json, LoginQrDto::class.java) ?: return null
         val user = dto.username?.trim().orEmpty()
         val pass = dto.password.orEmpty()
-        if (user.isBlank() || pass.isBlank()) null else ExtSystemCredentials(user, pass)
+        if (user.isBlank() || pass.isBlank()) null else LoginQr(user, pass)
     }.getOrElse {
         // Nothing about the payload is logged — a failure here is either a non-login barcode or
         // a code this build can't read, and neither is worth putting a ciphertext in logcat for.

@@ -6,6 +6,7 @@ import com.google.gson.GsonBuilder
 import com.erpbarcode.scanner.data.auth.AppSettingsStore
 import com.erpbarcode.scanner.data.auth.DOC_TYPES_BEFORE_COMPLAINT_SPLIT
 import com.erpbarcode.scanner.data.auth.DeviceConfiguration
+import com.erpbarcode.scanner.data.auth.MAX_REMEMBER_SIGN_IN_DAYS
 import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.auth.ExtSystemConfigStore
 import com.erpbarcode.scanner.data.auth.ExtSystemDefaultsCompany
@@ -48,7 +49,12 @@ class ConfigController @Inject constructor(
         DeviceConfiguration(
             extSystem = ExtSystemConfig(
                 serverBaseUrl            = dto.serverBaseUrl.orEmpty(),
-                credentialTtlHours       = dto.credentialTtlHours ?: 24,
+                // A file that does not say leaves the device's answer alone, like the other
+                // fields added after the first files were written: importing a file exported
+                // before this existed must not switch remembering back on where it was set to 0.
+                // A device that was never told has the default.
+                rememberSignInDays       = (dto.rememberSignInDays ?: extSystemConfigStore.get().rememberSignInDays)
+                    .coerceIn(0, MAX_REMEMBER_SIGN_IN_DAYS),
                 documentLinesUrl         = dto.documentLinesUrl.orEmpty(),
                 // A type the file does not mention keeps the device's code. A file written before
                 // the complaint types existed would otherwise blank their codes.
@@ -146,7 +152,7 @@ class ConfigController @Inject constructor(
         val settings = appSettingsStore.get()
         val dto = ExtSystemDefaultsDto(
             serverBaseUrl      = config.serverBaseUrl,
-            credentialTtlHours = config.credentialTtlHours,
+            rememberSignInDays = config.rememberSignInDays,
             documentLinesUrl   = config.documentLinesUrl,
             documentTypeCodes  = DocumentType.entries.associate { it.name to config.docTypeCodeFor(it) },
             locationsUrl       = config.locationsUrl,
@@ -223,7 +229,7 @@ class ConfigController @Inject constructor(
         val companyName: String? = null,
         val environment: String? = null,
         val serverBaseUrl: String? = null,
-        val credentialTtlHours: Int? = null,
+        val rememberSignInDays: Int? = null,
         val documentLinesUrl: String? = null,
         val documentTypeCodes: Map<String, String>? = null,
         val locationsUrl: String? = null,

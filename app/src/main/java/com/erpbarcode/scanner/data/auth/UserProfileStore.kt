@@ -56,7 +56,7 @@ class UserProfileStore @Inject constructor(@param:ApplicationContext private val
     // Moved off EncryptedSharedPreferences in 3.6.28 without carrying the list over, by decision.
     // An operator reappears here at their next sign-in.
     private val store by lazy {
-        SecureStore(context, fileName = "user_profiles_v2", legacyFileName = "user_profiles")
+        SecureStore(context, fileName = "user_profiles_v2", legacyFileNames = listOf("user_profiles"))
     }
 
     private val gson = Gson()

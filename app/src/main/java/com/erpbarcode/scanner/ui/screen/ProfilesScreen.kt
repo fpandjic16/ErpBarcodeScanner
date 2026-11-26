@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,9 +40,6 @@ import com.erpbarcode.scanner.ui.theme.AppLine
 
 private val SignOutRed = AppSignal.Danger
 
-/** What deleting a profile would destroy. Null while it is still being counted. */
-private data class Footprint(val documents: Int, val scans: Int, val unsentScans: Int)
-
 /**
  * The operators this device knows, and the only way to remove one.
  *
@@ -71,7 +67,8 @@ fun ProfilesScreen(
     onDelete: (profileKey: String) -> Unit,
 ) {
     var pending by remember { mutableStateOf<UserProfile?>(null) }
-    var footprint by remember { mutableStateOf<Footprint?>(null) }
+    // Null while it is still being counted.
+    var footprint by remember { mutableStateOf<ProfileFootprint?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
         AppTopBar(title = stringResource(R.string.profiles_title), onBack = onBack)
@@ -97,7 +94,7 @@ fun ProfilesScreen(
                         pending = profile
                         footprint = null
                         loadFootprint(profile.key) { docs, scans, unsent ->
-                            footprint = Footprint(docs, scans, unsent)
+                            footprint = ProfileFootprint(docs, scans, unsent)
                         }
                     },
                 )
@@ -117,49 +114,14 @@ fun ProfilesScreen(
             danger = true,
             dismissLabel = stringResource(R.string.btn_cancel),
             content = {
-                // Counting is one database open and two reads. It is quick, but asking "delete?"
-                // before knowing the answer would be asking the operator to agree to an unknown.
+                // The counts and their warning are drawn by ProfileDeletionWarning.kt, the same
+                // as when an operator deletes their own profile from the user info screen.
                 if (counts == null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.profiles_delete_counting))
-                    }
+                    ProfileFootprintCounting()
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.profiles_delete_text, profile.displayName, profile.serverLine()))
-                        if (counts.scans > 0) {
-                            // Its own block, not a clause in the sentence above. Documents come
-                            // back on the next download; scans do not come back at all.
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(SignOutRed.copy(alpha = 0.10f))
-                                    .border(1.dp, SignOutRed.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Text(
-                                    stringResource(
-                                        R.string.profiles_delete_scans,
-                                        counts.scans,
-                                        counts.documents,
-                                    ),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = SignOutRed,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                )
-                                if (counts.unsentScans > 0) {
-                                    // The half that exists here and nowhere else.
-                                    Text(
-                                        stringResource(R.string.profiles_delete_unsent, counts.unsentScans),
-                                        style = monoLabel.copy(color = SignOutRed),
-                                    )
-                                }
-                            }
-                        }
+                        ProfileDeletionWarning(counts)
                     }
                 }
             },

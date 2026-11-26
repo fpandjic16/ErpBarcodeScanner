@@ -2,7 +2,7 @@
   "companyName": "Prima Pohištvo",
   "environment": "TEST",
   "serverBaseUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/",
-  "credentialTtlHours": 168,
+  "rememberSignInDays": 5,
   "loginQrKey": "AuQp75VFBpA/ybuRGeFDEM5z4DTcjUTXTaTIQSj7Bl4=",
   "domain": "",
   "documentLinesUrl": "http://192.168.100.87:8048/NAV_TEST_HR/ODataV4/Company('Prima%20Pohi%C5%A1tvo')/BarcodeAppEntries",

@@ -88,7 +88,7 @@ Ako skenirate barkod koji nije naveden kao očekivani artikl na trenutnom dokume
 
 ## 3. Prvo pokretanje
 
-**Prijavljujete se svaki put kad otvorite aplikaciju.** Svojim imenom i lozinkom; ništa drugo u aplikaciji nije dostupno dok se ne prijavite. Nije riječ samo o privatnosti — svako skeniranje bilježi tko ga je napravio, u trenutku kad ga napravite, pa aplikacija mora znati tko drži uređaj prije prvog skeniranja.
+**Prijavljujete se svaki put kad otvorite aplikaciju.** Svojim QR kodom prijave ili imenom i lozinkom; ništa drugo u aplikaciji nije dostupno dok se ne prijavite. Nije riječ samo o privatnosti — svako skeniranje bilježi tko ga je napravio, u trenutku kad ga napravite, pa aplikacija mora znati tko drži uređaj prije prvog skeniranja.
 
 **Vaš posao je vaš.** Dokumente koje preuzmete i skeniranja koja napravite vidite samo vi. Drugi operater koji se prijavi na isti uređaj vidi svoje, ne vaše — i ne može poslati vaše. Ako zaboravite poslati na kraju smjene, ništa se ne gubi; čeka vas kad se sljedeći put prijavite na taj uređaj.
 
@@ -96,13 +96,13 @@ Dvoje vas može istovremeno raditi na istom dokumentu. Svatko ima svoju kopiju s
 
 **Postavljanje potpuno novog uređaja dolazi prije svega ovoga.** Uređaj tek izvađen iz kutije ne zna gdje je vanjski sustav, a ekran za prijavu bez njega ne može provjeriti lozinku. Zato ekran za prijavu ima gumb **Postava vanjskog sustava**, koji otvara postavke veze bez prijave. Obično IT ili konzultant ondje jednom odabere tvrtku, čime se popune sve adrese, a od tada se svi samo prijavljuju. **Gumb postoji samo dok adresa poslužitelja nije spremljena.** Nakon toga se postavke veze mijenjaju samo nakon prijave, iz Postavki: inače bi svatko s uređajem u ruci mogao uređaj usmjeriti na drugi poslužitelj i otvoriti tuđi rad. Ako je spremljena adresa kriva ili se poslužitelj preseli, podatke aplikacije treba obrisati (ili aplikaciju ponovno instalirati) i uređaj postaviti iznova. Na istom se ekranu uključuju vrste dokumenata s kojima lokacija radi; nova instalacija nema nijednu uključenu. Uz njega je gumb **O aplikaciji**, koji također bez prijave prikazuje podatke o aplikaciji (vidi [§16](#16-postavke--objašnjenje-svake-opcije), Informacije o sustavu).
 
-**Svaka prijava traži da je vanjski sustav dostupan**, jer samo on može potvrditi vašu lozinku. Ako ne radi, nitko ne može ući u aplikaciju — ni vi, pa ni do posla koji ste već skenirali. Taj posao nije izgubljen: ostaje na uređaju i čeka da sustav ponovno odgovori.
+**Upisanu lozinku uvijek provjerava vanjski sustav**, jer je samo on može potvrditi. Ako sustav ne radi, upisivanjem nitko ne može ući. **Iznimka je vaš QR kod prijave:** nakon što je vanjski sustav prihvatio vašu prijavu na nekom uređaju, skeniranje koda vas na tom uređaju pušta i bez njega, onoliko dana koliko je vaša tvrtka postavila (5 ako nije mijenjano; broj piše na ekranu za prijavu). Svako vaše slanje ili preuzimanje koje vanjski sustav prihvati vraća to brojanje na početak. Posao koji ste već skenirali ni u jednom slučaju nije izgubljen: ostaje na uređaju.
 
 Kad prvi put otvorite aplikaciju:
 
-1. Prijavite se korisničkim imenom i lozinkom. Imena koja su se već koristila na tom uređaju su navedena, pa možete dodirnuti svoje umjesto da ga upisujete. Ime upišite kako god želite — `alice`, `PRIMA\alice` i `alice@prima.hr` za aplikaciju su ista osoba. **Ako imate QR kod za prijavu, pritisnite okidač ili dodirnite *Skeniraj QR kod*.** Na uređaju sa skenerom gumb pokreće skener; kameru otvara samo uređaj bez skenera. Kod popuni oba polja; za ulazak i dalje dodirnete gumb.
+1. **Ako imate QR kod prijave, pritisnite okidač ili dodirnite *Skeniraj prijavu*: skeniranje koda vas prijavljuje**, bez ijednog dodatnog dodira. Na uređaju sa skenerom gumb pokreće skener; kameru otvara samo uređaj bez skenera. Bez koda se prijavite korisničkim imenom i lozinkom. Imena koja su se već koristila na tom uređaju su navedena, pa možete dodirnuti svoje umjesto da ga upisujete; riječ *Zapamćen* ispod imena znači da kod tog operatera na ovom uređaju radi i bez vanjskog sustava. Ime upišite kako god želite — `alice`, `PRIMA\alice` i `alice@prima.hr` za aplikaciju su ista osoba. Dok aplikacija provjerava, ekran je zaključan i piše *Prijava…*.
 2. Upišite **Korisničko ime** i **Lozinku**, zatim dodirnite prikazani gumb. Natpis mu ovisi o tome odakle je prijava pozvana — „Prijavi se”, „Testiraj vezu” ili „Prijavi se i sinkroniziraj”. Ako je za vašu tvrtku postavljena Windows domena (Postavke → Konfiguracija vanjskog sustava), upisujete samo korisničko ime; inače ga upišite kao `korisnik@domena` ili `DOMENA\korisnik`. Prije nego što vas prijavi, aplikacija vaše podatke stvarno provjerava u vanjskom sustavu. Ako budu odbijeni, na istom ekranu vidjet ćete zašto, pa možete ispraviti i pokušati ponovno.
-3. Prijava ostaje aktivna zadano razdoblje (obično 24 sata, ponekad dulje — navedeno je u tekstu ispod gumba, npr. *„Vjerodajnice pohranjene šifrirano s AES-256-GCM za 24 sata.”*). Nakon tog razdoblja jednostavno ćete se morati ponovno prijaviti sljedeći put kad bude potrebno — vaše vjerodajnice cijelo su vrijeme šifrirane na uređaju.
+3. Vaša prijava čuva se šifrirana na uređaju, pa slanje i preuzimanje ne traže lozinku ponovno. Tekst ispod gumba kaže koliko se dugo pamti, npr. *„Prijava se čuva šifrirano na ovom uređaju i pamti 5 dana.”* Uređaj ne čuva samu lozinku, nego njezin oblik koji služi samo za vanjski sustav. Ako je vanjski sustav odbije pet puta zaredom (lozinka vam je promijenjena ili je račun ugašen), uređaj je zaboravlja i traži da se ponovno prijavite.
 4. Odaberite **centar odgovornosti** i **lokaciju** (vidi [§5](#5-odabir-lokacije-i-centra-odgovornosti)). Time aplikacija zna iz kojeg skladišta ili trgovine radite i sve što vidite filtrira na to područje.
 
 ---
@@ -445,19 +445,21 @@ Jedan redak, **„Poslužitelj i krajnje točke”**, koji otvara postavke veze 
 | **Izbriši preuzete dokumente** *(crveno — briše podatke)* | Briše preuzete dokumente, ali **zadržava** vaše postavke i prijavu. **Dokument s neposlanim skeniranjima ostaje**, a aplikacija javlja koliko ih je ostalo: pošaljite ih ili im prvo obrišite skeniranja pod **ZAPISI**, pa ih je moguće obrisati. Već poslana skeniranja ne mogu se obrisati zasebno; nestaju zajedno s dokumentom. Traži potvrdu. |
 
 ### Informacije o sustavu
-Podaci samo za čitanje — verzija aplikacije, verzija Androida, SDK, verzija baze podataka, za koji je sustav uređaj postavljen (Test ili Produkcija) i za koju tvrtku — korisni kad prijavljujete grešku podršci. Isti podaci nalaze se i na ekranu za prijavu pod **O aplikaciji**, za slučaj kad se ne možete prijaviti.
+Podaci samo za čitanje — verzija aplikacije, verzija Androida, SDK, verzija baze podataka, za koji je sustav uređaj postavljen (Test ili Produkcija), za koju tvrtku te gdje uređaj drži ključ koji štiti spremljene prijave (**Zaštita ključa**: prijave se pamte samo na uređaju koji ga drži u sigurnom hardveru) — korisni kad prijavljujete grešku podršci. Isti podaci nalaze se i na ekranu za prijavu pod **O aplikaciji**, za slučaj kad se ne možete prijaviti.
 
 ### Korisnički račun
-Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde).
+Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde). Dodir na vaše inicijale na glavnom izborniku prikazuje iste podatke uz još jedan gumb, **Odjavi me i obriši moj profil** — vidi [§17](#17-prijava-i-odjava).
 
 ---
 
 ## 17. Prijava i odjava
 
 - Prijavljujete se svaki put kad otvorite aplikaciju — vidi [§3](#3-prvo-pokretanje).
+- **Nakon nadogradnje na 3.6.92 svi se prijavljuju još jednom, uz dostupan vanjski sustav.** Uređaj više ne čuva lozinke, nego samo njihov oblik koji služi za vanjski sustav, i ništa staro nije preneseno. Dokumenti i skeniranja ostaju netaknuti.
 - **Nakon nadogradnje na 3.6.28 svi se prijavljuju još jednom**, a **Postavke → Operateri na ovom uređaju** ponovno se pune kako se ljudi prijavljuju. Promijenio se način na koji uređaj čuva lozinke i ništa staro nije preneseno. Ničiji dokumenti ni neposlana skeniranja ne gube se: vraćaju se pri sljedećoj prijavi te osobe.
-- Vaš pristup vanjskom sustavu čuva se šifriran na uređaju i istječe nakon zadanog razdoblja. Nakon toga aplikacija ponovno traži lozinku sljedeći put kad joj treba vanjski sustav (preuzimanje, slanje, osvježavanje lokacija) — ništa se ne gubi.
-- Za odjavu idite na **Postavke → Korisnički račun → Odjavi se iz vanjskog sustava**. Time se vraćate na ekran za prijavu, spremni za sljedećeg operatera. Odjava nije moguća dok je prijenos još u tijeku — vidi [§18.2d](#182d-piše-da-je-prijenos-u-tijeku-i-ne-mogu-se-odjaviti).
+- Vaša prijava čuva se šifrirana na uređaju. Zbog nje vaš QR kod prijave radi i bez vanjskog sustava, onoliko dana koliko je vaša tvrtka postavila, računajući od zadnjeg puta kad ju je vanjski sustav prihvatio — pri prijavi te pri svakom slanju ili preuzimanju. Nakon toliko dana bez vanjskog sustava, ili nakon što je vašu prijavu odbio pet puta zaredom, aplikacija ponovno traži kod ili lozinku, a tada vanjski sustav mora biti dostupan. Ništa se ne gubi.
+- Za odjavu idite na **Postavke → Korisnički račun → Odjavi se iz vanjskog sustava**, ili dodirnite svoje inicijale na glavnom izborniku pa **Odjavi se**. Time se vraćate na ekran za prijavu, spremni za sljedećeg operatera, a **sve vaše ostaje na uređaju, uključujući zapamćenu prijavu**, pa vas kod idući put ponovno pušta. Odjava nije moguća dok je prijenos još u tijeku — vidi [§18.2d](#182d-piše-da-je-prijenos-u-tijeku-i-ne-mogu-se-odjaviti).
+- **Odjavi me i obriši moj profil** (dodir na vaše inicijale na glavnom izborniku) služi kad ovaj uređaj više nećete koristiti. Uklanja vas s njega: vaše dokumente, vaša skeniranja, spremljenu prijavu i vaše postavke. Aplikacija prvo prebroji što bi se obrisalo i pita **Da** ili **Ne**. **Skeniranja koja nikad nisu poslana brišu se s ostalim i ne mogu se vratiti.** U pitanju piše koliko ih je: odgovorite **Ne**, pošaljite ih pa se vratite. Brisanje nije moguće dok je prijenos još u tijeku.
 
 ---
 
@@ -478,7 +480,7 @@ Ništa se ne briše odjavom, time što kolega koristi uređaj ni istekom vaše l
 Nećete ga vidjeti, i to namjerno — na njima je da ga završe i pošalju. Vratite im uređaj ili ih zamolite da se prijave i pošalju.
 
 ### 18.2c „Ne mogu se prijaviti, piše da vanjski sustav nije dostupan”
-**Vanjski sustav je taj koji provjerava vašu lozinku, svaki put.** Dok nije dostupan, u aplikaciju se ne može ući — ni za koga, uključujući ljude koji ovaj uređaj koriste mjesecima. Ništa što ste skenirali u međuvremenu se ne gubi; ostaje na uređaju i čeka da se sustav vrati. Prijavite ispad umjesto da pokušavate drugu lozinku.
+**Vanjski sustav je taj koji provjerava upisanu lozinku, svaki put.** Dok nije dostupan, upisivanjem se ne može ući — ni za koga, uključujući ljude koji ovaj uređaj koriste mjesecima. **Ako imate QR kod prijave i vanjski sustav je vašu prijavu na ovom uređaju prihvatio u zadnjih nekoliko dana, skenirajte kod: to i dalje radi.** Ako ne radi (na ovom se uređaju niste prijavili u zadnje vrijeme ili su dani istekli), prijavite ispad umjesto da pokušavate drugu lozinku. Ništa što ste skenirali u međuvremenu se ne gubi; ostaje na uređaju i čeka da se sustav vrati.
 
 Ako je sustav *dostupan*, a lozinka se odbija, vjerojatno vam je promijenjena u vanjskom sustavu — prijavite se novom.
 
@@ -541,6 +543,7 @@ Operateri se mogu prijaviti skeniranjem QR koda umjesto upisivanja ([§3](#3-prv
   3. Dodirnite „Napravi kodove”. Tablica pokazuje koji su redovi postali kodovi i zašto su ostali preskočeni.
   4. „Ispiši” stavlja **dva koda po stranici A4**, s crtom za rezanje između. „Spremi ZIP” sprema sve slike u jednu datoteku.
 - **Ispisani kod nosi lozinku.** Čuvajte ga kao samu lozinku, a CSV nakon ispisa obrišite.
+- **Kod radi i bez vanjskog sustava**, na uređaju na kojem je vanjski sustav prihvatio prijavu tog operatera unutar postavljenog broja dana (vidi [§3](#3-prvo-pokretanje)). Kad se kod izgubi, promijenite operateru lozinku i ispišite novi kod. Na uređaju na kojem se operater zatim prijavi novim kodom stari odmah prestaje raditi. Na uređaju na kojem se ne prijavi stari kod i dalje pušta onoga tko ga ima bez vanjskog sustava dok dani ne isteknu, ali ništa tako skenirano ne može se poslati: vanjski sustav odbija staru lozinku, a nakon pet odbijanja uređaj je zaboravlja.
 
 Za naredbeni redak postoji i `tools/make_login_qr.py`.
 

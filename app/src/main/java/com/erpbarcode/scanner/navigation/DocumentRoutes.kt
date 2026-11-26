@@ -78,6 +78,7 @@ internal fun NavGraphBuilder.documentRoutes(shell: Shell) {
             val scopeMissingText = stringResource(R.string.main_blocked_text)
             DownloadFilterScreen(
                 hasCredentials  = appVm.hasCredentials(),
+                rememberDays    = appVm.rememberDaysInEffect(),
                 loginQrKey      = extSystemConfig.loginQrKey,
                 hapticEnabled   = hapticEnabled,
                 soundEnabled    = soundEnabled,

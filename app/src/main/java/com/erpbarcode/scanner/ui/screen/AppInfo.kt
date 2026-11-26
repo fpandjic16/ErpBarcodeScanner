@@ -11,11 +11,13 @@ import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.erpbarcode.scanner.BuildConfig
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
+import com.erpbarcode.scanner.data.auth.KeyProtection
+import com.erpbarcode.scanner.data.auth.SecureStore
 import com.erpbarcode.scanner.data.db.DB_VERSION
 import com.erpbarcode.scanner.ui.component.AppTopBar
 import com.erpbarcode.scanner.ui.theme.AppPalette
@@ -79,6 +83,22 @@ internal fun AppInfoCard(environment: ExtSystemEnvironment?, companyName: String
         )
         SettingsDivider()
         InfoRow(Icons.Outlined.Business, stringResource(R.string.app_info_company), companyName ?: notSet)
+        SettingsDivider()
+        // Asked of the device itself, once per showing. It decides whether sign-ins are remembered
+        // on this device at all (see SecureStore.keyProtection), and reading this line is how a
+        // model is checked before it is put to work.
+        val keyProtection = remember { SecureStore.keyProtection() }
+        InfoRow(
+            Icons.Outlined.Lock,
+            stringResource(R.string.app_info_key_protection),
+            stringResource(
+                when (keyProtection) {
+                    KeyProtection.SECURE_HARDWARE -> R.string.app_info_key_hardware
+                    KeyProtection.SOFTWARE -> R.string.app_info_key_software
+                    KeyProtection.UNKNOWN -> R.string.app_info_key_unknown
+                }
+            ),
+        )
     }
 }
 

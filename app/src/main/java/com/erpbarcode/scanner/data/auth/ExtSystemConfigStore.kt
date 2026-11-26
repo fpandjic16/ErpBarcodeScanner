@@ -13,7 +13,8 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
 
     fun get(): ExtSystemConfig = ExtSystemConfig(
         serverBaseUrl      = prefs.getString("serverBaseUrl", "") ?: "",
-        credentialTtlHours = prefs.getInt("credentialTtlHours", 24),
+        rememberSignInDays = prefs.getInt("rememberSignInDays", DEFAULT_REMEMBER_SIGN_IN_DAYS)
+            .coerceIn(0, MAX_REMEMBER_SIGN_IN_DAYS),
         documentLinesUrl   = prefs.getString("documentLinesUrl", "") ?: "",
         documentTypeCodes = DocumentType.entries.associateWith { type ->
             prefs.getString("doc_type_code_${type.key}", null) ?: CODES_OF_TYPES_ADDED_LATER[type].orEmpty()
@@ -37,7 +38,7 @@ class ExtSystemConfigStore @Inject constructor(@param:ApplicationContext private
     fun save(config: ExtSystemConfig) {
         val ed = prefs.edit()
             .putString("serverBaseUrl",      config.serverBaseUrl)
-            .putInt   ("credentialTtlHours", config.credentialTtlHours)
+            .putInt   ("rememberSignInDays", config.rememberSignInDays.coerceIn(0, MAX_REMEMBER_SIGN_IN_DAYS))
             .putString("documentLinesUrl", config.documentLinesUrl)
             .putString("recordingSyncUrl", config.recordingSyncUrl)
             .putString("locationsUrl",     config.locationsUrl)

@@ -134,13 +134,7 @@
     <string name="login_password">Password</string>
     <string name="login_show_password">Show password</string>
     <string name="login_hide_password">Hide password</string>
-    <string name="login_footer">Credentials stored encrypted with AES-256-GCM for %s.</string>
     <string name="login_username_hint">e.g. user@domain</string>
-    <plurals name="login_ttl_hours">
-        <item quantity="one">%d hour</item>
-        <item quantity="other">%d hours</item>
-    </plurals>
-    <string name="login_ttl_days">%d days</string>
     <!-- User info -->
     <string name="user_info_title">User Info</string>
     <string name="user_info_id">User ID</string>
@@ -178,14 +172,12 @@
     <string name="ext_config_title">External System Configuration</string>
     <string name="ext_config_subtitle">Server connection &amp; endpoints</string>
     <string name="ext_config_sec_connection">Connection</string>
-    <string name="ext_config_sec_session">Credential session</string>
+    <string name="ext_config_sec_session">Sign-in</string>
     <string name="ext_config_sec_endpoints">Document endpoints (OData page URLs)</string>
     <string name="ext_config_sec_reference">Reference data</string>
     <string name="ext_config_sec_recording">Recording sync</string>
     <string name="ext_config_server_url">Server base URL</string>
     <string name="ext_config_windows_domain">Windows domain</string>
-    <string name="ext_config_session_duration">Session duration</string>
-    <string name="ext_config_session_desc">Credentials are wiped from encrypted storage after this period</string>
     <string name="ext_config_locations_url">Locations URL</string>
     <string name="ext_config_recording_url">Recording sync URL</string>
     <string name="ext_config_load_title">Load configuration</string>
@@ -287,7 +279,6 @@
     <string name="settings_delete_all">Delete downloaded documents</string>
     <string name="settings_delete_all_desc">Deletes every downloaded document that holds no unsent scans. Settings and sign-in stay untouched.</string>
     <string name="settings_background_sync_desc">Upload in the background so you can keep working while documents are sent.</string>
-    <string name="login_scan_qr">Scan QR code</string>
     <string name="login_qr_invalid">That QR code does not contain sign-in details.</string>
     <string name="login_connect_failed">Could not connect. Check your username and password and try again.</string>
     <string name="main_blocked_title">Location required</string>
@@ -316,7 +307,7 @@
     <string name="signin_action">SIGN IN</string>
     <string name="signin_known_operators">Operators on this device</string>
     <string name="signin_first_time_note">Signing in always needs the external system — it is what checks your password.</string>
-    <string name="signin_needs_server">The external system cannot be reached, so your password cannot be checked. Sign-in needs it every time.</string>
+    <string name="signin_needs_server">No external system is set up on this device, so your password cannot be checked.</string>
     <string name="signin_open_config">External system setup</string>
     <string name="signin_name_too_long">User name can be at most %d characters.</string>
     <string name="signin_bad_username">Enter a valid user name.</string>
@@ -352,8 +343,6 @@
     <string name="ext_config_hint_locations">e.g. …/ODataV4/Company(\'Name\')/LocationList</string>
     <string name="ext_config_hint_recording_sync">e.g. …/ODataV4/Company(\'Name\')/BarcodeAppRecordings</string>
     <string name="ext_config_hint_doc_type_code">e.g. WHSE_SHIP (max 20 chars)</string>
-    <string name="ext_config_ttl_hours_short">%d h</string>
-    <string name="ext_config_ttl_days_short">%d d</string>
     <string name="settings_app_version_value">%1$s (build %2$d)</string>
     <string name="settings_sdk_value">Min API %1$d (Android %2$s) · Target API %3$d (Android %4$s)</string>
     <!-- App info: Settings > System info, and its own screen before sign-in -->
@@ -401,4 +390,28 @@
         <item quantity="other">%d documents were kept because they hold scans that have not been sent.</item>
     </plurals>
     <string name="processing_signing_in">Signing in…</string>
+    <string name="signin_scan">Scan sign-in</string>
+    <string name="signin_profile_remembered">Remembered</string>
+    <string name="signin_remembered_toast">Signed in without asking the external system. It will be asked at the first transfer.</string>
+    <string name="login_footer_session">The sign-in is kept encrypted on this device until you sign out.</string>
+    <string name="ext_config_remember_days">Remembered sign-in (days)</string>
+    <string name="ext_config_remember_hint">0–%d</string>
+    <string name="ext_config_remember_desc">For this many days after the external system last accepted an operator\'s sign-in, their sign-in code lets them in without it. Every transfer it accepts starts the count again. 0 switches this off: every sign-in then asks the external system. At most %d.</string>
+    <string name="user_info_delete_profile">Sign out and delete my profile</string>
+    <string name="own_profile_delete_title">Delete your profile?</string>
+    <string name="own_profile_delete_text">You will be signed out, and your documents, scans, saved sign-in and settings will be removed from this device. This cannot be undone. Do you want to continue?</string>
+    <string name="own_profile_delete_unsent_hint">Answer No to go back and upload them first.</string>
+    <string name="app_info_key_protection">Key protection</string>
+    <string name="app_info_key_hardware">Secure hardware</string>
+    <string name="app_info_key_software">Software only — sign-ins are not remembered</string>
+    <string name="app_info_key_unknown">Unknown — sign-ins are not remembered</string>
+    <plurals name="signin_remember_note">
+        <item quantity="one">A typed password is always checked by the external system. A sign-in code it has accepted keeps working without it for %d day.</item>
+        <item quantity="other">A typed password is always checked by the external system. A sign-in code it has accepted keeps working without it for %d days.</item>
+    </plurals>
+    <plurals name="login_footer_remembered">
+        <item quantity="one">The sign-in is kept encrypted on this device and remembered for %d day.</item>
+        <item quantity="other">The sign-in is kept encrypted on this device and remembered for %d days.</item>
+    </plurals>
+    <string name="signin_clock_behind_note">This device\'s clock is behind a time the app has already seen, so sign-in codes do not work without the external system. It is put right the next time somebody signs in with the external system reachable; after that everybody signs in through it once.</string>
 </resources>

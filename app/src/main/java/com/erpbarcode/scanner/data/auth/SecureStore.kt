@@ -2,7 +2,9 @@ package com.erpbarcode.scanner.data.auth
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import timber.log.Timber
@@ -11,7 +13,38 @@ import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
+
+/**
+ * Named secrets, kept so that reading the file they are in gives nothing away.
+ *
+ * [SecureStore] is the one the app runs on. The interface is there for the tests: the Android
+ * Keystore does not exist under Robolectric, and what is built on this storage (the saved
+ * sign-in, its count of failures) is logic worth testing without it.
+ */
+interface SecretStorage {
+    fun getString(name: String): String?
+    fun edit(block: SecretEditor.() -> Unit)
+}
+
+/** One change to a [SecretStorage], applied when the block that receives it ends. */
+interface SecretEditor {
+    fun putString(name: String, value: String)
+    fun remove(name: String)
+}
+
+/** Where the key that encrypts a [SecureStore] is held. */
+enum class KeyProtection {
+    /** In the device's secure hardware (a trusted execution environment or a secure element). */
+    SECURE_HARDWARE,
+
+    /** In software only: whoever takes over the system can read it. */
+    SOFTWARE,
+
+    /** The device would not say. Treated as not protected. */
+    UNKNOWN,
+}
 
 /**
  * Small key-value storage whose values are encrypted with an AES-256-GCM key kept in the Android
@@ -25,24 +58,30 @@ import javax.crypto.spec.GCMParameterSpec
  * Names are stored as a SHA-256 digest, so the file does not list who has used the device; values
  * as `base64(iv ‖ ciphertext ‖ tag)`. Nothing read or written here is ever logged.
  *
- * No data was carried over from the old storage, by decision: the stores that use this are a
- * credential cache that expires anyway and the list of operators enrolled here, and both are
- * rebuilt by signing in. [legacyFileName] names the old file, which is deleted unread on first use.
+ * No data is carried over from an earlier storage, by decision: the stores that use this are the
+ * saved sign-in and the list of operators enrolled here, and both are rebuilt by signing in.
+ * [legacyFileNames] are the files of earlier versions, deleted unread when the store is made.
  */
 class SecureStore(
     private val context: Context,
     fileName: String,
-    private val legacyFileName: String? = null,
-) {
-    private val prefs: SharedPreferences by lazy {
-        legacyFileName?.let { legacy ->
+    legacyFileNames: List<String> = emptyList(),
+) : SecretStorage {
+
+    init {
+        // When the store is made, not when it is first read: one of these files holds passwords
+        // in a form this version no longer keeps, and it must not wait for a first use to go.
+        legacyFileNames.forEach { legacy ->
             runCatching { context.deleteSharedPreferences(legacy) }
-                .onFailure { Timber.w("Could not delete the old encrypted store") }
+                .onFailure { Timber.w("Could not delete an old encrypted store") }
         }
+    }
+
+    private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(fileName, Context.MODE_PRIVATE)
     }
 
-    fun getString(name: String): String? {
+    override fun getString(name: String): String? {
         val stored = prefs.getString(digest(name), null) ?: return null
         return decrypt(stored) ?: run {
             // Written under a key the Keystore no longer has, or damaged: as good as absent.
@@ -51,22 +90,19 @@ class SecureStore(
         }
     }
 
-    fun getLong(name: String, default: Long): Long = getString(name)?.toLongOrNull() ?: default
-
-    fun edit(block: Editor.() -> Unit) {
+    override fun edit(block: SecretEditor.() -> Unit) {
         val editor = Editor(prefs.edit())
         editor.block()
         editor.save()
     }
 
-    inner class Editor internal constructor(private val delegate: SharedPreferences.Editor) {
-        fun putString(name: String, value: String) {
+    private inner class Editor(private val delegate: SharedPreferences.Editor) : SecretEditor {
+        override fun putString(name: String, value: String) {
             val encrypted = encrypt(value)
             if (encrypted == null) delegate.remove(digest(name)) else delegate.putString(digest(name), encrypted)
         }
-        fun putLong(name: String, value: Long) = putString(name, value.toString())
-        fun remove(name: String) { delegate.remove(digest(name)) }
-        internal fun save() = delegate.apply()
+        override fun remove(name: String) { delegate.remove(digest(name)) }
+        fun save() = delegate.apply()
     }
 
     private fun digest(name: String): String =
@@ -88,16 +124,16 @@ class SecureStore(
         String(cipher.doFinal(bytes, IV_BYTES, bytes.size - IV_BYTES), Charsets.UTF_8)
     }.onFailure { Timber.w("SecureStore: a value could not be decrypted (${it.javaClass.simpleName})") }.getOrNull()
 
-    private companion object {
-        const val KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "secure_store_v1"
-        const val TRANSFORMATION = "AES/GCM/NoPadding"
-        const val IV_BYTES = 12
-        const val TAG_BITS = 128
+    companion object {
+        private const val KEYSTORE = "AndroidKeyStore"
+        private const val KEY_ALIAS = "secure_store_v1"
+        private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val IV_BYTES = 12
+        private const val TAG_BITS = 128
 
         /** One key for every store; created the first time anything is written or read. */
         @Synchronized
-        fun key(): SecretKey {
+        private fun key(): SecretKey {
             val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
             (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
             val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
@@ -110,5 +146,39 @@ class SecureStore(
             )
             return generator.generateKey()
         }
+
+        /**
+         * Where this device holds the storage key: asked of the key itself, not assumed from the
+         * model.
+         *
+         * A sign-in is remembered only where the answer is [KeyProtection.SECURE_HARDWARE]. The
+         * saved sign-in is as good as the password for reaching the ERP, and a key held in
+         * software is one a rooted or compromised system can copy, taking every saved sign-in on
+         * the device with it. The same answer is shown under System info and About the app, which
+         * is how a model is checked before it is put to work.
+         */
+        fun keyProtection(): KeyProtection = runCatching {
+            val key = key()
+            val info = SecretKeyFactory.getInstance(key.algorithm, KEYSTORE)
+                .getKeySpec(key, KeyInfo::class.java) as KeyInfo
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                when (info.securityLevel) {
+                    KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT,
+                    KeyProperties.SECURITY_LEVEL_STRONGBOX,
+                    KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE -> KeyProtection.SECURE_HARDWARE
+                    KeyProperties.SECURITY_LEVEL_SOFTWARE -> KeyProtection.SOFTWARE
+                    else -> KeyProtection.UNKNOWN
+                }
+            } else if (info.inSecureHardwareBeforeApi31()) {
+                KeyProtection.SECURE_HARDWARE
+            } else {
+                KeyProtection.SOFTWARE
+            }
+        }.onFailure { Timber.w("SecureStore: the key would not say where it is held (${it.javaClass.simpleName})") }
+            .getOrDefault(KeyProtection.UNKNOWN)
+
+        /** The only way to ask below API 31, where `securityLevel` does not exist yet. */
+        @Suppress("DEPRECATION")
+        private fun KeyInfo.inSecureHardwareBeforeApi31(): Boolean = isInsideSecureHardware
     }
 }

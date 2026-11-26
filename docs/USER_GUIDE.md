@@ -86,7 +86,7 @@ If you scan a barcode that isn't listed as an expected item on the current docum
 
 ## 3. First-Time Setup
 
-**You sign in every time the app opens.** Your name and password; nothing else in the app is reachable until you do. That is not only about privacy — every scan records who made it at the moment you make it, so the app has to know who is holding the device before the first scan.
+**You sign in every time the app opens.** With your sign-in QR code, or with your name and password; nothing else in the app is reachable until you do. That is not only about privacy — every scan records who made it at the moment you make it, so the app has to know who is holding the device before the first scan.
 
 **Your work is yours.** Documents you download and scans you make are visible only to you. Another operator signing in on the same device sees their own, not yours — and cannot send yours. If you forget to upload at the end of a shift, nothing is lost; it is waiting for you the next time you sign in on that device.
 
@@ -94,13 +94,13 @@ Two of you can work the same document at the same time. Each of you has your own
 
 **Setting up a brand-new device comes before all of this.** A device fresh out of the box does not know where the central system is, and the sign-in screen cannot confirm a password without it. So the sign-in screen has an **External system setup** button that opens the connection settings without signing in — normally IT or a consultant picks the company there once, which fills in every address, and from then on everyone just signs in. **The button is there only until the server address is saved.** After that the connection settings are changed only after signing in, from Settings: otherwise anyone holding the device could point it at another server and open other people's work. If the saved address is wrong, or the server moves, the app's data has to be cleared (or the app reinstalled) and the device set up again. The same screen is where the site switches on the document types it works with; a new installation starts with none. Beside it, **About the app** shows the app's details (see [§16](#16-settings--every-option-explained), System Info), also without signing in.
 
-**Every sign-in needs the central system to be reachable**, because only it can confirm your password. If it is down, nobody can open the app — including you, and including work you have already scanned. That work is not lost: it stays on the device and is waiting when the system answers again.
+**A typed password is always checked by the central system**, because only it can confirm it. If the system is down, nobody gets in by typing. **Your sign-in QR code is the exception:** once the central system has accepted your sign-in on a device, scanning your code lets you in on that device even without it, for a number of days your company sets (5 unless it was changed; the sign-in screen says how many). Every upload or download of yours that the central system accepts starts those days again. Work you have already scanned is not lost either way: it stays on the device.
 
 When you first open the app:
 
-1. Sign in with your user name and password. Names already used on that device are listed, so you can tap yours instead of typing it. Type your name however you like — `alice`, `PRIMA\alice` and `alice@prima.hr` are all the same person to the app. **If you have a sign-in QR code, pull the trigger or tap *Scan QR code*.** On a device with a scanner the button starts the scanner; only a device without one opens the camera. The code fills in both fields; you still tap the button to go in.
+1. **If you have a sign-in QR code, pull the trigger or tap *Scan sign-in*: scanning the code signs you in**, with nothing more to tap. On a device with a scanner the button starts the scanner; only a device without one opens the camera. Without a code, sign in with your user name and password. Names already used on that device are listed, so you can tap yours instead of typing it; the word *Remembered* under a name means that operator's code works on this device even without the central system. Type your name however you like — `alice`, `PRIMA\alice` and `alice@prima.hr` are all the same person to the app. While the app is checking, the screen is locked and shows *Signing in…*.
 2. Enter your **Username** and **Password**, then tap the button shown (its label changes depending on what triggered it — "Sign in", "Test connection", or "Sign in & Sync"). If your company has a Windows domain configured (Settings → External System Configuration), you just type your plain username — otherwise type it as `user@domain` or `DOMAIN\user`. Submitting actually verifies your credentials against the central system before signing you in — if they're rejected, you'll see why on the same screen and can correct and retry.
-3. Your session stays signed in for a configured period (commonly 24 hours, sometimes longer — named in the footer text below the button, e.g. *"Credentials stored encrypted with AES-256-GCM for 24 hours."*). After that period, you'll simply be asked to sign in again next time it's needed — your credentials are encrypted on the device the whole time.
+3. Your sign-in is kept encrypted on the device, so uploads and downloads do not ask for your password again. The text below the button says for how long it is remembered, e.g. *"The sign-in is kept encrypted on this device and remembered for 5 days."* The device does not keep your password itself, only a form of it that works for the central system. If the central system refuses it five times in a row (your password was changed, or your account closed), the device forgets it and asks you to sign in again.
 4. Pick your **Responsibility Center** and **Location** (see [§5](#5-choosing-your-location--responsibility-center)) — this tells the app which warehouse/store you're working from and filters everything you see to that scope.
 
 ---
@@ -443,19 +443,21 @@ A single row, **"Server & endpoints"**, that opens the connection settings for t
 | **Delete downloaded documents** *(red — destructive)* | Deletes your downloaded documents, but **keeps** your settings and sign-in. **A document with scans that have not been sent is kept**, and the app tells you how many stayed: send them, or delete their scans under **RECORDINGS** first, and then they can be deleted. Scans that were already sent cannot be deleted on their own; they go with their document. Requires confirmation. |
 
 ### System Info
-Read-only details — app version, Android version, SDK, database version, which system the device is set up for (Test or Production) and which company — useful when reporting a bug to support. The same details are on the sign-in screen under **About the app**, for when you cannot sign in.
+Read-only details — app version, Android version, SDK, database version, which system the device is set up for (Test or Production), which company, and where the device keeps the key that protects saved sign-ins (**Key protection**: sign-ins are remembered only on a device that keeps it in secure hardware) — useful when reporting a bug to support. The same details are on the sign-in screen under **About the app**, for when you cannot sign in.
 
 ### Account
-Shows who's currently signed in, and a **Sign out** option (immediate, no confirmation needed).
+Shows who's currently signed in, and a **Sign out** option (immediate, no confirmation needed). Tapping your initials on the main menu shows the same details with one more button, **Sign out and delete my profile** — see [§17](#17-signing-in-and-out).
 
 ---
 
 ## 17. Signing In and Out
 
 - You sign in every time the app opens — see [§3](#3-first-time-setup).
+- **After the update to 3.6.92 everyone signs in once more, with the central system reachable.** The device no longer keeps passwords, only a form of them that works for the central system, and nothing old was carried over. Documents and scans are untouched.
 - **After the update to 3.6.28 everyone signs in once more**, and **Settings → Operators on this device** fills up again as people do. The way the device keeps passwords changed, and nothing old was carried over. Nobody's documents or unsent scans are lost: they are there again at that person's next sign-in.
-- Your access to the central system is stored encrypted on the device and expires after a set period. After that, the app asks for your password again the next time it needs the central system (download, upload, refreshing locations) — nothing is lost.
-- To sign out, go to **Settings → Account → Sign out of External System**. This takes you back to the sign-in screen, ready for the next operator. It is refused while a transfer is still running — see [§18.2d](#182d-it-says-a-transfer-is-in-progress-and-wont-let-me-sign-out).
+- Your sign-in is stored encrypted on the device. It is what lets your sign-in QR code work without the central system, for the number of days your company has set, counted from the last time the central system accepted it — at sign-in, and at every upload or download. After that many days without the central system, or after it has refused your sign-in five times in a row, the app asks for your code or your password again, and then the central system has to be reachable. Nothing is lost.
+- To sign out, go to **Settings → Account → Sign out of External System**, or tap your initials on the main menu and then **Sign out**. This takes you back to the sign-in screen, ready for the next operator, and **keeps everything of yours on the device, the remembered sign-in included**, so your code lets you in again next time. It is refused while a transfer is still running — see [§18.2d](#182d-it-says-a-transfer-is-in-progress-and-wont-let-me-sign-out).
+- **Sign out and delete my profile** (tap your initials on the main menu) is for when you will not be using this device again. It removes you from it: your documents, your scans, your saved sign-in and your settings. The app first counts what would go and asks **Yes** or **No**. **Scans that were never sent are deleted with the rest and cannot be brought back.** The question says how many there are: answer **No**, upload them, and come back. It is refused while a transfer is still running.
 
 ---
 
@@ -476,7 +478,7 @@ Nothing is deleted by signing out, by a colleague using the device, or by your p
 You will not see it, and that is on purpose — it is theirs to finish and send. Hand the device back, or ask them to sign in and upload.
 
 ### 18.2c "It won't let me sign in and says the system can't be reached"
-**The central system is what checks your password, every single time.** There is no way into the app while it cannot be reached — not for anyone, including people who have used this device for months. Nothing you have scanned is lost in the meantime; it stays on the device and is there when the system comes back. Report the outage rather than trying another password.
+**The central system is what checks a typed password, every single time.** While it cannot be reached, nobody gets in by typing — including people who have used this device for months. **If you have a sign-in QR code and the central system accepted your sign-in on this device in the last few days, scan the code: that still works.** If it does not (you have not signed in on this device lately, or the days have run out), report the outage rather than trying another password. Nothing you have scanned is lost in the meantime; it stays on the device and is there when the system comes back.
 
 If the system *is* reachable and your password is refused, it has probably been changed in the central system — sign in with the new one.
 
@@ -532,6 +534,7 @@ Operators can sign in by scanning a QR code instead of typing ([§3](#3-first-ti
   3. Tap "Napravi kodove". The table shows which rows became codes and why the others were skipped.
   4. "Ispiši" puts **two codes on each A4 page**, with a cut line between. "Spremi ZIP" saves every image in one file.
 - **A printed code carries the password.** Keep it as you would the password itself, and delete the CSV after printing.
+- **A code also works without the central system**, on a device where the central system accepted that operator's sign-in within the configured number of days (see [§3](#3-first-time-setup)). When a code is lost, change the operator's password and print a new code. On a device where the operator then signs in with the new code, the old one stops working at once. On a device where they do not, the old code still lets its holder in without the central system until the days run out, but nothing scanned that way can be sent: the central system refuses the old password, and after five refusals the device forgets it.
 
 For the command line there is also `tools/make_login_qr.py`.
 

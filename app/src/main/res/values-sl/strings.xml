@@ -134,15 +134,7 @@
     <string name="login_password">Geslo</string>
     <string name="login_show_password">Prikaži geslo</string>
     <string name="login_hide_password">Skrij geslo</string>
-    <string name="login_footer">Poverilnice shranjene šifrirano z AES-256-GCM za %s.</string>
     <string name="login_username_hint">npr. uporabnik@domena</string>
-    <plurals name="login_ttl_hours">
-        <item quantity="one">%d uro</item>
-        <item quantity="two">%d uri</item>
-        <item quantity="few">%d ure</item>
-        <item quantity="other">%d ur</item>
-    </plurals>
-    <string name="login_ttl_days">%d dni</string>
     <!-- User info -->
     <string name="user_info_title">Podatki o uporabniku</string>
     <string name="user_info_id">ID uporabnika</string>
@@ -180,14 +172,12 @@
     <string name="ext_config_title">Konfiguracija zunanjega sistema</string>
     <string name="ext_config_subtitle">Povezava s strežnikom in končne točke</string>
     <string name="ext_config_sec_connection">Povezava</string>
-    <string name="ext_config_sec_session">Seja poverilnic</string>
+    <string name="ext_config_sec_session">Prijava</string>
     <string name="ext_config_sec_endpoints">Končne točke dokumentov (URL-ji strani OData)</string>
     <string name="ext_config_sec_reference">Referenčni podatki</string>
     <string name="ext_config_sec_recording">Sinhronizacija snemanj</string>
     <string name="ext_config_server_url">Osnovni URL strežnika</string>
     <string name="ext_config_windows_domain">Windows domena</string>
-    <string name="ext_config_session_duration">Trajanje seje</string>
-    <string name="ext_config_session_desc">Poverilnice se po tem obdobju izbrišejo iz šifrirane shrambe</string>
     <string name="ext_config_locations_url">URL lokacij</string>
     <string name="ext_config_recording_url">URL sinhronizacije snemanj</string>
     <string name="ext_config_load_title">Naloži konfiguracijo</string>
@@ -291,7 +281,6 @@
     <string name="settings_delete_all">Izbriši prenesene dokumente</string>
     <string name="settings_delete_all_desc">Izbriše vse prenesene dokumente, ki nimajo neposlanih skeniranj. Nastavitve in prijava ostanejo nedotaknjene.</string>
     <string name="settings_background_sync_desc">Pošiljanje poteka v ozadju, tako da lahko med pošiljanjem dokumentov delate naprej.</string>
-    <string name="login_scan_qr">Skeniraj kodo QR</string>
     <string name="login_qr_invalid">Ta koda QR ne vsebuje podatkov za prijavo.</string>
     <string name="login_connect_failed">Povezava ni uspela. Preverite uporabniško ime in geslo ter poskusite znova.</string>
     <string name="main_blocked_title">Potrebna lokacija</string>
@@ -320,7 +309,7 @@
     <string name="signin_action">PRIJAVI SE</string>
     <string name="signin_known_operators">Operaterji na tej napravi</string>
     <string name="signin_first_time_note">Prijava vedno zahteva zunanji sistem — ta preveri vaše geslo.</string>
-    <string name="signin_needs_server">Zunanji sistem ni dosegljiv, zato gesla ni mogoče preveriti. Prijava ga zahteva vsakič.</string>
+    <string name="signin_needs_server">Na napravi ni nastavljen zunanji sistem, zato gesla ni mogoče preveriti.</string>
     <string name="signin_open_config">Nastavitev zunanjega sistema</string>
     <string name="signin_name_too_long">Uporabniško ime sme imeti največ %d znakov.</string>
     <string name="signin_bad_username">Vnesite veljavno uporabniško ime.</string>
@@ -356,8 +345,6 @@
     <string name="ext_config_hint_locations">npr. …/ODataV4/Company(\'Podjetje\')/LocationList</string>
     <string name="ext_config_hint_recording_sync">npr. …/ODataV4/Company(\'Podjetje\')/BarcodeAppRecordings</string>
     <string name="ext_config_hint_doc_type_code">npr. WHSE_SHIP (največ 20 znakov)</string>
-    <string name="ext_config_ttl_hours_short">%d h</string>
-    <string name="ext_config_ttl_days_short">%d d</string>
     <string name="settings_app_version_value">%1$s (izdaja %2$d)</string>
     <string name="settings_sdk_value">Najnižji API %1$d (Android %2$s) · Ciljni API %3$d (Android %4$s)</string>
     <!-- App info: Settings > System info, and its own screen before sign-in -->
@@ -409,4 +396,32 @@
         <item quantity="other">%d dokumentov ni bilo izbrisanih, ker imajo neposlana skeniranja.</item>
     </plurals>
     <string name="processing_signing_in">Prijava…</string>
+    <string name="signin_scan">Skeniraj prijavo</string>
+    <string name="signin_profile_remembered">Zapomnjen</string>
+    <string name="signin_remembered_toast">Prijava brez preverjanja v zunanjem sistemu. Preverila se bo ob prvem prenosu.</string>
+    <string name="login_footer_session">Prijava se hrani šifrirano na tej napravi do odjave.</string>
+    <string name="ext_config_remember_days">Zapomnjena prijava (dni)</string>
+    <string name="ext_config_remember_hint">0–%d</string>
+    <string name="ext_config_remember_desc">Toliko dni po tem, ko je zunanji sistem nazadnje sprejel prijavo operaterja, njegova koda QR za prijavo deluje tudi brez zunanjega sistema. Vsak prenos, ki ga sistem sprejme, začne štetje znova. 0 izklopi pomnjenje: vsaka prijava gre takrat v zunanji sistem. Največ %d.</string>
+    <string name="user_info_delete_profile">Odjavi me in izbriši moj profil</string>
+    <string name="own_profile_delete_title">Izbrišem vaš profil?</string>
+    <string name="own_profile_delete_text">Odjavljeni boste, vaši dokumenti, skeniranja, shranjena prijava in nastavitve pa bodo izbrisani s te naprave. Tega ni mogoče razveljaviti. Želite nadaljevati?</string>
+    <string name="own_profile_delete_unsent_hint">Odgovorite Ne, da se vrnete in jih najprej pošljete.</string>
+    <string name="app_info_key_protection">Zaščita ključa</string>
+    <string name="app_info_key_hardware">Varna strojna oprema</string>
+    <string name="app_info_key_software">Programska — prijave se ne pomnijo</string>
+    <string name="app_info_key_unknown">Neznano — prijave se ne pomnijo</string>
+    <plurals name="signin_remember_note">
+        <item quantity="one">Vneseno geslo vedno preveri zunanji sistem. Koda QR za prijavo, ki jo je sistem sprejel, deluje tudi brez njega še %d dan.</item>
+        <item quantity="two">Vneseno geslo vedno preveri zunanji sistem. Koda QR za prijavo, ki jo je sistem sprejel, deluje tudi brez njega še %d dneva.</item>
+        <item quantity="few">Vneseno geslo vedno preveri zunanji sistem. Koda QR za prijavo, ki jo je sistem sprejel, deluje tudi brez njega še %d dni.</item>
+        <item quantity="other">Vneseno geslo vedno preveri zunanji sistem. Koda QR za prijavo, ki jo je sistem sprejel, deluje tudi brez njega še %d dni.</item>
+    </plurals>
+    <plurals name="login_footer_remembered">
+        <item quantity="one">Prijava se hrani šifrirano na tej napravi in pomni %d dan.</item>
+        <item quantity="two">Prijava se hrani šifrirano na tej napravi in pomni %d dneva.</item>
+        <item quantity="few">Prijava se hrani šifrirano na tej napravi in pomni %d dni.</item>
+        <item quantity="other">Prijava se hrani šifrirano na tej napravi in pomni %d dni.</item>
+    </plurals>
+    <string name="signin_clock_behind_note">Ura te naprave je za časom, ki ga je aplikacija že videla, zato koda QR za prijavo ne deluje brez zunanjega sistema. Popravi se, ko se naslednjič kdo prijavi ob dosegljivem zunanjem sistemu; nato se vsi enkrat prijavijo prek njega.</string>
 </resources>

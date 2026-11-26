@@ -5,6 +5,8 @@ import com.google.gson.Gson
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
+import com.erpbarcode.scanner.data.auth.ErpSignInVerdict
+import com.erpbarcode.scanner.data.auth.SignInLedger
 import com.erpbarcode.scanner.i18n.inAppLanguage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.*
@@ -38,6 +40,8 @@ sealed class ExtSystemResult<out T> {
 @Singleton
 class ExtSystemODataClient @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    // Told, at the end of every transfer, what the ERP said about the sign-in it ran under.
+    private val signInLedger: SignInLedger,
 ) {
 
     private val gson = Gson()
@@ -95,17 +99,25 @@ class ExtSystemODataClient @Inject constructor(
      *
      * The price is one sign-in handshake per transfer, where a client kept from the last transfer
      * could sometimes reuse a connection: three round trips on the local network.
+     *
+     * **Every transfer ends by reporting what the ERP said about its sign-in** to the
+     * [SignInLedger]: accepted, refused, or nothing either way. That is what renews an operator's
+     * saved sign-in each time the ERP lets a transfer through, and what removes it after it has
+     * been refused often enough. It is done here, the one place every transfer passes, so no
+     * transfer written later can forget to.
      */
     suspend fun <T> transfer(
         config: ExtSystemConfig,
         creds: ExtSystemCredentials,
         block: suspend (ErpConnection) -> T,
     ): T {
-        val (client, _) = buildClient(config.domain, creds.username, creds.password)
+        val (client, auth) = buildClient(config.domain, creds.username, creds.ntHash)
+        val connection = ErpConnection(client, auth)
         return try {
-            block(ErpConnection(client))
+            block(connection)
         } finally {
             client.close()
+            signInLedger.transferEnded(creds, connection.verdict)
         }
     }
 
@@ -118,14 +130,48 @@ class ExtSystemODataClient @Inject constructor(
      * be one more failed logon on the operator's account: fifty scans used to mean fifty of them,
      * which is how a password changed in the directory locked the account from a scanner.
      */
-    inner class ErpConnection internal constructor(private val client: HttpClient) {
+    inner class ErpConnection internal constructor(
+        private val client: HttpClient,
+        private val auth: NtlmAuthenticator,
+    ) {
 
         private var refused: ExtSystemResult.Failure? = null
+        private var acceptedAfterProof = false
+        private var refusedAfterProof = false
+
+        /**
+         * What the ERP said about this transfer's sign-in, for the [SignInLedger].
+         *
+         * Only an answer that follows the proof of the password counts ([NtlmAuthenticator.sentProof]).
+         * A 401 from a server that never asked for NTLM is a wrong address or a server that is not
+         * the ERP, and a 2xx from one that never asked who was calling proves nothing about anybody:
+         * neither may shorten or lengthen what the device remembers of an operator. Nor does no
+         * answer at all. A refusal outweighs an acceptance earlier in the same transfer.
+         */
+        internal val verdict: ErpSignInVerdict
+            get() = when {
+                refusedAfterProof -> ErpSignInVerdict.REFUSED
+                acceptedAfterProof -> ErpSignInVerdict.ACCEPTED
+                else -> ErpSignInVerdict.NOT_SAID
+            }
 
         private inline fun <T> unlessRefused(request: () -> ExtSystemResult<T>): ExtSystemResult<T> {
             refused?.let { return it }
+            // Requests of one transfer go out one after another, so the handshake seen after this
+            // request is this request's own.
+            auth.resetPhase()
             val result = request()
-            if (result is ExtSystemResult.Failure && result.accountRefused) refused = result
+            val answered = result is ExtSystemResult.Success ||
+                (result is ExtSystemResult.Failure && result.code > 0)
+            when {
+                result is ExtSystemResult.Failure && result.accountRefused -> {
+                    refused = result
+                    if (auth.sentProof) refusedAfterProof = true
+                }
+                // Any answer but a 401 after the proof means the ERP took the sign-in, whatever it
+                // then thought of the row.
+                answered && auth.sentProof -> acceptedAfterProof = true
+            }
             return result
         }
 
@@ -146,7 +192,7 @@ class ExtSystemODataClient @Inject constructor(
     private fun buildClient(
         configuredDomain: String,
         rawUsername: String,
-        password: String,
+        ntHash: String,
     ): Pair<HttpClient, NtlmAuthenticator> {
         // What the user typed always wins over the configured domain, so a login can be
         // corrected on the spot without touching Settings:
@@ -163,7 +209,8 @@ class ExtSystemODataClient @Inject constructor(
         val (typedDomain, username) = parseDomainUser(typed)
         val statesOwnDomain = '\\' in typed || '@' in typed
         val domain = if (statesOwnDomain) typedDomain else configuredDomain.trim()
-        val auth = NtlmAuthenticator(domain, username, password)
+        // A hash that is not one signs with zeroes and is refused, as a wrong password would be.
+        val auth = NtlmAuthenticator(domain, username, ntHash.hexToNtHashOrNull() ?: ByteArray(16))
         val okHttp = OkHttpClient.Builder()
             .proxy(Proxy.NO_PROXY)  // bypass system proxy; the ERP is always on local LAN
             .authenticator(auth)
@@ -194,7 +241,7 @@ class ExtSystemODataClient @Inject constructor(
         creds: ExtSystemCredentials,
         baseUrl: String,
     ): ExtSystemResult<Unit> {
-        val (client, auth) = buildClient(config.domain, creds.username, creds.password)
+        val (client, auth) = buildClient(config.domain, creds.username, creds.ntHash)
         return try {
             probe(client, auth, baseUrl)
         } finally {

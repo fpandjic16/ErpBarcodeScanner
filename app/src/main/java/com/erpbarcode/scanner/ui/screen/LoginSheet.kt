@@ -61,14 +61,26 @@ import com.erpbarcode.scanner.ui.theme.AppSignal
 private fun Window.resizeForSoftInput() =
     setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
+/**
+ * The operator's sign-in to the ERP, asked for inside a session: before a transfer when nothing is
+ * saved for them any more, and for the connection test.
+ *
+ * **A scanned sign-in code is submitted as it is read** (3.6.92), as on the sign-in screen. It
+ * used to fill both fields, where the eye button then showed the password to whoever held the
+ * device. A scanned password is now handed to the check and is never on the screen.
+ *
+ * **Nothing is prefilled but the name.** The device keeps no password to prefill (only its NT
+ * hash), so the password field starts empty every time.
+ */
 @Composable
 fun LoginSheet(
-    credentialTtlHours: Int = 24,
+    // ExtSystemConfig.rememberSignInDays, for the line under the button; 0 when a sign-in is kept
+    // only until sign-out.
+    rememberDays: Int = 0,
     onSubmit: (username: String, password: String) -> Unit,
     onDismiss: () -> Unit,
     ctaLabel: String = stringResource(R.string.btn_sign_in),
     initialUsername: String = "",
-    initialPassword: String = "",
     // ExtSystemConfig.loginQrKey. Blank (an install that hasn't loaded a configuration carrying
     // one) leaves the QR button working but every code refused, which the error line reports.
     loginQrKey: String = "",
@@ -82,7 +94,7 @@ fun LoginSheet(
     onTestConnection: ((username: String, password: String, onResult: (success: Boolean, error: String?) -> Unit) -> Unit)? = null,
 ) {
     var username by remember { mutableStateOf(initialUsername) }
-    var password by remember { mutableStateOf(initialPassword) }
+    var password by remember { mutableStateOf("") }
     var visible  by remember { mutableStateOf(false) }
     var testing  by remember { mutableStateOf(false) }
     // One error line for both failure modes — a rejected sign-in and an unusable QR code.
@@ -108,6 +120,34 @@ fun LoginSheet(
     val hapticEngine = remember { HapticEngine(context) }
     val soundEngine = rememberSoundEngine()
 
+    /**
+     * Hands a name and a password on: straight to [onSubmit], or through the check first.
+     *
+     * What is handed on after the check is what was checked, [name] and [secret] as they were
+     * given, not whatever the fields hold by the time the ERP answers: the fields are state, and a
+     * callback reads state as it is when it runs. A code scanned during the check used to be
+     * passed on as the sign-in the ERP had just accepted, though it had never seen it.
+     *
+     * Declared above the scan path that calls it: a local function can only use what already
+     * exists above it.
+     */
+    fun check(name: String, secret: String) {
+        val test = onTestConnection
+        if (test == null) {
+            onSubmit(name, secret)
+            return
+        }
+        errorMessage = null
+        testing = true
+        test(name, secret) { success, error ->
+            testing = false
+            if (success) onSubmit(name, secret)
+            else errorMessage = error ?: connectFailedMessage
+        }
+    }
+
+    fun submit() = check(username.trim(), password)
+
     /** One path for both scanners: the camera and the hardware trigger read the same code. */
     fun applyScannedQr(raw: String) {
         // Not while the ERP is being asked: the fields are disabled for that time, and the trigger
@@ -119,9 +159,11 @@ fun LoginSheet(
         if (scanned != null) {
             if (hapticEnabled) hapticEngine.confirm()
             if (soundEnabled) soundEngine.confirm()
+            // The name is shown; the password goes to the check and is not put in the field.
             username = scanned.username
-            password = scanned.password
+            password = ""
             errorMessage = null
+            check(scanned.username, scanned.password)
         } else {
             // The error line is easy to miss when the operator is looking at the scanner rather
             // than the screen, which on a barcode terminal is most of the time.
@@ -142,35 +184,17 @@ fun LoginSheet(
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    fun submit() {
-        // Read once. What is handed on after the check is what was checked, not whatever the
-        // fields hold by the time the ERP answers: they are state, and a callback reads state as
-        // it is when it runs. A code scanned during the check used to be passed on as the sign-in
-        // the ERP had just accepted, though it had never seen it.
-        val name = username.trim()
-        val secret = password
-        val test = onTestConnection
-        if (test == null) {
-            onSubmit(name, secret)
-            return
-        }
-        errorMessage = null
-        testing = true
-        test(name, secret) { success, error ->
-            testing = false
-            if (success) onSubmit(name, secret)
-            else errorMessage = error ?: connectFailedMessage
-        }
-    }
-
     // Closing the sheet waits for the answer too: the check would otherwise finish behind a sheet
     // that is gone and hand its result to a caller that has stopped waiting for it.
     val dismissUnlessTesting: () -> Unit = { if (!testing) onDismiss() }
 
-    // Hours are a plural, not a format string: Croatian says 1 sat, 24 sata, 48 sati, and the
-    // single "%d sati" this replaced printed "24 sati" under the default setting.
-    val ttlLabel = if (credentialTtlHours == 168) stringResource(R.string.login_ttl_days, 7)
-        else context.resources.getQuantityString(R.plurals.login_ttl_hours, credentialTtlHours, credentialTtlHours)
+    // Days are a plural, not a format string: Croatian says 1 dan, 5 dana, and Slovenian has four
+    // forms.
+    val footer = if (rememberDays > 0) {
+        context.resources.getQuantityString(R.plurals.login_footer_remembered, rememberDays, rememberDays)
+    } else {
+        stringResource(R.string.login_footer_session)
+    }
 
     Dialog(
         onDismissRequest = dismissUnlessTesting,
@@ -257,7 +281,7 @@ fun LoginSheet(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.login_scan_qr), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.signin_scan), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
                         }
                     }
 
@@ -285,9 +309,10 @@ fun LoginSheet(
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        stringResource(R.string.login_footer, ttlLabel),
+                        footer,
                         style = monoLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                     )
                 }

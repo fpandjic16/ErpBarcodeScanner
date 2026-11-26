@@ -1,8 +1,11 @@
 package com.erpbarcode.scanner.navigation
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -82,6 +85,19 @@ internal fun SignInGate(
         )
         return
     }
+    val profilesChanged by appVm.profilesChanged.collectAsState()
+
+    // Who is remembered, and what the screen says about remembering. Worked out off the main
+    // thread (it reads the encrypted storage once for each operator), so the screen is drawn
+    // first with nobody marked, and the marks follow. Read again after every attempt: a sign-in
+    // that failed for the fifth time is no longer remembered, and one the ERP has just accepted is.
+    val remembered by produceState(
+        initialValue = AppViewModel.RememberedSignIns(),
+        signingIn, extSystemConfig.serverIdentity, extSystemConfig.rememberSignInDays, profilesChanged,
+    ) {
+        value = appVm.rememberedSignIns()
+    }
+
     // The second door out of the gate: read-only, and nothing in it is personal or secret.
     if (appInfoAtSignIn) {
         AppInfoScreen(
@@ -99,18 +115,27 @@ internal fun SignInGate(
         soundEnabled = soundEnabled,
         // Those enrolled on the installation the device is pointed at: a name known only on
         // another server or company would be offered here and then find none of its work.
-        profiles = remember(signingIn, extSystemConfig.serverIdentity) {
+        // Read again when the list changes underneath: an operator who has just deleted their
+        // own profile lands here before the deletion has finished.
+        profiles = remember(signingIn, extSystemConfig.serverIdentity, profilesChanged) {
             appVm.profileStore.profilesOn(extSystemConfig.serverIdentity)
         },
+        rememberedKeys = remembered.keys,
+        rememberDays = remembered.days,
+        clockBehind = remembered.clockBehind,
         busy = signingIn,
         error = signInError,
         onErrorDismiss = { signInError = null },
-        onSignIn = { username, password ->
+        onSignIn = { username, password, scanned ->
             signingIn = true
-            appVm.signIn(username, password) { result ->
+            appVm.signIn(username, password, scanned) { result ->
                 signingIn = false
                 when (result) {
                     is AppViewModel.SignInResult.Online -> Unit
+                    // Said, because it matters later: nothing has asked the ERP yet, so the
+                    // first transfer is where a changed password or a closed account shows.
+                    is AppViewModel.SignInResult.Remembered ->
+                        Toast.makeText(context, context.getString(R.string.signin_remembered_toast), Toast.LENGTH_LONG).show()
                     is AppViewModel.SignInResult.Failed -> signInError = result.message
                 }
             }

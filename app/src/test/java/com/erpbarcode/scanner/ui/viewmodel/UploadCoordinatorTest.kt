@@ -43,7 +43,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * talking HTTP to a local server that answers as the ERP would. What is checked is what leaves the
  * device, in which order, and what the device believes afterwards.
  *
- * The server never asks for authentication, so the sign-in handshake is not part of these tests.
+ * The server never asks for authentication, so the sign-in handshake is not part of these tests;
+ * that, and what its outcome does to the saved sign-in, is `SignInLedgerTest`.
  */
 @RunWith(RobolectricTestRunner::class)
 class UploadCoordinatorTest {
@@ -53,7 +54,7 @@ class UploadCoordinatorTest {
     private lateinit var client: ExtSystemODataClient
     private lateinit var coordinator: UploadCoordinator
 
-    private val credentials = ExtSystemCredentials("tester", "not-a-real-password")
+    private val credentials = ExtSystemCredentials.fromPassword("tester", "not-a-real-password")
     private val shipment = DocumentType.WAREHOUSE_SHIPMENT
 
     @Before
@@ -62,7 +63,7 @@ class UploadCoordinatorTest {
         device.signIn()
         erp = MockWebServer()
         erp.start(InetAddress.getByName("127.0.0.1"), 0)
-        client = ExtSystemODataClient(device.context)
+        client = device.erpClient()
         coordinator = UploadCoordinator(device.context, device.repository, client)
     }
 
@@ -533,7 +534,7 @@ class UploadCoordinatorTest {
         assertEquals("POST", nextRequest().method)
 
         val tried = client.checkCredentials(
-            perScan(), ExtSystemCredentials("somebody-else", "another-password"), address("/"),
+            perScan(), ExtSystemCredentials.fromPassword("somebody-else", "another-password"), address("/"),
         )
         signInTried.countDown()
 
@@ -565,7 +566,7 @@ class UploadCoordinatorTest {
         // The same account written another way, as a connection test may have saved it since the
         // upload began: other credentials, as far as a client can tell. Two requests, so that its
         // connection has carried more than the upload's has.
-        val listed = client.transfer(perScan(), ExtSystemCredentials("DOMAIN\\tester", "not-a-real-password")) {
+        val listed = client.transfer(perScan(), ExtSystemCredentials.fromPassword("DOMAIN\\tester", "not-a-real-password")) {
             it.downloadRaw(address("/odata/Locations"))
             it.downloadRaw(address("/odata/Locations"))
         }

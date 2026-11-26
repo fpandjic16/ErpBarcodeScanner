@@ -27,6 +27,7 @@ import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.auth.ExtSystemCredentials
 import com.erpbarcode.scanner.data.auth.ExtSystemDefaultsCompany
 import com.erpbarcode.scanner.data.auth.ExtSystemEnvironment
+import com.erpbarcode.scanner.data.auth.MAX_REMEMBER_SIGN_IN_DAYS
 import com.erpbarcode.scanner.data.auth.RecordingUploadMode
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
@@ -37,14 +38,6 @@ import com.erpbarcode.scanner.ui.theme.monoLabel
 import androidx.compose.ui.res.stringResource
 import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.ui.theme.AppLine
-
-private val TTL_OPTIONS = listOf(8, 24, 48, 168)
-
-// Short unit symbols, from resources so Macedonian can write ч and д.
-@Composable
-private fun Int.ttlLabel(): String =
-    if (this == 168) stringResource(R.string.ext_config_ttl_days_short, 7)
-    else stringResource(R.string.ext_config_ttl_hours_short, this)
 
 /**
  * Suggested name for an exported configuration; the file picker lets the user change it.
@@ -86,7 +79,8 @@ fun ExtSystemConfigScreen(
     var serverBaseUrl             by remember { mutableStateOf(initial.serverBaseUrl) }
     var domain                   by remember { mutableStateOf(initial.domain) }
     var loginQrKey               by remember { mutableStateOf(initial.loginQrKey) }
-    var ttlHours                 by remember { mutableIntStateOf(initial.credentialTtlHours) }
+    // Text, because it is typed: 0 to MAX_REMEMBER_SIGN_IN_DAYS, read in buildConfig().
+    var rememberDays             by remember { mutableStateOf(initial.rememberSignInDays.toString()) }
     var documentLinesUrl         by remember { mutableStateOf(initial.documentLinesUrl) }
     val documentTypeCodes = remember {
         mutableStateMapOf<DocumentType, String>().also { map ->
@@ -113,7 +107,10 @@ fun ExtSystemConfigScreen(
 
     fun buildConfig() = ExtSystemConfig(
         serverBaseUrl            = serverBaseUrl.trim(),
-        credentialTtlHours       = ttlHours,
+        // A field left empty keeps what the device had: an empty field is not a decision to
+        // switch remembering off, and 0 has to be typed to mean it.
+        rememberSignInDays       = rememberDays.toIntOrNull()?.coerceIn(0, MAX_REMEMBER_SIGN_IN_DAYS)
+            ?: initial.rememberSignInDays,
         documentLinesUrl         = documentLinesUrl.trim(),
         documentTypeCodes        = documentTypeCodes.toMap(),
         recordingSyncUrl = recordingSyncUrl.trim(),
@@ -153,7 +150,7 @@ fun ExtSystemConfigScreen(
     fun applyConfiguration(cfg: DeviceConfiguration) {
         val c = cfg.extSystem
         serverBaseUrl = c.serverBaseUrl
-        ttlHours = c.credentialTtlHours
+        rememberDays = c.rememberSignInDays.toString()
         documentLinesUrl = c.documentLinesUrl
         DocumentType.entries.forEach { documentTypeCodes[it] = c.docTypeCodeFor(it) }
         recordingSyncUrl = c.recordingSyncUrl
@@ -270,7 +267,7 @@ fun ExtSystemConfigScreen(
                 }
             }
 
-            // ── Session TTL ───────────────────────────────────────────────────
+            // ── Sign-in ───────────────────────────────────────────────────────
             item { ConfigSectionHeader(stringResource(R.string.ext_config_sec_session)) }
             item {
                 ConfigCard {
@@ -281,15 +278,19 @@ fun ExtSystemConfigScreen(
                         onValueChange = { domain = it },
                     )
                     ConfigDivider()
-                    ConfigSegmentedChoice(
-                        title = stringResource(R.string.ext_config_session_duration),
-                        description = stringResource(R.string.ext_config_session_desc),
-                        options = TTL_OPTIONS,
-                        selected = ttlHours,
-                        optionLabel = { it.ttlLabel() },
-                        onSelect = { ttlHours = it },
-                        verticalPadding = 14.dp,
-                        gap = 12.dp,
+                    // Days, typed: 0 switches remembering off. Two digits at most, so nothing
+                    // above the limit can even be written; buildConfig() holds it to the limit.
+                    ConfigField(
+                        label = stringResource(R.string.ext_config_remember_days),
+                        hint  = stringResource(R.string.ext_config_remember_hint, MAX_REMEMBER_SIGN_IN_DAYS),
+                        value = rememberDays,
+                        onValueChange = { typed -> rememberDays = typed.filter { it.isDigit() }.take(2) },
+                        keyboardType = KeyboardType.Number,
+                    )
+                    Text(
+                        stringResource(R.string.ext_config_remember_desc, MAX_REMEMBER_SIGN_IN_DAYS),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
                     )
                 }
             }
@@ -383,13 +384,12 @@ fun ExtSystemConfigScreen(
 
     if (showLoginSheet) {
         LoginSheet(
-            credentialTtlHours = ttlHours,
+            rememberDays       = buildConfig().rememberSignInDays,
             ctaLabel           = stringResource(R.string.btn_test_connection),
             loginQrKey         = loginQrKey,
             hapticEnabled      = hapticEnabled,
             soundEnabled       = soundEnabled,
             initialUsername    = savedCredentials?.username ?: "",
-            initialPassword    = savedCredentials?.password ?: "",
             onDismiss          = { showLoginSheet = false },
             onSubmit           = { u, p ->
                 showLoginSheet = false

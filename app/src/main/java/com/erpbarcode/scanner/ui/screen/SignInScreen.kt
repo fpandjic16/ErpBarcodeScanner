@@ -40,6 +40,7 @@ import com.erpbarcode.scanner.data.auth.parseLoginQr
 import com.erpbarcode.scanner.data.barcode.DataWedgeManager
 import com.erpbarcode.scanner.data.haptic.HapticEngine
 import com.erpbarcode.scanner.data.sound.rememberSoundEngine
+import com.erpbarcode.scanner.ui.component.ActionBarButton
 import com.erpbarcode.scanner.ui.component.AppAlertDialog
 import com.erpbarcode.scanner.ui.component.CameraPreview
 import com.erpbarcode.scanner.ui.component.AppTopBar
@@ -55,13 +56,17 @@ import com.erpbarcode.scanner.ui.theme.AppSignal
  * is not possible, because by then the scan is already on disk and there is nothing to say who
  * made it. That is what the empty `userId` used to be.
  *
- * Known operators are listed so the common case is a tap and a password rather than typing a
- * username on a device with no comfortable keyboard.
+ * **Scanning a sign-in code is the sign-in** (3.6.92), from the hardware trigger or, on a device
+ * without a scanner, the camera: one gesture, and the operator is in or is told why not. It used
+ * to fill the two fields and wait for Sign in to be pressed, which also put the password where
+ * the eye button could show it to whoever held the device next. A scanned password now goes
+ * straight to [onSignIn] and is never on the screen. For an operator the ERP accepted here
+ * within the configured number of days, the same scan works without the ERP ([rememberedKeys]
+ * marks who that is); `AppViewModel.signIn` holds the rule.
  *
- * Signing in by QR belongs here and not only in [LoginSheet]. Before this screen existed the way
- * into the app *was* that sheet, so moving the gate in front of it quietly took the scanner away
- * from the one moment an operator most wants it — picking up a terminal with no keyboard worth
- * the name. The hardware trigger and the camera both feed the same [parseLoginQr].
+ * Known operators are listed so that signing in by hand is a tap and a password rather than
+ * typing a username on a device with no comfortable keyboard. A typed password always goes to
+ * the ERP.
  *
  * The one thing reachable from here without signing in is the external-system configuration — see
  * [onOpenConfig] — and only on a device that has no server address yet.
@@ -69,7 +74,8 @@ import com.erpbarcode.scanner.ui.theme.AppSignal
 @Composable
 fun SignInScreen(
     profiles: List<UserProfile>,
-    onSignIn: (username: String, password: String) -> Unit,
+    // [scanned] says the name and password came from a sign-in code, not from the two fields.
+    onSignIn: (username: String, password: String, scanned: Boolean) -> Unit,
     busy: Boolean = false,
     error: String? = null,
     onErrorDismiss: () -> Unit = {},
@@ -89,6 +95,17 @@ fun SignInScreen(
     loginQrKey: String = "",
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
+    // The profiles (by `UserProfile.key`) whose sign-in code would let them in without the ERP
+    // right now. Shown as a word under the name, so an operator knows before walking out of
+    // range whether their code will work there.
+    rememberedKeys: Set<String> = emptySet(),
+    // For how many days this device remembers a sign-in, for the line that explains it; 0 when
+    // it remembers none (the setting is 0, or the device cannot protect its storage key).
+    rememberDays: Int = 0,
+    // The device's clock stands behind a time the app has already seen, so no sign-in code works
+    // without the ERP for now. Said on the screen: otherwise a code that worked yesterday is
+    // simply refused, and nothing tells support where to look.
+    clockBehind: Boolean = false,
 ) {
     var username by remember { mutableStateOf(profiles.firstOrNull()?.displayName.orEmpty()) }
     var password by remember { mutableStateOf("") }
@@ -128,14 +145,17 @@ fun SignInScreen(
         // that is about to open as the one already on their way in.
         if (busy) return
         // Any symbology can land here — an ordinary product barcode pulled on the trigger, or a
-        // code made under a different key. Say so rather than leaving the fields unchanged.
+        // code made under a different key. Say so rather than leaving the screen unchanged.
         val scanned = parseLoginQr(raw, loginQrKey)
         if (scanned != null) {
             if (hapticEnabled) hapticEngine.confirm()
             if (soundEnabled) soundEngine.confirm()
+            // The name is shown, so the operator sees whose code it was. The password is not put
+            // in the field: it goes to the sign-in and nowhere else.
             username = scanned.username
-            password = scanned.password
+            password = ""
             qrError = null
+            onSignIn(scanned.username, scanned.password, true)
         } else {
             // Easy to miss the error line when the operator is looking at the scanner rather than
             // the screen, which on a barcode terminal is most of the time.
@@ -170,6 +190,34 @@ fun SignInScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // First on the screen: for an operator with a sign-in code it is the whole
+                // sign-in, and the one that still works where the network does not reach.
+                if (hasScanner || hasCamera) {
+                    ActionBarButton(
+                        label = stringResource(R.string.signin_scan),
+                        onClick = {
+                            qrError = null
+                            if (hasScanner) {
+                                // Same read as a trigger pull; the result arrives through this
+                                // screen's scan receiver, so nothing else is needed here.
+                                DataWedgeManager.startScan(context)
+                            } else {
+                                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                                    PackageManager.PERMISSION_GRANTED
+                                if (granted) cameraOpen = true
+                                else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        primary = true,
+                        enabled = !busy,
+                        icon = Icons.Outlined.QrCodeScanner,
+                        color = AppPalette.Slate,
+                    )
+                }
+
+                qrError?.let { Text(it, style = monoLabel, color = AppSignal.Danger) }
+
                 if (profiles.isNotEmpty()) {
                     Text(
                         stringResource(R.string.signin_known_operators),
@@ -183,6 +231,7 @@ fun SignInScreen(
                             ProfileRow(
                                 profile = profile,
                                 selected = UserProfileStore.normalise(username) == profile.id,
+                                remembered = profile.key in rememberedKeys,
                                 onClick = { username = profile.displayName; password = "" },
                             )
                         }
@@ -222,44 +271,15 @@ fun SignInScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                if (hasScanner || hasCamera) {
-                    OutlinedButton(
-                        onClick = {
-                            qrError = null
-                            if (hasScanner) {
-                                // Same read as a trigger pull; the result arrives through this
-                                // screen's scan receiver, so nothing else is needed here.
-                                DataWedgeManager.startScan(context)
-                            } else {
-                                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                                    PackageManager.PERMISSION_GRANTED
-                                if (granted) cameraOpen = true
-                                else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                            }
-                        },
-                        enabled = !busy,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    ) {
-                        Icon(
-                            Icons.Outlined.QrCodeScanner,
-                            contentDescription = null,
-                            tint = AppPalette.Ink3,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(R.string.login_scan_qr),
-                            style = monoLabel.copy(color = AppPalette.Ink),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                qrError?.let { Text(it, style = monoLabel, color = AppSignal.Danger) }
-
                 Text(
-                    stringResource(R.string.signin_first_time_note),
+                    when {
+                        rememberDays <= 0 -> stringResource(R.string.signin_first_time_note)
+                        clockBehind -> stringResource(R.string.signin_clock_behind_note)
+                        // A count decides the wording: Croatian has three forms and Slovenian four.
+                        else -> context.resources.getQuantityString(
+                            R.plurals.signin_remember_note, rememberDays, rememberDays,
+                        )
+                    },
                     style = monoLabel.copy(color = AppPalette.Ink3),
                 )
 
@@ -306,32 +326,28 @@ fun SignInScreen(
                 }
             }
 
-            Box(
+            // The typed sign-in. Its progress is the dialog the gate puts over the whole screen,
+            // so the button itself only has to say what it does.
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (canSubmit) AppPalette.Coral else AppPalette.Coral.copy(alpha = 0.35f))
-                    .clickable(enabled = canSubmit) { onSignIn(username.trim(), password) },
-                contentAlignment = Alignment.Center,
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
             ) {
-                if (busy) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text(
-                        stringResource(R.string.signin_action),
-                        style = monoLabel.copy(color = Color.White, fontWeight = FontWeight.Medium),
-                    )
-                }
+                ActionBarButton(
+                    label = stringResource(R.string.signin_action),
+                    onClick = { onSignIn(username.trim(), password, false) },
+                    modifier = Modifier.fillMaxWidth(),
+                    primary = true,
+                    enabled = canSubmit,
+                )
             }
         }
 
         if (cameraOpen) {
             CameraPreview(
                 onBarcode = { raw ->
-                    applyScannedQr(raw)
                     cameraOpen = false
+                    applyScannedQr(raw)
                 },
                 onClose = { cameraOpen = false },
             )
@@ -350,7 +366,7 @@ fun SignInScreen(
 }
 
 @Composable
-private fun ProfileRow(profile: UserProfile, selected: Boolean, onClick: () -> Unit) {
+private fun ProfileRow(profile: UserProfile, selected: Boolean, remembered: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -370,6 +386,15 @@ private fun ProfileRow(profile: UserProfile, selected: Boolean, onClick: () -> U
             )
         }
         Spacer(Modifier.width(12.dp))
-        Text(profile.displayName, style = monoLabel.copy(color = AppPalette.Ink))
+        Column {
+            Text(profile.displayName, style = monoLabel.copy(color = AppPalette.Ink))
+            if (remembered) {
+                // A word, not a colour: the four status colours mean something else everywhere.
+                Text(
+                    stringResource(R.string.signin_profile_remembered),
+                    style = monoLabel.copy(color = AppPalette.Ink3),
+                )
+            }
+        }
     }
 }

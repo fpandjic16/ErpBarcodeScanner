@@ -242,10 +242,12 @@ internal fun BarcodeApp(
 
     if (state.showUploadLoginSheet) {
         LoginSheet(
-            credentialTtlHours = extSystemConfig.credentialTtlHours,
+            rememberDays       = appVm.rememberDaysInEffect(),
             ctaLabel           = stringResource(R.string.btn_sign_in),
+            // The name as it was last typed, when one is saved, and otherwise nothing: the
+            // profile's own name has lost the domain, and a bare name where the operator types
+            // `user@domain` would be checked, and refused, under the wrong one.
             initialUsername    = appVm.savedCredentials()?.username ?: "",
-            initialPassword    = appVm.savedCredentials()?.password ?: "",
             loginQrKey         = extSystemConfig.loginQrKey,
             hapticEnabled      = hapticEnabled,
             soundEnabled       = soundEnabled,
@@ -261,7 +263,7 @@ internal fun BarcodeApp(
 
     if (state.showMainLoginSheet) {
         LoginSheet(
-            credentialTtlHours = extSystemConfig.credentialTtlHours,
+            rememberDays       = appVm.rememberDaysInEffect(),
             ctaLabel           = stringResource(R.string.btn_sign_in),
             loginQrKey         = extSystemConfig.loginQrKey,
             hapticEnabled      = hapticEnabled,

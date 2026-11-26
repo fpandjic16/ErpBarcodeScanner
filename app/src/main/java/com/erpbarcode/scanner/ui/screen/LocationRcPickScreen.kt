@@ -49,7 +49,8 @@ fun LocationRcPickScreen(
     isRefreshing: Boolean = false,
     lastSyncedAt: Instant? = null,
     hasCredentials: Boolean = false,
-    credentialTtlHours: Int = 24,
+    // ExtSystemConfig.rememberSignInDays, for the sign-in sheet's footer.
+    rememberDays: Int = 0,
     loginQrKey: String = "",
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
@@ -230,7 +231,7 @@ fun LocationRcPickScreen(
 
     if (showLoginSheet) {
         LoginSheet(
-            credentialTtlHours = credentialTtlHours,
+            rememberDays = rememberDays,
             ctaLabel = stringResource(R.string.btn_sign_in_sync),
             loginQrKey = loginQrKey,
             hapticEnabled = hapticEnabled,

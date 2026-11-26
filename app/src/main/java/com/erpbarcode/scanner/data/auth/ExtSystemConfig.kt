@@ -1,5 +1,6 @@
 package com.erpbarcode.scanner.data.auth
 
+import com.erpbarcode.scanner.data.extsystem.ntHashOf
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.data.model.DocumentType
 import java.net.URLDecoder
@@ -30,7 +31,10 @@ enum class RecordingUploadMode { PER_SCAN, PER_DOCUMENT }
 
 data class ExtSystemConfig(
     val serverBaseUrl: String = "",
-    val credentialTtlHours: Int = 24,
+    // For how many days after the ERP last accepted an operator's sign-in their sign-in code lets
+    // them in without it (see rememberedSignIn). 0 remembers nothing: every sign-in asks the ERP
+    // and the saved sign-in lasts only until sign-out. Never more than MAX_REMEMBER_SIGN_IN_DAYS.
+    val rememberSignInDays: Int = DEFAULT_REMEMBER_SIGN_IN_DAYS,
     val documentLinesUrl: String = "",
     val documentTypeCodes: Map<DocumentType, String> = emptyMap(),
     val recordingSyncUrl: String = "",
@@ -187,10 +191,27 @@ data class ExtSystemConfig(
     }
 }
 
+/**
+ * What signs an operator's requests to the ERP: the name as they gave it (the domain may ride in
+ * it), and the NT hash of their password.
+ *
+ * The hash, not the password: NTLM signs with the hash, so nothing that talks to the ERP needs
+ * more, and the password is turned into it where it is typed or scanned and then dropped
+ * ([fromPassword], `ntHashOf`).
+ */
 data class ExtSystemCredentials(
     val username: String,
-    val password: String,
-)
+    val ntHash: String,
+) {
+    /** The hash reaches the ERP as that operator just as the password would: never in a log. */
+    override fun toString(): String = "ExtSystemCredentials(username=$username)"
+
+    companion object {
+        /** From a password as typed or scanned. The password is kept nowhere after this. */
+        fun fromPassword(username: String, password: String): ExtSystemCredentials =
+            ExtSystemCredentials(username, ntHashOf(password))
+    }
+}
 
 /**
  * One bundled per-company ERP connection defaults file, selectable from "Load built-in
