@@ -100,6 +100,11 @@ class UploadCoordinator @Inject constructor(
         perDocument: Boolean,
     ): Int {
         var failures = 0
+        // Set once the ERP has refused the account (HTTP 401), to the message it was refused with.
+        // No row of any document is sent after that: the same sign-in gets the same answer, and
+        // each asking is a failed logon on the operator's account. The documents still to go are
+        // marked failed with that reason, so none is left looking as if it were being sent.
+        var refusedWith: String? = null
         for (doc in docs) {
             // Checked before a single row goes out. A document holding scans whose line the ERP has
             // since removed would otherwise send a Document_Line_No that no longer exists there,
@@ -143,6 +148,14 @@ class UploadCoordinator @Inject constructor(
                 continue
             }
 
+            // Everything above is decided on the device and still applies; only the sending stops.
+            val refusal = refusedWith
+            if (refusal != null) {
+                repository.updateDocState(doc.documentNo, doc.type.key, DocState.UploadFailed(refusal))
+                failures++
+                continue
+            }
+
             if (perDocument) {
                 // One call, one transaction on the ERP side: all of these rows are in the ERP, or none
                 // of them are. Every row carries the same outcome, so the error screen shows the
@@ -165,6 +178,7 @@ class UploadCoordinator @Inject constructor(
                         }
                         repository.updateDocState(doc.documentNo, doc.type.key, DocState.UploadFailed(result.message))
                         failures++
+                        if (result.accountRefused) refusedWith = result.message
                     }
                 }
                 continue
@@ -197,7 +211,12 @@ class UploadCoordinator @Inject constructor(
                         // response came back at all — the server or the network is gone, and
                         // continuing would spend a connect timeout per remaining row to learn
                         // the same thing again.
-                        if (result.code <= 0) {
+                        //
+                        // A 401 is a real status code and still not about this row: the ERP has
+                        // refused the account. It ends the row loop like a lost connection, and
+                        // the documents after this one too.
+                        if (result.accountRefused) refusedWith = result.message
+                        if (result.code <= 0 || result.accountRefused) {
                             connectionLost = true
                             break
                         }

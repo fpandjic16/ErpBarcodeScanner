@@ -245,6 +245,91 @@ class UploadCoordinatorTest {
         assertTrue(shop["Retail_Location"].asBoolean)
     }
 
+    // ── The ERP refuses the account ────────────────────────────────────────────
+
+    /** The ERP turns the account away, however often and for whatever it is asked. */
+    private fun refuseTheAccount() {
+        erp.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = MockResponse().setResponseCode(401)
+        }
+    }
+
+    /** D1 with three scans on one line and D2 with one. */
+    private suspend fun twoDocumentsWithScans() {
+        device.download(
+            testDocument("D1", listOf(testLine("D1", 10000, "111", 3.0))),
+            testDocument("D2", listOf(testLine("D2", 10000, "333", 1.0))),
+        )
+        repeat(3) { device.scan("D1", 10000, "111") }
+        device.scan("D2", 10000, "333")
+    }
+
+    @Test
+    fun `per scan, a refused account is asked once and ends the whole upload`(): Unit = runBlocking {
+        twoDocumentsWithScans()
+        refuseTheAccount()
+
+        val failures = upload("D1", "D2")
+
+        assertEquals(2, failures)
+        // One failed logon on the operator's account, where four scans used to be four.
+        assertEquals(1, erp.requestCount)
+        val refusedWith = text(R.string.ext_error_http_401)
+        val (first, second, third) = device.recordings("D1")
+        assertEquals(refusedWith, first.lastError)
+        assertNull(second.lastError)
+        assertNull(third.lastError)
+        assertEquals(DocState.UploadFailed(refusedWith), device.state("D1"))
+        // Not sent and not left looking as if it were on its way.
+        assertEquals(DocState.UploadFailed(refusedWith), device.state("D2"))
+        assertNull(device.recordings("D2").single().lastError)
+        assertTrue((device.recordings("D1") + device.recordings("D2")).all { it.sentAt == null })
+    }
+
+    @Test
+    fun `per document, a refused account is asked once and ends the whole upload`(): Unit = runBlocking {
+        twoDocumentsWithScans()
+        refuseTheAccount()
+
+        val failures = upload("D1", "D2", config = perDocument())
+
+        assertEquals(2, failures)
+        assertEquals(1, erp.requestCount)
+        val refusedWith = text(R.string.ext_error_http_401)
+        assertEquals(DocState.UploadFailed(refusedWith), device.state("D1"))
+        assertEquals(DocState.UploadFailed(refusedWith), device.state("D2"))
+        assertNull(device.recordings("D2").single().lastError)
+    }
+
+    @Test
+    fun `a refused account leaves a document with nothing to send as it was`(): Unit = runBlocking {
+        device.download(
+            testDocument("D1", listOf(testLine("D1", 10000, "111", 1.0))),
+            testDocument("D2", listOf(testLine("D2", 10000, "333", 1.0))),
+        )
+        device.scan("D1", 10000, "111")
+        refuseTheAccount()
+
+        val failures = upload("D1", "D2")
+
+        assertEquals(1, failures)
+        assertEquals(1, erp.requestCount)
+        assertEquals(DocState.Downloaded, device.state("D2"))
+    }
+
+    @Test
+    fun `nothing more is asked on a connection once the account was refused`(): Unit = runBlocking {
+        refuseTheAccount()
+
+        val answers = client.transfer(perScan(), credentials) {
+            listOf(it.downloadRaw(address("/odata/Locations")), it.downloadRaw(address("/odata/Documents")))
+        }
+
+        // Whatever loop a transfer runs, the second asking never reaches the ERP.
+        assertEquals(1, erp.requestCount)
+        assertTrue(answers.all { it is ExtSystemResult.Failure && it.accountRefused })
+    }
+
     // ── What is never sent, and what is never deleted ──────────────────────────
 
     @Test

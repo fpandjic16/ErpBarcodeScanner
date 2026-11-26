@@ -250,6 +250,10 @@ class DownloadCoordinator @Inject constructor(
                     Timber.w("Failed to download ${type.display}: ${result.message}")
                     failures++
                     errorMessages.add(result.message)
+                    // The ERP has refused the account, not this type. The types still to come
+                    // would be refused the same way, each as one more failed logon, so they are
+                    // not asked for and the reason is reported once.
+                    if (result.accountRefused) return failures to errorMessages
                 }
             }
         }

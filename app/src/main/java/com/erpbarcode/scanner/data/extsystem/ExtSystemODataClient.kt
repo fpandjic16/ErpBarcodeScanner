@@ -26,7 +26,13 @@ import javax.inject.Singleton
 
 sealed class ExtSystemResult<out T> {
     data class Success<T>(val data: T) : ExtSystemResult<T>()
-    data class Failure(val message: String, val code: Int = -1) : ExtSystemResult<Nothing>()
+    data class Failure(val message: String, val code: Int = -1) : ExtSystemResult<Nothing>() {
+        /**
+         * The ERP turned the account away (HTTP 401), not what was sent. Asking again on the same
+         * sign-in gets the same answer, and every such answer is a failed logon on the account.
+         */
+        val accountRefused: Boolean get() = code == 401
+    }
 }
 
 @Singleton
@@ -103,19 +109,37 @@ class ExtSystemODataClient @Inject constructor(
         }
     }
 
-    /** One transfer's connection to the ERP. Only [transfer] makes one, and closes it. */
+    /**
+     * One transfer's connection to the ERP. Only [transfer] makes one, and closes it.
+     *
+     * **Nothing more goes out once the ERP has refused the account.** The first HTTP 401 is kept,
+     * and every request after it gets that answer back without reaching the network. A transfer is
+     * a loop over rows, documents or types, and each further request under a refused sign-in would
+     * be one more failed logon on the operator's account: fifty scans used to mean fifty of them,
+     * which is how a password changed in the directory locked the account from a scanner.
+     */
     inner class ErpConnection internal constructor(private val client: HttpClient) {
+
+        private var refused: ExtSystemResult.Failure? = null
+
+        private inline fun <T> unlessRefused(request: () -> ExtSystemResult<T>): ExtSystemResult<T> {
+            refused?.let { return it }
+            val result = request()
+            if (result is ExtSystemResult.Failure && result.accountRefused) refused = result
+            return result
+        }
 
         /** One recording, as one OData POST. */
         suspend fun uploadRecording(url: String, row: ErpRecordingRow): ExtSystemResult<Unit> =
-            postRecording(client, url, row)
+            unlessRefused { postRecording(client, url, row) }
 
         /** Every recording of one document in a single SOAP call: all of them, or none. */
         suspend fun uploadDocument(url: String, rows: List<ErpRecordingRow>): ExtSystemResult<Unit> =
-            postDocument(client, url, rows)
+            unlessRefused { postDocument(client, url, rows) }
 
         /** A GET that follows the ERP's paging to the end and returns every row as one list. */
-        suspend fun downloadRaw(url: String): ExtSystemResult<String> = getAllPages(client, url)
+        suspend fun downloadRaw(url: String): ExtSystemResult<String> =
+            unlessRefused { getAllPages(client, url) }
     }
 
     /** A client and the authenticator that answers for it; the two are only ever built together. */
