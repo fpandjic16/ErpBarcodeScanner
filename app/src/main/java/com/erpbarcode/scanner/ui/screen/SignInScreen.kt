@@ -123,6 +123,10 @@ fun SignInScreen(
      * only capture locals that already exist above it.
      */
     fun applyScannedQr(raw: String) {
+        // The trigger is not a touch, so the dialog that covers the screen while the ERP is being
+        // asked does not stop it. A code read then would put another operator's name on a screen
+        // that is about to open as the one already on their way in.
+        if (busy) return
         // Any symbology can land here — an ordinary product barcode pulled on the trigger, or a
         // code made under a different key. Say so rather than leaving the fields unchanged.
         val scanned = parseLoginQr(raw, loginQrKey)

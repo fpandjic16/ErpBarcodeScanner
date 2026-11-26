@@ -400,4 +400,5 @@
         <item quantity="one">%d document was kept because it holds scans that have not been sent.</item>
         <item quantity="other">%d documents were kept because they hold scans that have not been sent.</item>
     </plurals>
+    <string name="processing_signing_in">Signing in…</string>
 </resources>

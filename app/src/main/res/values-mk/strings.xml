@@ -400,4 +400,5 @@
         <item quantity="one">%d документ не е избришан бидејќи има неиспратени скенирања.</item>
         <item quantity="other">%d документи не се избришани бидејќи имаат неиспратени скенирања.</item>
     </plurals>
+    <string name="processing_signing_in">Најавување…</string>
 </resources>

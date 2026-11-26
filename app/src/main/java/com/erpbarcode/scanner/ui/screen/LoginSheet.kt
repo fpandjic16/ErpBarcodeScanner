@@ -110,6 +110,9 @@ fun LoginSheet(
 
     /** One path for both scanners: the camera and the hardware trigger read the same code. */
     fun applyScannedQr(raw: String) {
+        // Not while the ERP is being asked: the fields are disabled for that time, and the trigger
+        // must not be the one way left to change what is in them.
+        if (testing) return
         // Any symbology can land here — an ordinary product barcode pulled on the trigger, or a
         // code made under a different key. Say so rather than leaving the fields unchanged.
         val scanned = parseLoginQr(raw, loginQrKey)
@@ -140,19 +143,29 @@ fun LoginSheet(
     }
 
     fun submit() {
+        // Read once. What is handed on after the check is what was checked, not whatever the
+        // fields hold by the time the ERP answers: they are state, and a callback reads state as
+        // it is when it runs. A code scanned during the check used to be passed on as the sign-in
+        // the ERP had just accepted, though it had never seen it.
+        val name = username.trim()
+        val secret = password
         val test = onTestConnection
         if (test == null) {
-            onSubmit(username.trim(), password)
+            onSubmit(name, secret)
             return
         }
         errorMessage = null
         testing = true
-        test(username.trim(), password) { success, error ->
+        test(name, secret) { success, error ->
             testing = false
-            if (success) onSubmit(username.trim(), password)
+            if (success) onSubmit(name, secret)
             else errorMessage = error ?: connectFailedMessage
         }
     }
+
+    // Closing the sheet waits for the answer too: the check would otherwise finish behind a sheet
+    // that is gone and hand its result to a caller that has stopped waiting for it.
+    val dismissUnlessTesting: () -> Unit = { if (!testing) onDismiss() }
 
     // Hours are a plural, not a format string: Croatian says 1 sat, 24 sata, 48 sati, and the
     // single "%d sati" this replaced printed "24 sati" under the default setting.
@@ -160,7 +173,7 @@ fun LoginSheet(
         else context.resources.getQuantityString(R.plurals.login_ttl_hours, credentialTtlHours, credentialTtlHours)
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissUnlessTesting,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         (LocalView.current.parent as? DialogWindowProvider)?.window?.let { window ->
@@ -180,7 +193,7 @@ fun LoginSheet(
             Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
                 AppTopBar(
                     title = stringResource(R.string.login_title),
-                    onBack = onDismiss,
+                    onBack = dismissUnlessTesting,
                 )
                 val scrollState = rememberScrollState()
                 Column(

@@ -408,4 +408,5 @@
         <item quantity="few">%d dokumenti niso bili izbrisani, ker imajo neposlana skeniranja.</item>
         <item quantity="other">%d dokumentov ni bilo izbrisanih, ker imajo neposlana skeniranja.</item>
     </plurals>
+    <string name="processing_signing_in">Prijava…</string>
 </resources>

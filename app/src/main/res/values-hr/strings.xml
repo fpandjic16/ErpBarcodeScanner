@@ -404,4 +404,5 @@
         <item quantity="few">%d dokumenta nisu obrisana jer imaju neposlana skeniranja.</item>
         <item quantity="other">%d dokumenata nije obrisano jer imaju neposlana skeniranja.</item>
     </plurals>
+    <string name="processing_signing_in">Prijava…</string>
 </resources>

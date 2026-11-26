@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.erpbarcode.scanner.R
 import com.erpbarcode.scanner.data.auth.ExtSystemConfig
 import com.erpbarcode.scanner.data.model.DocTypeFilterMode
 import com.erpbarcode.scanner.ui.screen.AppInfoScreen
@@ -115,4 +116,11 @@ internal fun SignInGate(
             }
         },
     )
+
+    // Nothing on the screen can be touched while the ERP is being asked. The Sign in button alone
+    // used to be disabled, which left the list of operators, both fields and the two doors live for
+    // as long as the server took to answer: half a minute when it does not. A name tapped in that
+    // time changed what the screen showed, and the app then opened as the operator who had already
+    // been sent. The hardware trigger is not a touch; the screen ignores it for the same time.
+    if (signingIn) ProcessingDialog(R.string.processing_signing_in)
 }
