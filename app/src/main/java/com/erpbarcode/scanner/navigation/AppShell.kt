@@ -106,7 +106,6 @@ internal class Shell(
     val debounceTime: Int,
     val hapticEnabled: Boolean,
     val soundEnabled: Boolean,
-    val warnOnOver: Boolean,
     val backgroundSync: Boolean,
     val disabledDocTypes: Set<String>,
     val onDisabledDocTypesChange: (Set<String>) -> Unit,

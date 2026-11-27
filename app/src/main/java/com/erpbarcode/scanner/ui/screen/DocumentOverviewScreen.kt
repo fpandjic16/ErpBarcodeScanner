@@ -91,9 +91,11 @@ fun DocumentOverviewScreen(
     // showed exactly the complaints that had none.
     val atLocation = remember(filtered, locationCode, rcCode, docTypeFilters) {
         filtered.filter { doc ->
-            when (docTypeFilters[doc.type.key] ?: doc.type.defaultFilterMode) {
+            when (doc.type.filterModeIn(docTypeFilters)) {
                 DocTypeFilterMode.LOCATION -> locationCode.isNotEmpty() && doc.sourceCode == locationCode
                 DocTypeFilterMode.RESPONSIBILITY_CENTER -> rcCode.isNotEmpty() && doc.rcCode == rcCode
+                // A type with no scope belongs to every location, this one included.
+                DocTypeFilterMode.NONE -> true
             }
         }
     }

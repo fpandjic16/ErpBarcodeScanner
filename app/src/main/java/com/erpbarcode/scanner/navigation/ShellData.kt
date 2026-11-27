@@ -46,14 +46,19 @@ internal class ShellData(
  * A type scoped by responsibility centre needs one selected, the same as a location-scoped
  * type needs a location. No centre used to mean every centre, so an operator who had chosen
  * nothing saw — and counted — every complaint in the company.
+ *
+ * A type with no scope at all (the vendor complaint types) is the one case where everything is
+ * shown, and it is so by the type's own definition, not by what happens to be selected:
+ * `DocumentType.filterModeIn` decides which of the three a type is.
  */
 internal fun Document.isInScope(
     docTypeFilters: Map<String, DocTypeFilterMode>,
     location: Location?,
     rc: ResponsibilityCenter?,
-): Boolean = when (docTypeFilters[type.key] ?: type.defaultFilterMode) {
+): Boolean = when (type.filterModeIn(docTypeFilters)) {
     DocTypeFilterMode.LOCATION -> location != null && sourceCode == location.code
     DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null && rcCode == rc.code
+    DocTypeFilterMode.NONE -> true
 }
 
 internal fun shellData(
@@ -66,7 +71,7 @@ internal fun shellData(
     val filteredDocs = documents.filter { it.isInScope(docTypeFilters, location, rc) }
 
     val docTypes = DocumentType.entries.map { type ->
-        val filterMode = docTypeFilters[type.key] ?: type.defaultFilterMode
+        val filterMode = type.filterModeIn(docTypeFilters)
         // Blocked until the operator has selected what this type is scoped by — not merely until
         // the device has a list to select from. The old test was the list: once any operator had
         // refreshed locations, the next one could open every list with nothing selected. The
@@ -77,6 +82,8 @@ internal fun shellData(
         val blocked = when (filterMode) {
             DocTypeFilterMode.LOCATION -> location == null
             DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc == null
+            // Nothing to select first: the type is not narrowed by anything.
+            DocTypeFilterMode.NONE -> false
         }
         DocTypeSummary(
             type = type,

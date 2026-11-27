@@ -167,7 +167,8 @@ class ConfigController @Inject constructor(
             loginQrKey         = null,
             enabledDocTypes    = DocumentType.entries.filter { it.key !in settings.disabledDocTypes }.map { it.name },
             docTypeFilters     = DocumentType.entries.associate {
-                it.name to (settings.docTypeFilters[it.key] ?: it.defaultFilterMode).name
+                // The scope in effect, which for a type that has none is NONE whatever was stored.
+                it.name to it.filterModeIn(settings.docTypeFilters).name
             },
             debuggerActive     = settings.debuggerActive,
         )

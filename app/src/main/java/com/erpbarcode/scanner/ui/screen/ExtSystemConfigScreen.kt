@@ -313,7 +313,7 @@ fun ExtSystemConfigScreen(
                         type = type,
                         enabled = type.key !in disabledDocTypes,
                         code = documentTypeCodes[type] ?: "",
-                        filterMode = docTypeFilters[type.key] ?: type.defaultFilterMode,
+                        filterMode = type.filterModeIn(docTypeFilters),
                         onEnabledChange = { on ->
                             onDisabledDocTypesChange(
                                 if (on) disabledDocTypes - type.key else disabledDocTypes + type.key

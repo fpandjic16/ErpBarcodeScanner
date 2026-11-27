@@ -39,7 +39,6 @@ data class AppSettings(
     val debounceTime: Int = 200,
     val hapticEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
-    val warnOnOver: Boolean = true,
     val backgroundSync: Boolean = false,
     val lastLocationCode: String = "",
     val lastRcCode: String = "",

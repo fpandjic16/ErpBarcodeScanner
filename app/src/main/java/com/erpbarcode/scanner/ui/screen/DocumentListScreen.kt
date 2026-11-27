@@ -182,7 +182,8 @@ fun DocumentListScreen(
     Column(modifier = Modifier.fillMaxSize().background(AppPalette.Cream)) {
         AppTopBar(
             title = docType.localizedDisplay(),
-            subtitle = if (docTypeCode.isNotBlank()) "$locationCode · $docTypeCode" else locationCode,
+            // The location is blank for a type that is not narrowed by one; the dot goes with it.
+            subtitle = listOf(locationCode, docTypeCode).filter { it.isNotBlank() }.joinToString(" · "),
             onBack = onBack,
             actions = {
                 IconButton(onClick = onOpenFilter) {

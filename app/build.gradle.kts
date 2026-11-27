@@ -17,8 +17,8 @@ android {
         applicationId = "com.erpbarcode.scanner"
         minSdk = 26
         targetSdk = 36
-        versionCode = 167
-        versionName = "3.6.92"
+        versionCode = 168
+        versionName = "3.6.93"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

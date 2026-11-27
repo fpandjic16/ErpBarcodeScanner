@@ -82,6 +82,68 @@ class ShellDataTest {
         assertEquals(0, data(listOf(shipment)).filteredDocs.size)
     }
 
+    // ── A type with no scope: the vendor complaint types ───────────────────────
+
+    private val vendorShipment = DocumentType.VENDOR_COMPLAINT_SHIPMENT
+
+    @Test
+    fun `a type with no scope shows every document, whatever is selected`() {
+        val atThisLocation = doc("V1", type = vendorShipment, source = "CS165", rc = "RC1")
+        val elsewhere = doc("V2", type = vendorShipment, source = "CS999", rc = "RC9")
+        val noPlace = doc("V3", type = vendorShipment, source = "", rc = "")
+        val all = listOf(atThisLocation, elsewhere, noPlace)
+
+        assertEquals(listOf("V1", "V2", "V3"), data(all).filteredDocs.map { it.documentNo })
+        assertEquals(3, data(all).docTypes.first { it.type == vendorShipment }.count)
+    }
+
+    @Test
+    fun `a type with no scope is neither blocked nor empty with nothing selected`() {
+        val elsewhere = doc("V2", type = vendorShipment, source = "CS999", rc = "RC9")
+        val d = data(listOf(elsewhere), location = null, rc = null)
+
+        assertEquals(listOf("V2"), d.filteredDocs.map { it.documentNo })
+        assertFalse(d.docTypes.first { it.type == vendorShipment }.blocked)
+        assertFalse(d.docTypes.first { it.type == DocumentType.VENDOR_COMPLAINT_RECEIPT }.blocked)
+        // The types that do have a scope stay blocked beside it.
+        assertTrue(d.docTypes.first { it.type == DocumentType.WAREHOUSE_SHIPMENT }.blocked)
+        assertTrue(d.docTypes.first { it.type == DocumentType.COMPLAINT_SHIPMENT }.blocked)
+    }
+
+    @Test
+    fun `a scope stored for a type that has none is ignored`() {
+        // What a device configured before 3.6.93 holds for the vendor complaint types.
+        val stored = mapOf(vendorShipment.key to DocTypeFilterMode.RESPONSIBILITY_CENTER)
+        val elsewhere = doc("V2", type = vendorShipment, source = "CS999", rc = "RC9")
+
+        val d = data(listOf(elsewhere), filters = stored)
+
+        assertEquals(listOf("V2"), d.filteredDocs.map { it.documentNo })
+        assertFalse(data(listOf(elsewhere), rc = null, filters = stored).docTypes.first { it.type == vendorShipment }.blocked)
+    }
+
+    @Test
+    fun `no scope stored for a type that has one changes nothing`() {
+        // Must fail to pass: the shipment of another location stays out of sight.
+        val stored = mapOf(DocumentType.WAREHOUSE_SHIPMENT.key to DocTypeFilterMode.NONE)
+        val elsewhere = doc("B", source = "CS175")
+
+        assertTrue(data(listOf(elsewhere), filters = stored).filteredDocs.isEmpty())
+        assertTrue(
+            data(listOf(elsewhere), location = null, filters = stored)
+                .docTypes.first { it.type == DocumentType.WAREHOUSE_SHIPMENT }.blocked
+        )
+    }
+
+    @Test
+    fun `documents of a type with no scope count in the shift's numbers wherever they are from`() {
+        val ready = doc("R", type = vendorShipment, source = "CS999", rc = "RC9",
+            lines = listOf(line(2.0, 2.0)), state = DocState.Completed)
+        val d = data(listOf(ready))
+        assertEquals(listOf("R"), d.readyDocs.map { it.documentNo })
+        assertEquals(1, d.shiftScans)
+    }
+
     @Test
     fun `a switched-off type has no summary but keeps its recordings`() {
         val scanned = doc("A", lines = listOf(line(2.0, 1.0)), scans = 1, state = DocState.InProgress)

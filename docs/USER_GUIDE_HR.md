@@ -118,7 +118,7 @@ Ovo je početni ekran na koji dolazite svaki put kad otvorite aplikaciju.
   - ikonu i naziv vrste,
   - tanku traku u bojama (ako ima aktivnosti) koja pokazuje omjer statusa dokumenata te vrste,
   - broj dokumenata te vrste koje trenutno imate.
-  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Četiri vrste reklamacija (Otprema reklamacija, Zaprimanje reklamacija i dvije vrste za dobavljača) traže centar odgovornosti, a sve ostale vrste lokaciju.
+  - Dodir na redak otvara **popis dokumenata** te vrste. Ako se vrsta još ne može otvoriti — nije odabrana lokacija ni centar odgovornosti — aplikacija vam to kaže umjesto da ne učini ništa. Otprema reklamacija i Zaprimanje reklamacija traže centar odgovornosti; dvije vrste reklamacija dobavljaču ne traže nikakav odabir; sve ostale vrste traže lokaciju.
   - **Na novoj instalaciji sve su vrste isključene.** Popis to kaže i nudi gumb za konfiguraciju vanjskog sustava, gdje svaka vrsta ima svoj prekidač. Uređaj nadograđen sa starije verzije zadržava vrste koje je imao; dvije vrste reklamacija i ondje su na početku isključene.
 - **Redak ZAPISI**, pod vlastitim naslovom: otvara popis svih dokumenata u koje ste išta skenirali, svih vrsta. Kad niste ništa skenirali, pokazuje nulu. Vidi [§7a](#7a-odjeljak-zapisi).
 
@@ -149,8 +149,8 @@ Ovaj ekran otvarate dodirom na bilo koju od dvije oznake na glavnom izborniku.
 | **Transportni list** | Dokumenti prijenosa između lokacija |
 | **Otprema reklamacija** | Paketi reklamacija koji izlaze na otpremi reklamacija (zadano se filtrira po centru odgovornosti) |
 | **Zaprimanje reklamacija** | Zaprimanje paketa iste otpreme reklamacija (zadano se filtrira po centru odgovornosti) |
-| **Otprema reklamacije dobavljaču** | Paketi reklamacija koji izlaze dobavljaču na otpremi reklamacije dobavljaču (zadano se filtrira po centru odgovornosti) |
-| **Zaprimanje otpreme dobavljača** | Zaprimanje paketa iste otpreme dobavljaču (zadano se filtrira po centru odgovornosti) |
+| **Otprema reklamacije dobavljaču** | Paketi reklamacija koji izlaze dobavljaču na otpremi reklamacije dobavljaču (bez filtra: prikazuju se sve, neovisno o odabranoj lokaciji i centru odgovornosti) |
+| **Zaprimanje otpreme dobavljača** | Zaprimanje paketa iste otpreme dobavljaču (također bez filtra) |
 | **Inventura** | Brojanje zaliha: jedna serija temeljnice inventure iz vanjskog sustava |
 
 Koje od njih vidite (i filtriraju li se po lokaciji ili po centru odgovornosti) ovisi o tome kako je vaša tvrtka postavila aplikaciju. Ako se neka vrsta ponaša neočekivano, pitajte administratora ili konzultanta.
@@ -166,9 +166,9 @@ Obje su ista otprema reklamacija u vanjskom sustavu, u dvije faze.
 
 ### Otprema reklamacije dobavljaču i Zaprimanje otpreme dobavljača
 
-Ove dvije vrste rade jednako kao dvije iznad, za otpremu reklamacija koja ide dobavljaču umjesto između vlastitih lokacija tvrtke.
+Ove dvije vrste rade kao dvije iznad, za otpremu reklamacija koja ide dobavljaču umjesto između vlastitih lokacija tvrtke. Jedina razlika: **ne filtriraju se** ni po lokaciji ni po centru odgovornosti. Svaka otprema dobavljaču prikazuje se i preuzima, što god ste odabrali.
 
-- **Otprema reklamacije dobavljaču** prikazuje otpremu dobavljaču dok je otpuštena i čeka slanje. **Zaprimanje otpreme dobavljača** prikazuje je kad je otpremljena i čeka zaprimanje. Najprije odaberite centar odgovornosti; ni jedna od ovih vrsta ne koristi lokaciju.
+- **Otprema reklamacije dobavljaču** prikazuje otpremu dobavljaču dok je otpuštena i čeka slanje. **Zaprimanje otpreme dobavljača** prikazuje je kad je otpremljena i čeka zaprimanje. Prije toga ne treba ništa odabrati, a ekran preuzimanja nudi samo raspon datuma: ostavite ga praznim i **Preuzmi** donosi sve.
 - **Jedan redak po reklamaciji**, s brojem njezinih paketa kao očekivanom količinom. Naljepnicu svakog paketa skenirajte jednom.
 - **Svaki paket mora biti skeniran** prije nego se otprema može zaprimiti; ne zaprima se djelomično.
 - Kao i svaka vrsta dokumenta, obje su isključene dok ih administrator ne uključi u Konfiguraciji vanjskog sustava.
@@ -320,7 +320,7 @@ Dodir na natrag vraća vas izravno na popis dokumenata — napredak se sprema do
 
 | Upozorenje | Kada se pojavljuje | Što učiniti |
 |---|---|---|
-| **Prekoračeno** | Skenirali ste više od očekivane količine za stavku (ako je uključena postavka „Upozori pri prekoračenju”) | Samo informacija — dodirnite U redu. Višak je i dalje zabilježen (prikazuje se plavo, kao „Prekoračenje”). |
+| **Prekoračeno** | Skenirali ste više od očekivane količine za stavku | Samo informacija — dodirnite U redu. Višak je i dalje zabilježen (prikazuje se plavo, kao „Prekoračenje”). |
 | **Neusklađena jedinica mjere** | Koristili ste [posebni format barkoda](#11-posebni-format-barkoda-barkodjmkoličina), a skenirana jedinica mjere ne odgovara onoj koju dokument očekuje za taj artikl | Informacija — skeniranje je zabilježeno sa skeniranom količinom. Dodirnite U redu i javite uredu ako izgleda kao stvarna razlika. |
 | **Barkod nije pronađen** | Skenirali ste nešto što nije očekivani artikl na ovom dokumentu | Ništa nije zabilježeno — provjerite artikl i dokument, pa skenirajte ponovno. |
 | **Nije na seriji** | Na inventuri ste skenirali artikl kojeg nema na seriji | Još ništa nije brojano. **Broji** ako je artikl stvarno na polici, **Odustani** ako je skeniranje bila greška. |
@@ -424,7 +424,6 @@ Postavke otvarate ikonom zupčanika na glavnom izborniku. **Promjene se spremaju
 | **Vrijeme čekanja** | Koliko se dugo isti barkod zanemaruje nakon što je pročitan (200 ms – 2 s; 200 ms dok ga ne promijenite). Sprječava da se jedno skeniranje broji dvaput kad isti kod odmah stigne ponovno — dvostruki pritisak okidača ili ista etiketa pročitana dvaput zaredom. Ako isti artikl namjerno skenirate ponovno, pričekajte barem toliko. |
 | **Haptička povratna informacija** | Vibracija pri potvrdi skeniranja i pri greškama — jednako pri skeniranju dokumenata i pri prijavi QR kodom. |
 | **Zvuk skeniranja** | Dva zvuka, da bez gledanja znate trebate li pogledati ekran: **jedan pisak** kad skeniranje normalno prođe i **glasan dvotonski zvuk koji pada, odsviran četiri puta** („di-du, di-du, di-du, di-du”) kad god skeniranje izazove upozorenje — barkod nije na dokumentu, skenirani broj dokumenta nije pronađen ili je skeniranje stavku dovelo iznad onoga što dokument očekuje (ovo zadnje samo dok je uključeno upozorenje pri prekoračenju). Zvukovi prate glasnoću *medija* na uređaju, a ne glasnoću obavijesti, pa se čuju i kad je skener na vibraciji; glasnoću podesite tipkama za glasnoću, a ovim prekidačem ih isključujete. Vrijede za ista dva načina unosa kao i vibracija. |
-| **Upozori pri prekoračenju** | Prikazuje upozorenje kad skenirate više od očekivane količine za stavku. |
 
 ### Sinkronizacija
 | Postavka | Što radi |
@@ -466,7 +465,7 @@ Prikazuje tko je trenutno prijavljen i opciju **Odjavi se** (odmah, bez potvrde)
 ## 18. Česte situacije i što učiniti
 
 ### 18.1 „Dodir na vrstu dokumenta kaže da treba odabrati lokaciju”
-Svaka vrsta dokumenta traži da najprije nešto odaberete: četiri vrste reklamacija (**Otprema reklamacija**, **Zaprimanje reklamacija** i dvije vrste za dobavljača) centar odgovornosti, a sve ostale vrste lokaciju. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
+Gotovo svaka vrsta dokumenta traži da najprije nešto odaberete: **Otprema reklamacija** i **Zaprimanje reklamacija** centar odgovornosti, a sve ostale vrste lokaciju. Iznimka su dvije vrste reklamacija dobavljaču, koje se otvaraju bez ikakvog odabira. Odaberite ih na ekranu lokacije i CC-a ([§5](#5-odabir-lokacije-i-centra-odgovornosti)) i pokušajte ponovno — odabirom lokacije postavlja se i njezin centar odgovornosti. Lokacija koje više nema na popisu računa se kao da nije odabrana, pa je odaberite ponovno. Ako nema lokacija za odabir, najprije na tom ekranu dodirnite **Osvježi**.
 
 ### 18.2 „Skenirana je pogrešna količina”
 Dodirnite stavku pa upotrijebite −1/+1 ili dodirnite broj i izravno upišite točnu ukupnu količinu — ona zamjenjuje zabilježenu količinu stavke, ne dodaje joj se. Ne možete ići ispod onoga što je već poslano u vanjski sustav; vidi [§9.3](#93-ručna-izmjena-stavke).

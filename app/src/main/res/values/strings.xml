@@ -111,8 +111,6 @@
     <string name="settings_haptic_desc">Vibrate on scan confirmation and errors</string>
     <string name="settings_sound">Scan sounds</string>
     <string name="settings_sound_desc">Beep on a scan that lands, a different tone on one that doesn\'t</string>
-    <string name="settings_warn_over">Warn on over-scan</string>
-    <string name="settings_warn_over_desc">Confirm when scanned quantity exceeds expected</string>
     <string name="settings_server_endpoints">Server &amp; endpoints</string>
     <string name="settings_server_endpoints_desc">OData base URL, domain, document page URLs</string>
     <string name="settings_export">Export data</string>
@@ -414,4 +412,6 @@
         <item quantity="other">The sign-in is kept encrypted on this device and remembered for %d days.</item>
     </plurals>
     <string name="signin_clock_behind_note">This device\'s clock is behind a time the app has already seen, so sign-in codes do not work without the external system. It is put right the next time somebody signs in with the external system reachable; after that everybody signs in through it once.</string>
+    <string name="ext_config_filter_none">None</string>
+    <string name="ext_config_filter_none_desc">Not filtered: every document of this type is shown and downloaded, whichever location or responsibility centre is selected.</string>
 </resources>

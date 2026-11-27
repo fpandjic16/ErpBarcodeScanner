@@ -103,7 +103,6 @@ fun RecordingScreen(
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
     debounceTime: Int = 200,
-    warnOnOver: Boolean = true,
 ) {
     var view by remember { mutableStateOf(RecordingView.OVERVIEW) }
     var activeLineNo by remember { mutableStateOf<Int?>(null) }
@@ -255,15 +254,17 @@ fun RecordingScreen(
             val newScanned = base + qty
             scannedRunningTotal[matchedLine.lineNo] = newScanned
             val newStatus = LineStatus.of(newScanned, matchedLine.expected)
-            val overScan = warnOnOver && newStatus == LineStatus.OVER && warnsOnOver(matchedLine)
+            // Always warned about. It was a personal setting until 3.6.93, which let one operator
+            // switch off the only thing that says more was scanned than the document asks for.
+            val overScan = newStatus == LineStatus.OVER && warnsOnOver(matchedLine)
             // Every accepted scan makes a sound, not only the one that completes a line — this is
             // the operator's confirmation that the pull counted; the haptic below marks something
             // else, that the line is now exact.
             //
             // An over-scan gets the warning tone instead of the confirm. The scan did count, but a
             // "fine" beep followed by a warning dialog says two opposite things, and the beep is
-            // the one the operator hears while looking at the shelf rather than the screen. Tied
-            // to warnOnOver exactly as the dialog is: no warning shown, no warning sound. Decided
+            // the one the operator hears while looking at the shelf rather than the screen. It goes
+            // with the dialog: where no warning is shown (see warnsOnOver), none is sounded. Decided
             // after the status is known, which is why this sits below the arithmetic.
             if (soundEnabled) {
                 if (overScan) soundEngine.warning() else soundEngine.confirm()
@@ -481,7 +482,7 @@ fun RecordingScreen(
                                 onLineUpdate(line.lineNo, qty) { sent ->
                                     sentFloorWarning = SentFloorInfo(line.item.no, sent, line.unitOfMeasureCode)
                                 }
-                                if (warnOnOver && qty > line.expected && warnsOnOver(line)) {
+                                if (qty > line.expected && warnsOnOver(line)) {
                                     overScanWarning = OverScanInfo(line.item.no, line.item.name, line.barcodeNo, line.expected, qty)
                                 }
                                 localScanned = null

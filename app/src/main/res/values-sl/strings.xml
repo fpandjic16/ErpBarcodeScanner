@@ -111,8 +111,6 @@
     <string name="settings_haptic_desc">Vibriranje ob potrditvi skeniranja in napakah</string>
     <string name="settings_sound">Zvok skeniranja</string>
     <string name="settings_sound_desc">Pisk, ko skeniranje uspe, drugačen ton, ko ne</string>
-    <string name="settings_warn_over">Opozori ob presežku</string>
-    <string name="settings_warn_over_desc">Potrdi, ko skenirana količina presega pričakovano</string>
     <string name="settings_server_endpoints">Strežnik in končne točke</string>
     <string name="settings_server_endpoints_desc">Osnovni URL OData, domena, URL-ji strani dokumentov</string>
     <string name="settings_export">Izvozi podatke</string>
@@ -424,4 +422,6 @@
         <item quantity="other">Prijava se hrani šifrirano na tej napravi in pomni %d dni.</item>
     </plurals>
     <string name="signin_clock_behind_note">Ura te naprave je za časom, ki ga je aplikacija že videla, zato koda QR za prijavo ne deluje brez zunanjega sistema. Popravi se, ko se naslednjič kdo prijavi ob dosegljivem zunanjem sistemu; nato se vsi enkrat prijavijo prek njega.</string>
+    <string name="ext_config_filter_none">Brez filtra</string>
+    <string name="ext_config_filter_none_desc">Brez filtra: prikažejo in prenesejo se vsi dokumenti te vrste, ne glede na izbrano lokacijo in center odgovornosti.</string>
 </resources>

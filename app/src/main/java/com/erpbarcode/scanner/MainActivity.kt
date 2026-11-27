@@ -128,7 +128,6 @@ class MainActivity : AppCompatActivity() {
             var debounceTime     by remember { mutableStateOf(initialSettings.debounceTime) }
             var hapticEnabled     by remember { mutableStateOf(initialSettings.hapticEnabled) }
             var soundEnabled      by remember { mutableStateOf(initialSettings.soundEnabled) }
-            var warnOnOver       by remember { mutableStateOf(initialSettings.warnOnOver) }
             var backgroundSync   by remember { mutableStateOf(initialSettings.backgroundSync) }
             var disabledDocTypes by remember { mutableStateOf(initialSettings.disabledDocTypes) }
             var docTypeFilters    by remember { mutableStateOf(initialSettings.docTypeFilters) }
@@ -143,8 +142,7 @@ class MainActivity : AppCompatActivity() {
                 debounceTime     = debounceTime,
                 hapticEnabled    = hapticEnabled,
                 soundEnabled     = soundEnabled,
-                warnOnOver          = warnOnOver,
-                backgroundSync      = backgroundSync,
+                backgroundSync   = backgroundSync,
                 lastLocationCode = locationCode,
                 lastRcCode       = rcCode,
                 disabledDocTypes = disabledDocTypes,
@@ -165,7 +163,6 @@ class MainActivity : AppCompatActivity() {
                 debounceTime = s.debounceTime
                 hapticEnabled = s.hapticEnabled
                 soundEnabled = s.soundEnabled
-                warnOnOver = s.warnOnOver
                 backgroundSync = s.backgroundSync
                 debuggerActive = s.debuggerActive
                 // A configuration loaded from Settings brings these two. Left out, the main menu
@@ -201,7 +198,6 @@ class MainActivity : AppCompatActivity() {
                 debounceTime = s.debounceTime
                 hapticEnabled = s.hapticEnabled
                 soundEnabled = s.soundEnabled
-                warnOnOver = s.warnOnOver
                 backgroundSync = s.backgroundSync
                 debuggerActive = s.debuggerActive
                 disabledDocTypes = s.disabledDocTypes
@@ -222,7 +218,6 @@ class MainActivity : AppCompatActivity() {
                     debounceTime              = debounceTime,
                     hapticEnabled             = hapticEnabled,
                     soundEnabled              = soundEnabled,
-                    warnOnOver                = warnOnOver,
                     backgroundSync            = backgroundSync,
                     disabledDocTypes          = disabledDocTypes,
                     onDisabledDocTypesChange  = { disabledDocTypes = it; appVm.saveSettings(buildSettings().copy(disabledDocTypes = it)) },

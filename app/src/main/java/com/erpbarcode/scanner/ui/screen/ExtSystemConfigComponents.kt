@@ -113,18 +113,37 @@ internal fun DocTypeConfigCard(
                 readOnly = true,
             )
             ConfigDivider()
-            ConfigSegmentedChoice(
-                title = stringResource(R.string.ext_config_filter_by),
-                options = listOf(DocTypeFilterMode.LOCATION, DocTypeFilterMode.RESPONSIBILITY_CENTER),
-                selected = filterMode,
-                optionLabel = { mode ->
-                    when (mode) {
-                        DocTypeFilterMode.LOCATION -> stringResource(R.string.ext_config_filter_location)
-                        DocTypeFilterMode.RESPONSIBILITY_CENTER -> stringResource(R.string.ext_config_filter_rc)
-                    }
-                },
-                onSelect = onFilterModeChange,
-            )
+            if (filterMode == DocTypeFilterMode.NONE) {
+                // A type that is not narrowed by anything has nothing to choose between. Said in
+                // words where the choice would be, so nobody goes looking for the missing control.
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Text(
+                        stringResource(R.string.ext_config_filter_by),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium, color = AppPalette.Ink,
+                        ),
+                    )
+                    Text(
+                        stringResource(R.string.ext_config_filter_none_desc),
+                        style = monoLabel.copy(color = AppPalette.Ink3),
+                    )
+                }
+            } else {
+                ConfigSegmentedChoice(
+                    title = stringResource(R.string.ext_config_filter_by),
+                    options = listOf(DocTypeFilterMode.LOCATION, DocTypeFilterMode.RESPONSIBILITY_CENTER),
+                    selected = filterMode,
+                    optionLabel = { mode ->
+                        when (mode) {
+                            DocTypeFilterMode.LOCATION -> stringResource(R.string.ext_config_filter_location)
+                            DocTypeFilterMode.RESPONSIBILITY_CENTER -> stringResource(R.string.ext_config_filter_rc)
+                            // Never one of the options above; named so the `when` covers the enum.
+                            DocTypeFilterMode.NONE -> stringResource(R.string.ext_config_filter_none)
+                        }
+                    },
+                    onSelect = onFilterModeChange,
+                )
+            }
         }
     }
 }

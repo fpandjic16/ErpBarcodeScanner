@@ -33,18 +33,65 @@ class DocumentTypeTest {
     }
 
     @Test
-    fun `a vendor complaint behaves as the company's own complaint does`() {
+    fun `a vendor complaint is a complaint with a code of its own and no scope`() {
         val pairs = listOf(
             DocumentType.COMPLAINT_SHIPMENT to DocumentType.VENDOR_COMPLAINT_SHIPMENT,
             DocumentType.COMPLAINT_RECEIPT to DocumentType.VENDOR_COMPLAINT_RECEIPT,
         )
         for ((own, vendor) in pairs) {
-            assertEquals(own.defaultFilterMode, vendor.defaultFilterMode)
-            assertEquals(DocTypeFilterMode.RESPONSIBILITY_CENTER, vendor.defaultFilterMode)
+            // The company's own complaints go by responsibility centre; a vendor's go by nothing.
+            assertEquals(DocTypeFilterMode.RESPONSIBILITY_CENTER, own.defaultFilterMode)
+            assertEquals(DocTypeFilterMode.NONE, vendor.defaultFilterMode)
             // A code of its own, so there is no retail flag to send or to filter by.
             assertNull(vendor.retailLocation)
             assertFalse(vendor.isStockCount)
         }
+    }
+
+    @Test
+    fun `only the two vendor complaint types have no scope`() {
+        assertEquals(
+            setOf(DocumentType.VENDOR_COMPLAINT_SHIPMENT, DocumentType.VENDOR_COMPLAINT_RECEIPT),
+            DocumentType.entries.filter { it.defaultFilterMode == DocTypeFilterMode.NONE }.toSet(),
+        )
+    }
+
+    @Test
+    fun `a type with no scope keeps none, whatever the settings hold for it`() {
+        // Devices configured while these types were scoped by centre still hold that.
+        val vendor = DocumentType.VENDOR_COMPLAINT_SHIPMENT
+        for (stored in DocTypeFilterMode.entries) {
+            assertEquals(DocTypeFilterMode.NONE, vendor.filterModeIn(mapOf(vendor.key to stored)))
+        }
+        assertEquals(DocTypeFilterMode.NONE, vendor.filterModeIn(emptyMap()))
+    }
+
+    @Test
+    fun `a type with a scope cannot be set to none`() {
+        // Must fail to pass: one word in a configuration file may not show an operator every
+        // location's documents.
+        for (type in DocumentType.entries.filter { it.defaultFilterMode != DocTypeFilterMode.NONE }) {
+            assertEquals(
+                "${type.name} set to NONE",
+                type.defaultFilterMode,
+                type.filterModeIn(mapOf(type.key to DocTypeFilterMode.NONE)),
+            )
+        }
+    }
+
+    @Test
+    fun `a type with a scope takes the one the settings give it, and its own without`() {
+        val shipment = DocumentType.WAREHOUSE_SHIPMENT
+        assertEquals(DocTypeFilterMode.LOCATION, shipment.filterModeIn(emptyMap()))
+        assertEquals(
+            DocTypeFilterMode.RESPONSIBILITY_CENTER,
+            shipment.filterModeIn(mapOf(shipment.key to DocTypeFilterMode.RESPONSIBILITY_CENTER)),
+        )
+        // A setting made for another type says nothing about this one.
+        assertEquals(
+            DocTypeFilterMode.LOCATION,
+            shipment.filterModeIn(mapOf(DocumentType.COMPLAINT_SHIPMENT.key to DocTypeFilterMode.RESPONSIBILITY_CENTER)),
+        )
     }
 
     @Test

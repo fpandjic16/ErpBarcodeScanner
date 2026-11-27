@@ -126,7 +126,6 @@ internal fun NavGraphBuilder.settingsRoutes(shell: Shell) {
                 debounceTime = debounceTime,
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,
-                warnOnOver = warnOnOver,
                 backgroundSync = backgroundSync,
                 lastLocationCode = locationCode,
                 lastRcCode = rcCode,

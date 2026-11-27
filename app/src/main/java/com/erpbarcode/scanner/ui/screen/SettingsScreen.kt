@@ -89,7 +89,6 @@ fun SettingsScreen(
     var debounceTime by remember { mutableStateOf(initial.debounceTime) }
     var hapticEnabled by remember { mutableStateOf(initial.hapticEnabled) }
     var soundEnabled by remember { mutableStateOf(initial.soundEnabled) }
-    var warnOnOver by remember { mutableStateOf(initial.warnOnOver) }
     var backgroundSync by remember { mutableStateOf(initial.backgroundSync) }
     var debuggerActive by remember { mutableStateOf(initial.debuggerActive) }
     // No controls on this screen — these two are edited on ExtSystemConfigScreen. They are held
@@ -106,7 +105,6 @@ fun SettingsScreen(
         debounceTime = debounceTime,
         hapticEnabled = hapticEnabled,
         soundEnabled = soundEnabled,
-        warnOnOver = warnOnOver,
         backgroundSync = backgroundSync,
         debuggerActive = debuggerActive,
         disabledDocTypes = disabledDocTypes,
@@ -298,14 +296,6 @@ fun SettingsScreen(
                         description = stringResource(R.string.settings_sound_desc),
                         checked = soundEnabled,
                         onCheckedChange = { soundEnabled = it },
-                    )
-                    SettingsDivider()
-                    SettingsToggleRow(
-                        icon = Icons.Outlined.Warning,
-                        label = stringResource(R.string.settings_warn_over),
-                        description = stringResource(R.string.settings_warn_over_desc),
-                        checked = warnOnOver,
-                        onCheckedChange = { warnOnOver = it },
                     )
                 }
             }

@@ -22,7 +22,17 @@ data class Location(
     val rc: String,
 )
 
-enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
+/**
+ * What a document type is shown and downloaded by: the operator's location, their responsibility
+ * centre, or nothing.
+ *
+ * [NONE] is not something a device chooses. It belongs to a type (`DocumentType.defaultFilterMode`),
+ * and a type that has it is never given another, just as no other type can be given it, whatever a
+ * configuration says; see [DocumentType.filterModeIn]. The two scoped modes exist to keep an
+ * operator from seeing, and downloading, every location's documents, and one word in a
+ * configuration file must not be able to switch that off for a type that has a scope.
+ */
+enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER, NONE }
 
 /**
  * [retailLocation] is what separates the retail types from the warehouse ones on the ERP side.
@@ -38,7 +48,10 @@ enum class DocTypeFilterMode { LOCATION, RESPONSIBILITY_CENTER }
  *
  * [defaultFilterMode] is the scope a type falls back to until the user sets one in Settings.
  * Location suits the document types that move goods between two places; complaints are tracked
- * by responsibility centre instead.
+ * by responsibility centre instead. The two vendor complaint types have none
+ * ([DocTypeFilterMode.NONE]): every one of their documents is shown and downloaded, whichever
+ * location or centre the operator has selected, and no setting gives them a scope. Read the scope
+ * in effect with [filterModeIn], never from this field and the settings by hand.
  *
  * [key] is what the database stores in every row's `type` column, so a key is never reused for a
  * different type. The single COMPLAINT type ("COMPLAINT") was replaced by the two below; its rows
@@ -67,13 +80,29 @@ enum class DocumentType(
     COMPLAINT_SHIPMENT("CPL_SHIP",  "Complaint Shipment",    defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     COMPLAINT_RECEIPT( "CPL_RCPT",  "Complaint Receipt",     defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
     // A complaint shipment that goes to a vendor, in the same two phases as the one above: sent,
-    // then received. Each has a code of its own and is scoped by responsibility centre likewise.
-    VENDOR_COMPLAINT_SHIPMENT("VCPL_SHIP", "Vendor Complaint Shipment", defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
-    VENDOR_COMPLAINT_RECEIPT( "VCPL_RCPT", "Vendor Complaint Receipt",  defaultFilterMode = DocTypeFilterMode.RESPONSIBILITY_CENTER),
+    // then received. Each has a code of its own. Unlike the company's own complaints they are not
+    // scoped at all (3.6.93): neither by location nor by responsibility centre.
+    VENDOR_COMPLAINT_SHIPMENT("VCPL_SHIP", "Vendor Complaint Shipment", defaultFilterMode = DocTypeFilterMode.NONE),
+    VENDOR_COMPLAINT_RECEIPT( "VCPL_RCPT", "Vendor Complaint Receipt",  defaultFilterMode = DocTypeFilterMode.NONE),
     // One inventory journal batch (Phys. Inventory Journal) per document. Counted against the
     // calculated quantity the ERP supplies, the same as the types above. An item the ERP didn't send is
     // added on the device instead of being rejected (see isStockCount).
     INVENTORY(         "INVENTORY", "Inventory",            isStockCount = true),
+    ;
+
+    /**
+     * The scope this type is shown and downloaded by on a device whose settings hold [filters]
+     * (`AppSettings.docTypeFilters`, by [key]).
+     *
+     * The one place that answers it. A type with no scope keeps none whatever the settings hold for
+     * it, and a type with a scope cannot be set to none: a setting that says so is read as not
+     * having been made, and the type's own default applies. Both ways round, the reason is a
+     * configuration written for another version, or by hand: devices configured while the vendor
+     * complaint types were still scoped by responsibility centre hold that for them.
+     */
+    fun filterModeIn(filters: Map<String, DocTypeFilterMode>): DocTypeFilterMode =
+        if (defaultFilterMode == DocTypeFilterMode.NONE) DocTypeFilterMode.NONE
+        else filters[key]?.takeIf { it != DocTypeFilterMode.NONE } ?: defaultFilterMode
 }
 
 /**

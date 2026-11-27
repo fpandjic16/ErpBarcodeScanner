@@ -107,8 +107,7 @@ class AppSettingsStore @Inject constructor(
             debounceTime     = personal.getInt("debounceTime", defaults.debounceTime),
             hapticEnabled    = personal.getBoolean("hapticEnabled", true),
             soundEnabled     = personal.getBoolean("soundEnabled", true),
-            warnOnOver          = personal.getBoolean("warnOnOver", true),
-            backgroundSync      = personal.getBoolean("backgroundSync", false),
+            backgroundSync   = personal.getBoolean("backgroundSync", false),
             lastLocationCode = personal.getString(siteKey("lastLocationCode"), "") ?: "",
             lastRcCode       = personal.getString(siteKey("lastRcCode"), "") ?: "",
             // Still handed out as the switched-off set, so nothing above this class changed.
@@ -145,7 +144,6 @@ class AppSettingsStore @Inject constructor(
             .putInt    ("debounceTime",        settings.debounceTime)
             .putBoolean("hapticEnabled",      settings.hapticEnabled)
             .putBoolean("soundEnabled",       settings.soundEnabled)
-            .putBoolean("warnOnOver",          settings.warnOnOver)
             .putBoolean("backgroundSync",      settings.backgroundSync)
             .putString (siteKey("lastLocationCode"), settings.lastLocationCode)
             .putString (siteKey("lastRcCode"),       settings.lastRcCode)

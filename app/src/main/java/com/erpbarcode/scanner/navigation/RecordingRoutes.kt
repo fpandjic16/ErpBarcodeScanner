@@ -70,7 +70,6 @@ internal fun NavGraphBuilder.recordingRoutes(shell: Shell) {
                     hapticEnabled = hapticEnabled,
                     soundEnabled = soundEnabled,
                     debounceTime = debounceTime,
-                    warnOnOver = warnOnOver,
                 )
             }
         }

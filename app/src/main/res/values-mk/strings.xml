@@ -111,8 +111,6 @@
     <string name="settings_haptic_desc">Вибрира при потврда на скенирање и грешки</string>
     <string name="settings_sound">Звук на скенирање</string>
     <string name="settings_sound_desc">Бип кога скенирањето успее, друг тон кога не</string>
-    <string name="settings_warn_over">Предупреди при прекумерно скенирање</string>
-    <string name="settings_warn_over_desc">Потврди кога скенираната количина ја надминува очекуваната</string>
     <string name="settings_server_endpoints">Сервер и крајни точки</string>
     <string name="settings_server_endpoints_desc">Основен OData URL, домен, URL-адреси на страници со документи</string>
     <string name="settings_export">Извези податоци</string>
@@ -414,4 +412,6 @@
         <item quantity="other">Најавата се чува шифрирано на овој уред и се помни %d дена.</item>
     </plurals>
     <string name="signin_clock_behind_note">Часовникот на овој уред е зад време што апликацијата веќе го видела, па QR кодот за најава не работи без надворешниот систем. Се поправа кога следниот пат некој ќе се најави со достапен надворешен систем; потоа сите еднаш се најавуваат преку него.</string>
+    <string name="ext_config_filter_none">Без филтер</string>
+    <string name="ext_config_filter_none_desc">Без филтер: се прикажуваат и преземаат сите документи од овој вид, без оглед на избраната локација и центар на одговорност.</string>
 </resources>

@@ -30,7 +30,10 @@ internal fun NavGraphBuilder.documentRoutes(shell: Shell) {
                 hapticEnabled = hapticEnabled,
                 soundEnabled = soundEnabled,
                 docType = selectedDocType,
-                locationCode = location?.code ?: "",
+                // For the subtitle only. A type with no scope shows every location's documents, so
+                // naming the selected one above them would say something that is not so.
+                locationCode = if (selectedDocType.filterModeIn(docTypeFilters) == DocTypeFilterMode.NONE) ""
+                    else location?.code ?: "",
                 docTypeCode = extSystemConfig.docTypeCodeFor(selectedDocType),
                 documents = typeDocs,
                 onBack = { nav.popBackStack() },
@@ -64,7 +67,7 @@ internal fun NavGraphBuilder.documentRoutes(shell: Shell) {
             )
         }
         composable(Routes.DOWNLOAD_FILTER) {
-            val dlFilterMode = docTypeFilters[selectedDocType.key] ?: selectedDocType.defaultFilterMode
+            val dlFilterMode = selectedDocType.filterModeIn(docTypeFilters)
             // For the debugger's list of addresses; DocumentType.display is the English constant.
             val docTypeLabel = selectedDocType.localizedDisplay()
             // A second line behind the main menu, which already blocks the list in front of this
@@ -74,6 +77,9 @@ internal fun NavGraphBuilder.documentRoutes(shell: Shell) {
             val scopeSelected = when (dlFilterMode) {
                 DocTypeFilterMode.LOCATION -> location != null
                 DocTypeFilterMode.RESPONSIBILITY_CENTER -> rc != null
+                // A type with no scope is meant to be fetched for everybody: the request carries
+                // neither a location nor a centre, and every document it brings is shown.
+                DocTypeFilterMode.NONE -> true
             }
             val scopeMissingText = stringResource(R.string.main_blocked_text)
             DownloadFilterScreen(
@@ -83,6 +89,7 @@ internal fun NavGraphBuilder.documentRoutes(shell: Shell) {
                 hapticEnabled   = hapticEnabled,
                 soundEnabled    = soundEnabled,
                 docType         = selectedDocType,
+                scoped          = dlFilterMode != DocTypeFilterMode.NONE,
                 fixedSourceCode = if (dlFilterMode == DocTypeFilterMode.LOCATION) locationCode else null,
                 fixedRcCode     = if (dlFilterMode == DocTypeFilterMode.RESPONSIBILITY_CENTER) rcCode else null,
                 locations       = locations,

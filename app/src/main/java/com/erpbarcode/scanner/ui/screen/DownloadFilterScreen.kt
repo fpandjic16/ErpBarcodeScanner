@@ -65,6 +65,10 @@ fun DownloadFilterScreen(
     hapticEnabled: Boolean = true,
     soundEnabled: Boolean = true,
     docType: DocumentType? = null,
+    // False for a type that is narrowed by neither a location nor a responsibility centre: neither
+    // picker is shown, and nothing of the kind goes into the request, which then fetches the type
+    // for everybody. Both fixed codes are null in that case.
+    scoped: Boolean = true,
     fixedSourceCode: String? = null,
     fixedRcCode: String? = null,
     locations: List<Location> = emptyList(),
@@ -195,7 +199,7 @@ fun DownloadFilterScreen(
                 }
             }
 
-            if (fixedRcCode == null) DlFilterSection(label = stringResource(R.string.filter_source_code)) {
+            if (scoped && fixedRcCode == null) DlFilterSection(label = stringResource(R.string.filter_source_code)) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -229,7 +233,7 @@ fun DownloadFilterScreen(
                 }
             }
 
-            if (fixedSourceCode == null) DlFilterSection(label = stringResource(R.string.filter_responsibility_center)) {
+            if (scoped && fixedSourceCode == null) DlFilterSection(label = stringResource(R.string.filter_responsibility_center)) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
